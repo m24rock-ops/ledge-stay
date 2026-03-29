@@ -94,6 +94,14 @@ async function showDetail(id) {
         ? `<p>✅ Amenities: ${l.amenities.join(', ')}</p>` : ''}
       ${l.description ? `<p>📝 ${l.description}</p>` : ''}
       <button onclick="showPage('listings')" style="margin-top:20px;max-width:200px">← Back</button>
+      <div style="margin-top:24px;padding:20px;background:#f9f9f9;border-radius:12px">
+        <h3 style="margin-bottom:12px">📍 How far is this from your place?</h3>
+        <div style="display:flex;gap:8px">
+          <input type="text" id="distance-input" placeholder="Enter your college or workplace address..." style="flex:1;padding:12px;border:1px solid #ddd;border-radius:8px;font-size:14px">
+          <button id="distance-btn" onclick="calculateDistance('${l._id}')" style="padding:12px 20px;background:#e74c3c;color:white;border:none;border-radius:8px;cursor:pointer;white-space:nowrap">Calculate Distance</button>
+        </div>
+        <div id="distance-result"></div>
+      </div>
     </div>
   `;
   showPage('detail');
@@ -195,3 +203,26 @@ async function postListing() {
 
 // Init
 updateNav();
+async function calculateDistance(listingId) {
+  const from = document.getElementById('distance-input').value;
+  if (!from) { alert('Please enter your college or workplace address!'); return; }
+  const btn = document.getElementById('distance-btn');
+  btn.textContent = 'Calculating...';
+  btn.disabled = true;
+  try {
+    const res = await fetch(`/api/listings/${listingId}/distance?from=${encodeURIComponent(from)}`);
+    const data = await res.json();
+    if (res.ok) {
+      document.getElementById('distance-result').innerHTML = `
+        <div style="background:#e8f5e9;padding:16px;border-radius:8px;margin-top:16px">
+          🚗 <strong>${data.distanceKm} km</strong> away — approximately <strong>${data.durationMin} minutes</strong> by car
+        </div>`;
+    } else {
+      document.getElementById('distance-result').innerHTML = `<p style="color:red">${data.message}</p>`;
+    }
+  } catch (err) {
+    document.getElementById('distance-result').innerHTML = `<p style="color:red">Error calculating distance</p>`;
+  }
+  btn.textContent = 'Calculate Distance';
+  btn.disabled = false;
+}

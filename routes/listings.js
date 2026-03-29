@@ -84,4 +84,59 @@ router.delete('/:id', auth, async (req, res) => {
   }
 });
 
+// Get distance from user location to listing
+router.get('/:id/distance', async (req, res) => {
+  try {
+    const { from } = req.query;
+    if (!from) return res.status(400).json({ message: 'From address required' });
+
+    const listing = await Listing.findById(req.params.id);
+    if (!listing) return res.status(404).json({ message: 'Listing not found' });
+
+    const toAddress = `${listing.address}, ${listing.city}, India`;
+
+    // Geocode both addresses
+    const geocode = async (address) => {
+      const response = await fetch(
+        `https://api.openrouteservice.org/geocode/search?api_key=${process.env.ORS_API_KEY}&text=${encodeURIComponent(address)}&boundary.country=IN`
+      );
+      const data = await response.json();
+      return data.features[0]?.geometry?.coordinates;
+    };
+
+    const [fromCoords, toCoords] = await Promise.all([
+      geocode(from),
+      geocode(toAddress)
+    ]);
+
+    if (!fromCoords || !toCoords) {
+      return res.status(400).json({ message: 'Could not find one of the addresses' });
+    }
+
+    // Get distance and duration
+    const routeRes = await fetch('https://api.openrouteservice.org/v2/directions/driving-car', {
+      method: 'POST',
+      headers: {
+        'Authorization': process.env.ORS_API_KEY,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        coordinates: [fromCoords, toCoords]
+      })
+    });
+
+    const routeData = await routeRes.json();
+    const summary = routeData.routes[0]?.summary;
+
+    if (!summary) return res.status(400).json({ message: 'Could not calculate route' });
+
+    const distanceKm = (summary.distance / 1000).toFixed(1);
+    const durationMin = Math.round(summary.duration / 60);
+
+    res.json({ distanceKm, durationMin });
+  } catch (err) {
+    res.status(500).json({ message: 'Error calculating distance', error: err.message });
+  }
+});
+
 module.exports = router;
