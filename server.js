@@ -16,6 +16,7 @@ app.use('/uploads', express.static(path.join(__dirname, 'public/uploads')));
 // Routes
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/listings', require('./routes/listings'));
+app.use('/api/reviews', require('./routes/reviews'));
 
 // Connect to MongoDB
 mongoose.connect(process.env.MONGO_URI)
@@ -25,4 +26,3 @@ mongoose.connect(process.env.MONGO_URI)
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 
-app.use('/api/reviews', require('./routes/reviews'));
