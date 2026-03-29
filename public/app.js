@@ -90,6 +90,7 @@ async function showDetail(id) {
       <p>📍 ${l.address}, ${l.city}</p>
       <p>🏷️ Type: ${l.type.toUpperCase()} &nbsp; 👤 Gender: ${l.gender}</p>
       <p>📞 Owner: ${l.owner.name} — ${l.owner.email}</p>
+      ${l.owner.phone ? `<a href="https://wa.me/91${l.owner.phone}?text=Hi, I am interested in your listing: ${l.title}" target="_blank" style="display:inline-block;margin-top:8px;padding:12px 24px;background:#25D366;color:white;border-radius:8px;text-decoration:none;font-weight:600">💬 Contact on WhatsApp</a>` : ''}
       ${l.amenities && l.amenities.length > 0
         ? `<p>✅ Amenities: ${l.amenities.join(', ')}</p>` : ''}
       ${l.description ? `<p>📝 ${l.description}</p>` : ''}
@@ -113,11 +114,12 @@ async function register() {
   const email = document.getElementById('reg-email').value;
   const password = document.getElementById('reg-password').value;
   const role = document.getElementById('reg-role').value;
+  const phone = document.getElementById('reg-phone').value;
 
   const res = await fetch('/api/auth/register', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name, email, password, role })
+    body: JSON.stringify({ name, email, password, role, phone })
   });
 
   const data = await res.json();
