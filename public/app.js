@@ -112,6 +112,7 @@ async function showDetail(id) {
       </div>
     </div>
   `;
+  loadReviews(id);
   showPage('detail');
 }
 
@@ -234,4 +235,96 @@ async function calculateDistance(listingId) {
   }
   btn.textContent = 'Calculate Distance';
   btn.disabled = false;
+}
+async function loadReviews(listingId) {
+  const res = await fetch(`/api/reviews/${listingId}`);
+  const reviews = await res.json();
+  const user = getUser();
+
+  const avg = reviews.length
+    ? (reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length).toFixed(1)
+    : null;
+
+  document.getElementById('reviews-section').innerHTML = `
+    <div style="margin-top:32px;padding:20px;background:#fff;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,0.08)">
+      <h3 style="margin-bottom:16px">⭐ Reviews ${avg ? `— Average: ${avg}/5` : ''}</h3>
+      ${user ? `
+        <div style="margin-bottom:24px;padding:16px;background:#f9f9f9;border-radius:8px">
+          <p style="margin-bottom:8px;font-weight:500">Leave a Review</p>
+          <div style="display:flex;gap:8px;margin-bottom:8px">
+            ${[1,2,3,4,5].map(n => `
+              <button onclick="setRating(${n})" id="star-${n}"
+                style="padding:8px 12px;border:1px solid #ddd;border-radius:8px;cursor:pointer;background:#fff;font-size:18px">
+                ⭐
+              </button>
+            `).join('')}
+          </div>
+          <input type="hidden" id="review-rating" value="0">
+          <textarea id="review-comment" placeholder="Write your review..." 
+            style="width:100%;padding:12px;border:1px solid #ddd;border-radius:8px;height:80px;margin-bottom:8px;font-size:14px"></textarea>
+          <button onclick="submitReview('${listingId}')"
+            style="padding:10px 24px;background:#e74c3c;color:white;border:none;border-radius:8px;cursor:pointer;font-weight:600">
+            Submit Review
+          </button>
+          <p id="review-error" style="color:red;margin-top:8px"></p>
+        </div>
+      ` : '<p style="margin-bottom:16px;color:#888">Login to leave a review</p>'}
+      ${reviews.length === 0 ? '<p style="color:#888">No reviews yet</p>' : ''}
+      ${reviews.map(r => `
+        <div style="padding:16px;border-bottom:1px solid #eee">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <strong>${r.user.name}</strong>
+            <span>${'⭐'.repeat(r.rating)}</span>
+          </div>
+          <p style="margin-top:8px;color:#555">${r.comment}</p>
+          <p style="font-size:12px;color:#aaa;margin-top:4px">${new Date(r.createdAt).toLocaleDateString()}</p>
+          ${user && r.user._id === user.id ? `
+            <button onclick="deleteReview('${r._id}','${listingId}')"
+              style="margin-top:8px;padding:4px 12px;background:#fff;border:1px solid #e74c3c;color:#e74c3c;border-radius:6px;cursor:pointer;font-size:12px">
+              Delete
+            </button>
+          ` : ''}
+        </div>
+      `).join('')}
+    </div>
+  `;
+}
+
+function setRating(n) {
+  document.getElementById('review-rating').value = n;
+  for(let i = 1; i <= 5; i++) {
+    document.getElementById(`star-${i}`).style.background = i <= n ? '#ffeaa7' : '#fff';
+  }
+}
+
+async function submitReview(listingId) {
+  const rating = parseInt(document.getElementById('review-rating').value);
+  const comment = document.getElementById('review-comment').value;
+
+  if (!rating) { document.getElementById('review-error').textContent = 'Please select a rating!'; return; }
+  if (!comment) { document.getElementById('review-error').textContent = 'Please write a comment!'; return; }
+
+  const res = await fetch(`/api/reviews/${listingId}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer ' + getToken()
+    },
+    body: JSON.stringify({ rating, comment })
+  });
+
+  if (res.ok) {
+    loadReviews(listingId);
+  } else {
+    const data = await res.json();
+    document.getElementById('review-error').textContent = data.message;
+  }
+}
+
+async function deleteReview(reviewId, listingId) {
+  await fetch(`/api/reviews/${reviewId}`, {
+    method: 'DELETE',
+    headers: { 'Authorization': 'Bearer ' + getToken() }
+  });
+  loadReviews(listingId);
 }
