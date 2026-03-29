@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ledge Stay</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- NAVBAR -->
+  <nav>
+    <div class="logo">🏠 Ledge Stay</div>
+    <div class="nav-links">
+      <a href="#" onclick="showPage('home')">Home</a>
+      <a href="#" onclick="showPage('listings')">Browse</a>
+      <span id="nav-auth">
+        <a href="#" onclick="showPage('login')">Login</a>
+        <a href="#" onclick="showPage('register')">Register</a>
+      </span>
+      <span id="nav-user" style="display:none">
+        <a href="#" onclick="showPage('post')">Post Listing</a>
+        <a href="#" onclick="logout()">Logout</a>
+      </span>
+    </div>
+  </nav>
+
+  <!-- HOME PAGE -->
+  <div id="page-home" class="page">
+    <div class="hero">
+      <h1>Find Your Perfect Stay</h1>
+      <p>PGs, Hostels, Apartments and Rooms across India</p>
+      <div class="search-bar">
+        <input type="text" id="hero-search" placeholder="Search by city...">
+        <button onclick="heroSearch()">Search</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- LISTINGS PAGE -->
+  <div id="page-listings" class="page" style="display:none">
+    <div class="filters">
+      <input type="text" id="filter-city" placeholder="City">
+      <select id="filter-type">
+        <option value="">All Types</option>
+        <option value="pg">PG</option>
+        <option value="hostel">Hostel</option>
+        <option value="apartment">Apartment</option>
+        <option value="room">Room</option>
+      </select>
+      <select id="filter-gender">
+        <option value="">Any Gender</option>
+        <option value="male">Male</option>
+        <option value="female">Female</option>
+        <option value="any">Any</option>
+      </select>
+      <input type="number" id="filter-min" placeholder="Min Price">
+      <input type="number" id="filter-max" placeholder="Max Price">
+      <select id="filter-sort">
+        <option value="">Sort By</option>
+        <option value="price_asc">Price: Low to High</option>
+        <option value="price_desc">Price: High to Low</option>
+        <option value="newest">Newest</option>
+      </select>
+      <button onclick="loadListings()">Apply</button>
+    </div>
+    <div id="listings-grid" class="listings-grid"></div>
+  </div>
+
+  <!-- LOGIN PAGE -->
+  <div id="page-login" class="page" style="display:none">
+    <div class="form-box">
+      <h2>Login</h2>
+      <input type="email" id="login-email" placeholder="Email">
+      <input type="password" id="login-password" placeholder="Password">
+      <button onclick="login()">Login</button>
+      <p>No account? <a href="#" onclick="showPage('register')">Register</a></p>
+      <p id="login-error" class="error"></p>
+    </div>
+  </div>
+
+  <!-- REGISTER PAGE -->
+  <div id="page-register" class="page" style="display:none">
+    <div class="form-box">
+      <h2>Register</h2>
+      <input type="text" id="reg-name" placeholder="Full Name">
+      <input type="email" id="reg-email" placeholder="Email">
+      <input type="password" id="reg-password" placeholder="Password">
+      <select id="reg-role">
+        <option value="tenant">I am looking for a place (Tenant)</option>
+        <option value="owner">I want to post a listing (Owner)</option>
+      </select>
+      <button onclick="register()">Register</button>
+      <p>Have an account? <a href="#" onclick="showPage('login')">Login</a></p>
+      <p id="reg-error" class="error"></p>
+    </div>
+  </div>
+
+  <!-- POST LISTING PAGE -->
+  <div id="page-post" class="page" style="display:none">
+    <div class="form-box wide">
+      <h2>Post a Listing</h2>
+      <input type="text" id="post-title" placeholder="Title (e.g. Spacious PG in Koramangala)">
+      <select id="post-type">
+        <option value="pg">PG</option>
+        <option value="hostel">Hostel</option>
+        <option value="apartment">Apartment</option>
+        <option value="room">Room</option>
+      </select>
+      <input type="text" id="post-city" placeholder="City">
+      <input type="text" id="post-address" placeholder="Full Address">
+      <input type="number" id="post-price" placeholder="Monthly Rent (₹)">
+      <select id="post-gender">
+        <option value="any">Any Gender</option>
+        <option value="male">Male Only</option>
+        <option value="female">Female Only</option>
+      </select>
+      <textarea id="post-description" placeholder="Description"></textarea>
+      <input type="text" id="post-amenities" placeholder="Amenities (comma separated e.g. WiFi, AC, Food)">
+      <input type="file" id="post-photos" multiple accept="image/*">
+      <button onclick="postListing()">Post Listing</button>
+      <p id="post-error" class="error"></p>
+    </div>
+  </div>
+
+  <!-- LISTING DETAIL PAGE -->
+  <div id="page-detail" class="page" style="display:none">
+    <div id="detail-content"></div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
