@@ -68,6 +68,13 @@ async function loadListings() {
           <span class="badge">${l.type.toUpperCase()}</span>
           <span class="badge">${l.gender}</span>
         </div>
+        ${l.owner?.phone ? `
+        <a href="https://wa.me/91${l.owner.phone}?text=Hi, I am interested in your listing: ${l.title}" 
+          target="_blank"
+          onclick="event.stopPropagation()"
+          style="display:inline-block;margin-top:10px;padding:8px 16px;background:#25D366;color:white;border-radius:8px;text-decoration:none;font-size:13px;font-weight:600">
+          💬 WhatsApp Owner
+        </a>` : ''}
       </div>
     </div>
   `).join('');
