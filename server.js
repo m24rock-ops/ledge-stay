@@ -24,10 +24,3 @@ mongoose.connect(process.env.MONGO_URI)
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
-```
-
-Then create your `.env` file in the root:
-```
-MONGO_URI=your_mongodb_uri_here
-JWT_SECRET=mysecretkey123
-PORT=3000
