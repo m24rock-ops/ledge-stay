@@ -1,16 +1,8 @@
 const express = require('express');
 const router = express.Router();
-const multer = require('multer');
-const path = require('path');
 const Listing = require('../models/Listing');
 const auth = require('../middleware/auth');
-
-// Multer setup
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, 'public/uploads/'),
-  filename: (req, file, cb) => cb(null, Date.now() + path.extname(file.originalname))
-});
-const upload = multer({ storage });
+const { upload } = require('../middleware/cloudinary');
 
 // Get all listings (with search & filters)
 router.get('/', async (req, res) => {
@@ -55,7 +47,7 @@ router.post('/', auth, upload.array('photos', 5), async (req, res) => {
   try {
     if (req.user.role !== 'owner') return res.status(403).json({ message: 'Only owners can post listings' });
 
-    const photos = req.files ? req.files.map(f => '/uploads/' + f.filename) : [];
+    const photos = req.files ? req.files.map(f => f.path) : [];
     const listing = await Listing.create({ ...req.body, owner: req.user.id, photos });
     res.status(201).json(listing);
   } catch (err) {
@@ -69,8 +61,8 @@ router.put('/:id', auth, upload.array('photos', 5), async (req, res) => {
     const listing = await Listing.findById(req.params.id);
     if (!listing) return res.status(404).json({ message: 'Listing not found' });
     if (listing.owner.toString() !== req.user.id) return res.status(403).json({ message: 'Not authorized' });
-
-    const photos = req.files?.length ? req.files.map(f => '/uploads/' + f.filename) : listing.photos;
+    const photos = req.files?.length ? req.files.map(f => f.path) : listing.photos;
+   
     const updated = await Listing.findByIdAndUpdate(req.params.id, { ...req.body, photos }, { new: true });
     res.json(updated);
   } catch (err) {
