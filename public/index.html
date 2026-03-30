@@ -30,6 +30,7 @@
         <a href="/register" data-page-link="register">Register</a>
       </span>
       <span id="nav-user" style="display:none">
+        <a href="/wishlist" id="nav-wishlist-link" data-page-link="wishlist">Saved Listings</a>
         <a href="/dashboard" id="nav-dashboard-link" data-page-link="dashboard">Dashboard</a>
         <a href="/post" id="nav-post-link" data-page-link="post">Post Listing</a>
         <a href="/" data-action-link="logout">Logout</a>
@@ -179,6 +180,22 @@
 
       <div id="dashboard-listings" class="dashboard-listings">
         <div class="dashboard-empty">Loading your listings...</div>
+      </div>
+    </section>
+  </div>
+
+  <div id="page-wishlist" class="page" style="display:none">
+    <section class="dashboard-page">
+      <div class="dashboard-header">
+        <div>
+          <p class="section-label">Saved Listings</p>
+          <h2>Your wishlist</h2>
+          <p class="dashboard-copy">Keep the places you like in one easy list and come back to them anytime.</p>
+        </div>
+      </div>
+
+      <div id="wishlist-grid" class="featured-grid">
+        <div class="featured-empty">Loading your saved listings...</div>
       </div>
     </section>
   </div>

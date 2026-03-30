@@ -26,6 +26,7 @@ app.use('/api', require('./routes/auth'));
 app.use('/', require('./routes/auth'));
 app.use('/api/listings', require('./routes/listings'));
 app.use('/api/reviews', require('./routes/reviews'));
+app.use('/api/wishlist', require('./routes/wishlist'));
 
 app.get(/^\/(?!api).*/, (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));

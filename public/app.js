@@ -2,6 +2,7 @@ const ROUTE_PATHS = {
   home: '/',
   browse: '/browse',
   listings: '/browse',
+  wishlist: '/wishlist',
   login: '/login',
   register: '/register',
   post: '/post',
@@ -14,6 +15,7 @@ window.addEventListener('unhandledrejection', (event) => {
 
 let selectedReviewRating = 0;
 let editingListingId = null;
+let savedListingIds = new Set();
 
 function normalizePageName(page) {
   const aliases = {
@@ -65,6 +67,7 @@ function showPage(page, options = {}) {
   if (normalizedPage === 'listings') loadListings();
   if (normalizedPage === 'home') loadFeaturedListings();
   if (normalizedPage === 'dashboard') loadOwnerDashboard();
+  if (normalizedPage === 'wishlist') loadWishlistPage();
 }
 
 function ensurePageAccess(page) {
@@ -79,6 +82,20 @@ function ensurePageAccess(page) {
 
     if (user.role !== 'owner') {
       alert('Only property owners can access this section.');
+      showPage('home', { updateHistory: true, replaceHistory: true });
+      return false;
+    }
+  }
+
+  if (page === 'wishlist') {
+    if (!user) {
+      document.getElementById('login-error').textContent = 'Please login as a tenant to continue.';
+      showPage('login', { updateHistory: true, replaceHistory: true });
+      return false;
+    }
+
+    if (user.role !== 'tenant') {
+      alert('Only tenants can access saved listings.');
       showPage('home', { updateHistory: true, replaceHistory: true });
       return false;
     }
@@ -99,12 +116,14 @@ function updateNav() {
   const user = getUser();
   const navAuth = document.getElementById('nav-auth');
   const navUser = document.getElementById('nav-user');
+  const wishlistLink = document.getElementById('nav-wishlist-link');
   const dashboardLink = document.getElementById('nav-dashboard-link');
   const postLink = document.getElementById('nav-post-link');
 
   navAuth.style.display = user ? 'none' : 'inline-flex';
   navUser.style.display = user ? 'inline-flex' : 'none';
 
+  if (wishlistLink) wishlistLink.style.display = user && user.role === 'tenant' ? 'inline-flex' : 'none';
   if (dashboardLink) dashboardLink.style.display = user && user.role === 'owner' ? 'inline-flex' : 'none';
   if (postLink) postLink.style.display = user && user.role === 'owner' ? 'inline-flex' : 'none';
 }
@@ -187,6 +206,34 @@ function renderOwnerListingActions(listing, options = {}) {
   `;
 }
 
+function canUseWishlist() {
+  const user = getUser();
+  return Boolean(user && user.role === 'tenant');
+}
+
+function isListingSaved(listingId) {
+  return savedListingIds.has(String(listingId));
+}
+
+function renderWishlistButton(listing, options = {}) {
+  if (!canUseWishlist()) return '';
+
+  const { detail = false } = options;
+  const saved = isListingSaved(listing._id);
+  const wrapperClass = detail ? 'wishlist-actions detail-wishlist-actions' : 'wishlist-actions';
+
+  return `
+    <div class="${wrapperClass}" onclick="event.stopPropagation()">
+      <button
+        class="wishlist-button ${saved ? 'is-saved' : ''}"
+        onclick="toggleWishlist('${listing._id}', { source: '${detail ? 'detail' : 'listing'}' })"
+      >
+        ${saved ? 'Saved' : 'Save'}
+      </button>
+    </div>
+  `;
+}
+
 function apiUrl(path) {
   return path;
 }
@@ -220,6 +267,102 @@ async function apiFetchJson(path, options = {}) {
   }
 
   return data;
+}
+
+async function loadWishlistState() {
+  if (!canUseWishlist()) {
+    savedListingIds = new Set();
+    return;
+  }
+
+  try {
+    const data = await apiFetchJson('/api/wishlist', {
+      headers: { Authorization: `Bearer ${getToken()}` }
+    });
+    savedListingIds = new Set((data.listingIds || []).map((id) => String(id)));
+  } catch (err) {
+    console.error('wishlist load error:', err);
+    savedListingIds = new Set();
+  }
+}
+
+async function loadWishlistPage() {
+  const wishlistGrid = document.getElementById('wishlist-grid');
+  if (!wishlistGrid || !canUseWishlist()) return;
+
+  wishlistGrid.innerHTML = '<div class="featured-empty">Loading your saved listings...</div>';
+
+  try {
+    const data = await apiFetchJson('/api/wishlist', {
+      headers: { Authorization: `Bearer ${getToken()}` }
+    });
+
+    savedListingIds = new Set((data.listingIds || []).map((id) => String(id)));
+    const listings = Array.isArray(data.wishlist) ? data.wishlist : [];
+
+    if (listings.length === 0) {
+      wishlistGrid.innerHTML = '<div class="featured-empty">No saved listings yet. Tap Save on any listing to add it here.</div>';
+      return;
+    }
+
+    wishlistGrid.innerHTML = listings.map((listing) => `
+      <article class="featured-card" id="wishlist-card-${listing._id}">
+        <div class="featured-image-wrap">
+          ${renderListingImage(listing, listing.title)}
+        </div>
+        <div class="featured-card-body">
+          <p class="featured-location">${listing.city}</p>
+          <h3>${listing.title}</h3>
+          <p class="featured-address">${listing.address}</p>
+          <div class="featured-card-footer">
+            <div class="featured-price">Rs ${Number(listing.price).toLocaleString()}/month</div>
+            <button class="featured-view-button" onclick="showDetail('${listing._id}')">View</button>
+          </div>
+          ${renderWishlistButton(listing)}
+        </div>
+      </article>
+    `).join('');
+  } catch (err) {
+    wishlistGrid.innerHTML = `<div class="featured-empty">${err.message || 'Unable to load your wishlist right now.'}</div>`;
+  }
+}
+
+async function toggleWishlist(listingId, options = {}) {
+  if (!canUseWishlist()) return;
+
+  try {
+    const data = await apiFetchJson(`/api/wishlist/${listingId}`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${getToken()}` }
+    });
+
+    if (data.saved) {
+      savedListingIds.add(String(listingId));
+    } else {
+      savedListingIds.delete(String(listingId));
+    }
+
+    if (options.source === 'wishlist' || window.location.pathname === '/wishlist') {
+      const wishlistCard = document.getElementById(`wishlist-card-${listingId}`);
+      if (wishlistCard && !data.saved) {
+        wishlistCard.remove();
+      }
+
+      const wishlistGrid = document.getElementById('wishlist-grid');
+      if (wishlistGrid && !wishlistGrid.querySelector('.featured-card')) {
+        wishlistGrid.innerHTML = '<div class="featured-empty">No saved listings yet. Tap Save on any listing to add it here.</div>';
+      }
+    }
+
+    if (document.getElementById('page-wishlist')?.style.display === 'block') {
+      loadWishlistPage();
+    } else {
+      loadFeaturedListings();
+      if (document.getElementById('page-listings')?.style.display === 'block') loadListings();
+    }
+  } catch (err) {
+    alert(err.message || 'Unable to update your saved listings.');
+  }
 }
 
 function resetListingForm() {
@@ -301,6 +444,7 @@ async function loadFeaturedListings() {
             <div class="featured-price">Rs ${Number(listing.price).toLocaleString()}/month</div>
             <button class="featured-view-button" onclick="showDetail('${listing._id}')">View</button>
           </div>
+          ${renderWishlistButton(listing)}
           ${renderOwnerListingActions(listing)}
         </div>
       </article>
@@ -357,6 +501,7 @@ async function loadListings() {
               WhatsApp Owner
             </a>
           ` : ''}
+          ${renderWishlistButton(listing)}
           ${renderOwnerListingActions(listing)}
         </div>
       </div>
@@ -443,6 +588,7 @@ async function showDetail(id) {
           Contact on WhatsApp
         </a>
       ` : ''}
+      ${renderWishlistButton(listing, { detail: true })}
       ${listing.amenities && listing.amenities.length > 0 ? `<p>Amenities: ${listing.amenities.join(', ')}</p>` : ''}
       ${listing.description ? `<p>${listing.description}</p>` : ''}
       ${renderOwnerListingActions(listing, { detail: true })}
@@ -503,8 +649,9 @@ async function register() {
     console.log('register response data:', data);
     localStorage.setItem('token', data.token);
     localStorage.setItem('user', JSON.stringify(data.user));
+    await loadWishlistState();
     updateNav();
-    showPage(data.user.role === 'owner' ? 'dashboard' : 'listings');
+    showPage(data.user.role === 'owner' ? 'dashboard' : 'wishlist');
   } catch (err) {
     console.error('register error:', err);
     errorField.textContent = err.message || 'Unable to register right now.';
@@ -530,8 +677,9 @@ async function login() {
     console.log('login response data:', data);
     localStorage.setItem('token', data.token);
     localStorage.setItem('user', JSON.stringify(data.user));
+    await loadWishlistState();
     updateNav();
-    showPage(data.user.role === 'owner' ? 'dashboard' : 'listings');
+    showPage(data.user.role === 'owner' ? 'dashboard' : 'wishlist');
   } catch (err) {
     console.error('login error:', err);
     errorField.textContent = err.message || 'Unable to login right now.';
@@ -541,6 +689,7 @@ async function login() {
 function logout() {
   localStorage.removeItem('token');
   localStorage.removeItem('user');
+  savedListingIds = new Set();
   editingListingId = null;
   resetListingForm();
   updateNav();
@@ -866,6 +1015,11 @@ function bootFromPath() {
     return;
   }
 
+  if (path === '/wishlist') {
+    showPage('wishlist', { updateHistory: false, replaceHistory: true });
+    return;
+  }
+
   showPage('home', { updateHistory: false, replaceHistory: true });
 }
 
@@ -873,8 +1027,10 @@ document.addEventListener('DOMContentLoaded', () => {
   attachNavbarListeners();
   updateNav();
   resetListingForm();
-  loadFeaturedListings();
-  bootFromPath();
+  loadWishlistState().finally(() => {
+    loadFeaturedListings();
+    bootFromPath();
+  });
 });
 
 window.addEventListener('resize', () => {

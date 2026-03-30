@@ -364,6 +364,31 @@ nav {
   color: #fff;
 }
 
+.wishlist-actions {
+  margin-top: 12px;
+}
+
+.detail-wishlist-actions {
+  margin-top: 10px;
+  margin-bottom: 2px;
+}
+
+.wishlist-button {
+  min-height: 36px;
+  padding: 8px 14px;
+  border: 1px solid #efb1a8;
+  border-radius: 999px;
+  background: #fff;
+  color: #e74c3c;
+  font-size: 13px;
+}
+
+.wishlist-button.is-saved {
+  background: #ffeaea;
+  color: #c0392b;
+  border-color: #f1b5ad;
+}
+
 .form-box {
   max-width: 420px;
   margin: 60px auto;
@@ -976,7 +1001,8 @@ nav {
     flex-direction: column;
   }
 
-  .owner-action-button {
+  .owner-action-button,
+  .wishlist-button {
     width: 100%;
   }
 
