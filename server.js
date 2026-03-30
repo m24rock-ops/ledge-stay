@@ -19,9 +19,6 @@ app.use(cors({
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 app.use('/uploads', express.static(path.join(__dirname, 'public/uploads')));
-app.get('/dashboard', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
-});
 
 // Routes
 app.use('/api/auth', require('./routes/auth'));
@@ -29,6 +26,10 @@ app.use('/api', require('./routes/auth'));
 app.use('/', require('./routes/auth'));
 app.use('/api/listings', require('./routes/listings'));
 app.use('/api/reviews', require('./routes/reviews'));
+
+app.get(/^\/(?!api).*/, (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
 
 // Connect to MongoDB
 mongoose.connect(process.env.MONGO_URI)

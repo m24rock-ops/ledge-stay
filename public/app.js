@@ -1,6 +1,3 @@
-const BASE_URL = window.location.hostname === 'localhost'
-  ? 'http://localhost:3000'
-  : 'https://ledge-stay.up.railway.app';
 const ROUTE_PATHS = {
   home: '/',
   dashboard: '/dashboard'
@@ -134,8 +131,7 @@ function renderListingImage(listing, altText) {
 }
 
 function apiUrl(path) {
-  if (/^https?:\/\//i.test(path)) return path;
-  return `${BASE_URL}${path}`;
+  return path;
 }
 
 async function readJsonSafely(response) {
