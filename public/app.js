@@ -165,6 +165,28 @@ function renderListingImage(listing, altText) {
   return '<div class="no-image">Home</div>';
 }
 
+function isListingOwner(listing) {
+  const user = getUser();
+  if (!user || user.role !== 'owner') return false;
+
+  const ownerId = typeof listing.owner === 'object' ? listing.owner?._id || listing.owner?.id : listing.owner;
+  return String(ownerId || '') === String(user.id);
+}
+
+function renderOwnerListingActions(listing, options = {}) {
+  if (!isListingOwner(listing)) return '';
+
+  const { detail = false } = options;
+  const actionClass = detail ? 'owner-listing-actions detail-owner-actions' : 'owner-listing-actions';
+
+  return `
+    <div class="${actionClass}" onclick="event.stopPropagation()">
+      <button class="owner-action-button" onclick="openEditListingForm('${listing._id}')">Edit</button>
+      <button class="owner-action-button is-danger" onclick="deleteListing('${listing._id}', { source: '${detail ? 'detail' : 'listings'}' })">Delete</button>
+    </div>
+  `;
+}
+
 function apiUrl(path) {
   return path;
 }
@@ -279,6 +301,7 @@ async function loadFeaturedListings() {
             <div class="featured-price">Rs ${Number(listing.price).toLocaleString()}/month</div>
             <button class="featured-view-button" onclick="showDetail('${listing._id}')">View</button>
           </div>
+          ${renderOwnerListingActions(listing)}
         </div>
       </article>
     `).join('');
@@ -314,7 +337,7 @@ async function loadListings() {
     }
 
     grid.innerHTML = listings.map((listing) => `
-      <div class="listing-card" onclick="showDetail('${listing._id}')">
+      <div class="listing-card" id="listing-card-${listing._id}" onclick="showDetail('${listing._id}')">
         ${renderListingImage(listing, listing.title)}
         <div class="card-body">
           <h3>${listing.title}</h3>
@@ -334,6 +357,7 @@ async function loadListings() {
               WhatsApp Owner
             </a>
           ` : ''}
+          ${renderOwnerListingActions(listing)}
         </div>
       </div>
     `).join('');
@@ -421,6 +445,7 @@ async function showDetail(id) {
       ` : ''}
       ${listing.amenities && listing.amenities.length > 0 ? `<p>Amenities: ${listing.amenities.join(', ')}</p>` : ''}
       ${listing.description ? `<p>${listing.description}</p>` : ''}
+      ${renderOwnerListingActions(listing, { detail: true })}
       <button onclick="showPage('listings')" class="back-button">Back</button>
 
       <div class="distance-card">
@@ -576,7 +601,7 @@ async function saveListing() {
   }
 }
 
-async function deleteListing(listingId) {
+async function deleteListing(listingId, options = {}) {
   const confirmed = window.confirm('Delete this listing? This action cannot be undone.');
   if (!confirmed) return;
 
@@ -594,6 +619,21 @@ async function deleteListing(listingId) {
     resetListingForm();
   }
 
+  const listingCard = document.getElementById(`listing-card-${listingId}`);
+  if (listingCard) {
+    listingCard.remove();
+    const listingsGrid = document.getElementById('listings-grid');
+    if (listingsGrid && !listingsGrid.querySelector('.listing-card')) {
+      listingsGrid.innerHTML = '<p style="padding:20px;color:#888">No listings found.</p>';
+    }
+  }
+
+  if (options.source === 'detail') {
+    showPage('listings');
+    return;
+  }
+
+  loadFeaturedListings();
   loadOwnerDashboard();
 }
 
