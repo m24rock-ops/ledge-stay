@@ -19,7 +19,8 @@ const listingSchema = new mongoose.Schema({
   approvalStatus: {
     type: String,
     enum: ['pending', 'approved', 'rejected'],
-    default: 'pending'
+    // Default to approved so listings show up immediately on browse.
+    default: 'approved'
   },
   rejectionNote: { type: String, default: '' },
   reviewedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
