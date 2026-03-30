@@ -3,39 +3,82 @@ const router = express.Router();
 const Review = require('../models/Review');
 const auth = require('../middleware/auth');
 
-// Get reviews for a listing
-router.get('/:listingId', async (req, res) => {
+function buildReviewSummary(reviews) {
+  const totalReviews = reviews.length;
+  const averageRating = totalReviews
+    ? Number((reviews.reduce((sum, review) => sum + review.rating, 0) / totalReviews).toFixed(1))
+    : 0;
+
+  return { totalReviews, averageRating, reviews };
+}
+
+async function getReviews(req, res, listingId) {
   try {
-    const reviews = await Review.find({ listing: req.params.listingId })
+    if (!listingId) {
+      return res.status(400).json({ message: 'listingId is required' });
+    }
+
+    const reviews = await Review.find({ listing: listingId })
       .populate('user', 'name')
       .sort({ createdAt: -1 });
-    res.json(reviews);
-  } catch (err) {
-    res.status(500).json({ message: 'Server error' });
-  }
-});
 
-// Add review
-router.post('/:listingId', auth, async (req, res) => {
+    res.json(buildReviewSummary(reviews));
+  } catch (err) {
+    res.status(500).json({ message: 'Server error', error: err.message });
+  }
+}
+
+async function addReview(req, res, listingId) {
   try {
+    const { rating, comment } = req.body;
+    const parsedRating = Number(rating);
+    const trimmedComment = String(comment || '').trim();
+
+    if (!listingId) return res.status(400).json({ message: 'listingId is required' });
+    if (!Number.isInteger(parsedRating) || parsedRating < 1 || parsedRating > 5) {
+      return res.status(400).json({ message: 'Rating must be a whole number between 1 and 5' });
+    }
+    if (!trimmedComment) return res.status(400).json({ message: 'Comment is required' });
+
     const existing = await Review.findOne({
-      listing: req.params.listingId,
+      listing: listingId,
       user: req.user.id
     });
     if (existing) return res.status(400).json({ message: 'You already reviewed this listing' });
 
     const review = await Review.create({
-      listing: req.params.listingId,
+      listing: listingId,
       user: req.user.id,
-      rating: req.body.rating,
-      comment: req.body.comment
+      rating: parsedRating,
+      comment: trimmedComment
     });
 
     const populated = await review.populate('user', 'name');
     res.status(201).json(populated);
   } catch (err) {
+    if (err.code === 11000) {
+      return res.status(400).json({ message: 'You already reviewed this listing' });
+    }
     res.status(500).json({ message: 'Server error', error: err.message });
   }
+}
+
+// Get reviews for a listing
+router.get('/', async (req, res) => {
+  return getReviews(req, res, req.query.listingId);
+});
+
+router.get('/:listingId', async (req, res) => {
+  return getReviews(req, res, req.params.listingId);
+});
+
+// Add review
+router.post('/', auth, async (req, res) => {
+  return addReview(req, res, req.body.listingId);
+});
+
+router.post('/:listingId', auth, async (req, res) => {
+  return addReview(req, res, req.params.listingId);
 });
 
 // Delete review

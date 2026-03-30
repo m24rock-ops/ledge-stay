@@ -1,25 +1,51 @@
 const API = '';
+let selectedReviewRating = 0;
 
 // Show/hide pages
 function showPage(page) {
-  document.querySelectorAll('.page').forEach(p => p.style.display = 'none');
-  document.getElementById('page-' + page).style.display = 'block';
+  closeMenu();
+  document.querySelectorAll('.page').forEach((section) => {
+    section.style.display = 'none';
+  });
+
+  const activePage = document.getElementById(`page-${page}`);
+  if (activePage) activePage.style.display = 'block';
   if (page === 'listings') loadListings();
 }
 
 // Auth state
-function getToken() { return localStorage.getItem('token'); }
-function getUser() { return JSON.parse(localStorage.getItem('user') || 'null'); }
+function getToken() {
+  return localStorage.getItem('token');
+}
+
+function getUser() {
+  return JSON.parse(localStorage.getItem('user') || 'null');
+}
 
 function updateNav() {
   const user = getUser();
-  if (user) {
-    document.getElementById('nav-auth').style.display = 'none';
-    document.getElementById('nav-user').style.display = 'inline';
-  } else {
-    document.getElementById('nav-auth').style.display = 'inline';
-    document.getElementById('nav-user').style.display = 'none';
-  }
+  document.getElementById('nav-auth').style.display = user ? 'none' : 'inline-flex';
+  document.getElementById('nav-user').style.display = user ? 'inline-flex' : 'none';
+}
+
+function toggleMenu() {
+  const navLinks = document.getElementById('nav-links');
+  const toggleButton = document.querySelector('.menu-toggle');
+  if (!navLinks || !toggleButton) return;
+
+  const isOpen = navLinks.classList.toggle('open');
+  toggleButton.classList.toggle('open', isOpen);
+  toggleButton.setAttribute('aria-expanded', String(isOpen));
+}
+
+function closeMenu() {
+  const navLinks = document.getElementById('nav-links');
+  const toggleButton = document.querySelector('.menu-toggle');
+  if (!navLinks || !toggleButton) return;
+
+  navLinks.classList.remove('open');
+  toggleButton.classList.remove('open');
+  toggleButton.setAttribute('aria-expanded', 'false');
 }
 
 // Hero search
@@ -27,6 +53,11 @@ function heroSearch() {
   const city = document.getElementById('hero-search').value;
   document.getElementById('filter-city').value = city;
   showPage('listings');
+}
+
+function renderStars(rating) {
+  const safeRating = Math.max(0, Math.min(5, Math.round(Number(rating) || 0)));
+  return `${'★'.repeat(safeRating)}${'☆'.repeat(5 - safeRating)}`;
 }
 
 // Load listings
@@ -38,7 +69,7 @@ async function loadListings() {
   const maxPrice = document.getElementById('filter-max').value;
   const sort = document.getElementById('filter-sort').value;
 
-  let query = new URLSearchParams();
+  const query = new URLSearchParams();
   if (city) query.append('city', city);
   if (type) query.append('type', type);
   if (gender) query.append('gender', gender);
@@ -48,33 +79,36 @@ async function loadListings() {
 
   const res = await fetch(`/api/listings?${query.toString()}`);
   const listings = await res.json();
-
   const grid = document.getElementById('listings-grid');
-  if (listings.length === 0) {
+
+  if (!Array.isArray(listings) || listings.length === 0) {
     grid.innerHTML = '<p style="padding:20px;color:#888">No listings found.</p>';
     return;
   }
 
-  grid.innerHTML = listings.map(l => `
-    <div class="listing-card" onclick="showDetail('${l._id}')">
-      ${l.photos && l.photos.length > 0
-        ? `<img src="${l.photos[0]}" alt="${l.title}">`
-        : `<div class="no-image">🏠</div>`}
+  grid.innerHTML = listings.map((listing) => `
+    <div class="listing-card" onclick="showDetail('${listing._id}')">
+      ${listing.photos && listing.photos.length > 0
+        ? `<img src="${listing.photos[0]}" alt="${listing.title}">`
+        : '<div class="no-image">Home</div>'}
       <div class="card-body">
-        <h3>${l.title}</h3>
-        <div class="price">₹${l.price.toLocaleString()}/mo</div>
-        <div class="meta">📍 ${l.address}, ${l.city}</div>
+        <h3>${listing.title}</h3>
+        <div class="price">Rs ${Number(listing.price).toLocaleString()}/mo</div>
+        <div class="meta">${listing.address}, ${listing.city}</div>
         <div>
-          <span class="badge">${l.type.toUpperCase()}</span>
-          <span class="badge">${l.gender}</span>
+          <span class="badge">${listing.type.toUpperCase()}</span>
+          <span class="badge">${listing.gender}</span>
         </div>
-        ${l.owner?.phone ? `
-        <a href="https://wa.me/91${l.owner.phone}?text=Hi, I am interested in your listing: ${l.title}" 
-          target="_blank"
-          onclick="event.stopPropagation()"
-          style="display:inline-block;margin-top:10px;padding:8px 16px;background:#25D366;color:white;border-radius:8px;text-decoration:none;font-size:13px;font-weight:600">
-          💬 WhatsApp Owner
-        </a>` : ''}
+        ${listing.owner?.phone ? `
+          <a
+            href="https://wa.me/91${listing.owner.phone}?text=Hi, I am interested in your listing: ${encodeURIComponent(listing.title)}"
+            target="_blank"
+            onclick="event.stopPropagation()"
+            style="display:inline-block;margin-top:10px;padding:8px 16px;background:#25D366;color:white;border-radius:8px;text-decoration:none;font-size:13px;font-weight:600"
+          >
+            WhatsApp Owner
+          </a>
+        ` : ''}
       </div>
     </div>
   `).join('');
@@ -83,35 +117,62 @@ async function loadListings() {
 // Show listing detail
 async function showDetail(id) {
   const res = await fetch(`/api/listings/${id}`);
-  const l = await res.json();
+  const listing = await res.json();
+  selectedReviewRating = 0;
 
   document.getElementById('detail-content').innerHTML = `
     <div class="detail-photos">
-      ${l.photos && l.photos.length > 0
-        ? l.photos.map(p => `<img src="${p}" alt="photo">`).join('')
-        : '<div class="no-image" style="height:300px;background:#f0f0f0;display:flex;align-items:center;justify-content:center;font-size:64px;border-radius:12px">🏠</div>'}
+      ${listing.photos && listing.photos.length > 0
+        ? listing.photos.map((photo) => `<img src="${photo}" alt="Listing photo">`).join('')
+        : '<div class="no-image" style="height:300px;background:#f0f0f0;display:flex;align-items:center;justify-content:center;font-size:32px;border-radius:12px">No photo available</div>'}
     </div>
     <div class="detail-info">
-      <h1>${l.title}</h1>
-      <div class="price">₹${l.price.toLocaleString()}/month</div>
-      <p>📍 ${l.address}, ${l.city}</p>
-      <p>🏷️ Type: ${l.type.toUpperCase()} &nbsp; 👤 Gender: ${l.gender}</p>
-      <p>📞 Owner: ${l.owner.name} — ${l.owner.email}</p>
-      ${l.owner.phone ? `<a href="https://wa.me/91${l.owner.phone}?text=Hi, I am interested in your listing: ${l.title}" target="_blank" style="display:inline-block;margin-top:8px;padding:12px 24px;background:#25D366;color:white;border-radius:8px;text-decoration:none;font-weight:600">💬 Contact on WhatsApp</a>` : ''}
-      ${l.amenities && l.amenities.length > 0
-        ? `<p>✅ Amenities: ${l.amenities.join(', ')}</p>` : ''}
-      ${l.description ? `<p>📝 ${l.description}</p>` : ''}
-      <button onclick="showPage('listings')" style="margin-top:20px;max-width:200px">← Back</button>
-      <div style="margin-top:24px;padding:20px;background:#f9f9f9;border-radius:12px">
-        <h3 style="margin-bottom:12px">📍 How far is this from your place?</h3>
-        <div style="display:flex;gap:8px">
-          <input type="text" id="distance-input" placeholder="Enter your college or workplace address..." style="flex:1;padding:12px;border:1px solid #ddd;border-radius:8px;font-size:14px">
-          <button id="distance-btn" onclick="calculateDistance('${l._id}')" style="padding:12px 20px;background:#e74c3c;color:white;border:none;border-radius:8px;cursor:pointer;white-space:nowrap">Calculate Distance</button>
+      <h1>${listing.title}</h1>
+      <div class="price">Rs ${Number(listing.price).toLocaleString()}/month</div>
+      <p>${listing.address}, ${listing.city}</p>
+      <p>Type: ${listing.type.toUpperCase()} | Gender: ${listing.gender}</p>
+      <p>Owner: ${listing.owner.name} - ${listing.owner.email}</p>
+      ${listing.owner.phone ? `
+        <a
+          href="https://wa.me/91${listing.owner.phone}?text=Hi, I am interested in your listing: ${encodeURIComponent(listing.title)}"
+          target="_blank"
+          style="display:inline-block;margin-top:8px;padding:12px 24px;background:#25D366;color:white;border-radius:8px;text-decoration:none;font-weight:600"
+        >
+          Contact on WhatsApp
+        </a>
+      ` : ''}
+      ${listing.amenities && listing.amenities.length > 0
+        ? `<p>Amenities: ${listing.amenities.join(', ')}</p>`
+        : ''}
+      ${listing.description ? `<p>${listing.description}</p>` : ''}
+      <button onclick="showPage('listings')" class="back-button">Back</button>
+
+      <div class="distance-card">
+        <h3 class="distance-title">How far is this from your place?</h3>
+        <div class="distance-form">
+          <input
+            type="text"
+            id="distance-input"
+            placeholder="Enter your college or workplace address..."
+            class="distance-input"
+          >
+          <button
+            id="distance-btn"
+            onclick="calculateDistance('${listing._id}')"
+            class="distance-button"
+          >
+            Calculate Distance
+          </button>
         </div>
         <div id="distance-result"></div>
       </div>
+
+      <section id="reviews-section" class="reviews-section">
+        <div class="reviews-loading">Loading reviews...</div>
+      </section>
     </div>
   `;
+
   loadReviews(id);
   showPage('detail');
 }
@@ -168,13 +229,18 @@ function logout() {
   localStorage.removeItem('token');
   localStorage.removeItem('user');
   updateNav();
+  closeMenu();
   showPage('home');
 }
 
 // Post listing
 async function postListing() {
   const user = getUser();
-  if (!user) { showPage('login'); return; }
+  if (!user) {
+    showPage('login');
+    return;
+  }
+
   if (user.role !== 'owner') {
     document.getElementById('post-error').textContent = 'Only owners can post listings!';
     return;
@@ -190,15 +256,20 @@ async function postListing() {
   formData.append('description', document.getElementById('post-description').value);
 
   const amenities = document.getElementById('post-amenities').value
-    .split(',').map(a => a.trim()).filter(a => a);
-  amenities.forEach(a => formData.append('amenities', a));
+    .split(',')
+    .map((item) => item.trim())
+    .filter(Boolean);
+
+  amenities.forEach((amenity) => formData.append('amenities', amenity));
 
   const photos = document.getElementById('post-photos').files;
-  for (let photo of photos) formData.append('photos', photo);
+  for (const photo of photos) {
+    formData.append('photos', photo);
+  }
 
   const res = await fetch('/api/listings', {
     method: 'POST',
-    headers: { 'Authorization': 'Bearer ' + getToken() },
+    headers: { Authorization: `Bearer ${getToken()}` },
     body: formData
   });
 
@@ -211,120 +282,223 @@ async function postListing() {
   }
 }
 
-// Init
-updateNav();
 async function calculateDistance(listingId) {
   const from = document.getElementById('distance-input').value;
-  if (!from) { alert('Please enter your college or workplace address!'); return; }
-  const btn = document.getElementById('distance-btn');
-  btn.textContent = 'Calculating...';
-  btn.disabled = true;
+  if (!from) {
+    alert('Please enter your college or workplace address!');
+    return;
+  }
+
+  const button = document.getElementById('distance-btn');
+  button.textContent = 'Calculating...';
+  button.disabled = true;
+
   try {
     const res = await fetch(`/api/listings/${listingId}/distance?from=${encodeURIComponent(from)}`);
     const data = await res.json();
     if (res.ok) {
       document.getElementById('distance-result').innerHTML = `
         <div style="background:#e8f5e9;padding:16px;border-radius:8px;margin-top:16px">
-          🚗 <strong>${data.distanceKm} km</strong> away — approximately <strong>${data.durationMin} minutes</strong> by car
-        </div>`;
+          <strong>${data.distanceKm} km</strong> away - approximately <strong>${data.durationMin} minutes</strong> by car
+        </div>
+      `;
     } else {
       document.getElementById('distance-result').innerHTML = `<p style="color:red">${data.message}</p>`;
     }
   } catch (err) {
-    document.getElementById('distance-result').innerHTML = `<p style="color:red">Error calculating distance</p>`;
+    document.getElementById('distance-result').innerHTML = '<p style="color:red">Error calculating distance</p>';
   }
-  btn.textContent = 'Calculate Distance';
-  btn.disabled = false;
+
+  button.textContent = 'Calculate Distance';
+  button.disabled = false;
 }
+
 async function loadReviews(listingId) {
-  const res = await fetch(`/api/reviews/${listingId}`);
-  const reviews = await res.json();
-  const user = getUser();
+  const container = document.getElementById('reviews-section');
+  if (!container) return;
 
-  const avg = reviews.length
-    ? (reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length).toFixed(1)
-    : null;
+  container.innerHTML = '<div class="reviews-loading">Loading reviews...</div>';
 
-  document.getElementById('reviews-section').innerHTML = `
-    <div style="margin-top:32px;padding:20px;background:#fff;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,0.08)">
-      <h3 style="margin-bottom:16px">⭐ Reviews ${avg ? `— Average: ${avg}/5` : ''}</h3>
-      ${user ? `
-        <div style="margin-bottom:24px;padding:16px;background:#f9f9f9;border-radius:8px">
-          <p style="margin-bottom:8px;font-weight:500">Leave a Review</p>
-          <div style="display:flex;gap:8px;margin-bottom:8px">
-            ${[1,2,3,4,5].map(n => `
-              <button onclick="setRating(${n})" id="star-${n}"
-                style="padding:8px 12px;border:1px solid #ddd;border-radius:8px;cursor:pointer;background:#fff;font-size:18px">
-                ⭐
-              </button>
-            `).join('')}
-          </div>
-          <input type="hidden" id="review-rating" value="0">
-          <textarea id="review-comment" placeholder="Write your review..." 
-            style="width:100%;padding:12px;border:1px solid #ddd;border-radius:8px;height:80px;margin-bottom:8px;font-size:14px"></textarea>
-          <button onclick="submitReview('${listingId}')"
-            style="padding:10px 24px;background:#e74c3c;color:white;border:none;border-radius:8px;cursor:pointer;font-weight:600">
-            Submit Review
-          </button>
-          <p id="review-error" style="color:red;margin-top:8px"></p>
+  try {
+    const res = await fetch(`/api/reviews?listingId=${encodeURIComponent(listingId)}`);
+    const data = await res.json();
+
+    if (!res.ok) {
+      container.innerHTML = `<div class="review-error-box">${data.message || 'Unable to load reviews right now.'}</div>`;
+      return;
+    }
+
+    const user = getUser();
+    const reviews = Array.isArray(data.reviews) ? data.reviews : [];
+    const averageRating = Number(data.averageRating || 0);
+    const totalReviews = Number(data.totalReviews || 0);
+
+    container.innerHTML = `
+      <div class="reviews-header">
+        <div>
+          <h2>Reviews & Ratings</h2>
+          <p class="reviews-subtitle">Average score and feedback from people who stayed here.</p>
         </div>
-      ` : '<p style="margin-bottom:16px;color:#888">Login to leave a review</p>'}
-      ${reviews.length === 0 ? '<p style="color:#888">No reviews yet</p>' : ''}
-      ${reviews.map(r => `
-        <div style="padding:16px;border-bottom:1px solid #eee">
-          <div style="display:flex;justify-content:space-between;align-items:center">
-            <strong>${r.user.name}</strong>
-            <span>${'⭐'.repeat(r.rating)}</span>
-          </div>
-          <p style="margin-top:8px;color:#555">${r.comment}</p>
-          <p style="font-size:12px;color:#aaa;margin-top:4px">${new Date(r.createdAt).toLocaleDateString()}</p>
-          ${user && r.user._id === user.id ? `
-            <button onclick="deleteReview('${r._id}','${listingId}')"
-              style="margin-top:8px;padding:4px 12px;background:#fff;border:1px solid #e74c3c;color:#e74c3c;border-radius:6px;cursor:pointer;font-size:12px">
-              Delete
-            </button>
-          ` : ''}
+        <div class="rating-summary">
+          <div class="rating-value">${totalReviews ? averageRating.toFixed(1) : '0.0'}</div>
+          <div class="rating-stars">${renderStars(averageRating)}</div>
+          <div class="rating-count">${totalReviews} review${totalReviews === 1 ? '' : 's'}</div>
         </div>
-      `).join('')}
-    </div>
-  `;
+      </div>
+
+      <div class="review-form-card">
+        <h3>Write a Review</h3>
+        <div class="review-form-grid">
+          <div class="review-form-field">
+            <label for="review-name">Name</label>
+            <input
+              id="review-name"
+              class="review-input"
+              type="text"
+              value="${user ? user.name : ''}"
+              placeholder="${user ? 'Your name' : 'Login required'}"
+              ${user ? 'readonly' : 'disabled'}
+            >
+          </div>
+          <div class="review-form-field">
+            <label>Your Rating</label>
+            <div class="review-stars" role="group" aria-label="Select a rating">
+              ${[1, 2, 3, 4, 5].map((star) => `
+                <button
+                  type="button"
+                  class="star-button ${selectedReviewRating >= star ? 'active' : ''}"
+                  id="star-${star}"
+                  onclick="setRating(${star})"
+                  ${user ? '' : 'disabled'}
+                >
+                  ★
+                </button>
+              `).join('')}
+            </div>
+          </div>
+        </div>
+        <div class="review-form-field">
+          <label for="review-comment">Comment</label>
+          <textarea
+            id="review-comment"
+            class="review-input review-textarea"
+            placeholder="${user ? 'Share your honest experience with this property' : 'Login to add a comment'}"
+            ${user ? '' : 'disabled'}
+          ></textarea>
+        </div>
+        <button class="review-submit" onclick="submitReview('${listingId}')" ${user ? '' : 'disabled'}>
+          Submit Review
+        </button>
+        <p id="review-error" class="review-message review-message-error"></p>
+        ${user ? '' : '<p class="review-message">Login to submit a review and rating.</p>'}
+      </div>
+
+      <div class="reviews-list">
+        ${reviews.length === 0
+          ? '<div class="empty-reviews">No reviews yet. Be the first person to rate this listing.</div>'
+          : reviews.map((review) => `
+            <article class="review-card">
+              <div class="review-card-top">
+                <div>
+                  <h4>${review.user?.name || 'Anonymous User'}</h4>
+                  <p class="review-date">${new Date(review.createdAt).toLocaleDateString()}</p>
+                </div>
+                <div class="review-rating">
+                  <span class="review-rating-stars">${renderStars(review.rating)}</span>
+                  <span>${review.rating}/5</span>
+                </div>
+              </div>
+              <p class="review-comment">${review.comment}</p>
+              ${user && review.user && review.user._id === user.id
+                ? `<button class="review-delete" onclick="deleteReview('${review._id}', '${listingId}')">Delete Review</button>`
+                : ''}
+            </article>
+          `).join('')}
+      </div>
+    `;
+  } catch (err) {
+    container.innerHTML = '<div class="review-error-box">Unable to load reviews right now.</div>';
+  }
 }
 
-function setRating(n) {
-  document.getElementById('review-rating').value = n;
-  for(let i = 1; i <= 5; i++) {
-    document.getElementById(`star-${i}`).style.background = i <= n ? '#ffeaa7' : '#fff';
+function setRating(rating) {
+  selectedReviewRating = rating;
+
+  for (let star = 1; star <= 5; star += 1) {
+    const starButton = document.getElementById(`star-${star}`);
+    if (starButton) {
+      starButton.classList.toggle('active', star <= rating);
+    }
   }
 }
 
 async function submitReview(listingId) {
-  const rating = parseInt(document.getElementById('review-rating').value);
-  const comment = document.getElementById('review-comment').value;
+  const user = getUser();
+  const nameField = document.getElementById('review-name');
+  const commentField = document.getElementById('review-comment');
+  const errorField = document.getElementById('review-error');
 
-  if (!rating) { document.getElementById('review-error').textContent = 'Please select a rating!'; return; }
-  if (!comment) { document.getElementById('review-error').textContent = 'Please write a comment!'; return; }
+  if (!errorField) return;
 
-  const res = await fetch(`/api/reviews/${listingId}`, {
+  const name = nameField ? nameField.value.trim() : '';
+  const comment = commentField ? commentField.value.trim() : '';
+  const rating = selectedReviewRating;
+
+  errorField.textContent = '';
+
+  if (!user) {
+    errorField.textContent = 'Please login before submitting a review.';
+    return;
+  }
+
+  if (!name) {
+    errorField.textContent = 'Name is required.';
+    return;
+  }
+
+  if (!Number.isInteger(rating) || rating < 1 || rating > 5) {
+    errorField.textContent = 'Please choose a rating from 1 to 5 stars.';
+    return;
+  }
+
+  if (!comment) {
+    errorField.textContent = 'Please enter a comment.';
+    return;
+  }
+
+  const res = await fetch('/api/reviews', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': 'Bearer ' + getToken()
+      Authorization: `Bearer ${getToken()}`
     },
-    body: JSON.stringify({ rating, comment })
+    body: JSON.stringify({ listingId, rating, comment })
   });
 
   if (res.ok) {
+    selectedReviewRating = 0;
     loadReviews(listingId);
   } else {
     const data = await res.json();
-    document.getElementById('review-error').textContent = data.message;
+    errorField.textContent = data.message || 'Unable to submit review.';
   }
 }
 
 async function deleteReview(reviewId, listingId) {
-  await fetch(`/api/reviews/${reviewId}`, {
+  const res = await fetch(`/api/reviews/${reviewId}`, {
     method: 'DELETE',
-    headers: { 'Authorization': 'Bearer ' + getToken() }
+    headers: { Authorization: `Bearer ${getToken()}` }
   });
-  loadReviews(listingId);
+
+  if (res.ok) {
+    loadReviews(listingId);
+  }
 }
+
+// Init
+updateNav();
+window.addEventListener('resize', () => {
+  if (window.innerWidth > 768) {
+    closeMenu();
+  }
+});

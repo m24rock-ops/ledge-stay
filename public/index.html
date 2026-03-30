@@ -8,10 +8,21 @@
 </head>
 <body>
 
-  <!-- NAVBAR -->
-  <nav>
-    <div class="logo">🏠 Ledge Stay</div>
-    <div class="nav-links">
+  <nav class="site-nav">
+    <div class="logo">Ledge Stay</div>
+    <button
+      class="menu-toggle"
+      type="button"
+      aria-label="Toggle navigation menu"
+      aria-expanded="false"
+      aria-controls="nav-links"
+      onclick="toggleMenu()"
+    >
+      <span></span>
+      <span></span>
+      <span></span>
+    </button>
+    <div class="nav-links" id="nav-links">
       <a href="#" onclick="showPage('home')">Home</a>
       <a href="#" onclick="showPage('listings')">Browse</a>
       <span id="nav-auth">
@@ -25,11 +36,10 @@
     </div>
   </nav>
 
-  <!-- HOME PAGE -->
   <div id="page-home" class="page">
     <div class="hero">
       <h1>Find Your Perfect Stay</h1>
-      <p>PGs, Hostels, Apartments and Rooms across India</p>
+      <p>PGs, hostels, apartments and rooms across India</p>
       <div class="search-bar">
         <input type="text" id="hero-search" placeholder="Search by city...">
         <button onclick="heroSearch()">Search</button>
@@ -37,7 +47,6 @@
     </div>
   </div>
 
-  <!-- LISTINGS PAGE -->
   <div id="page-listings" class="page" style="display:none">
     <div class="filters">
       <input type="text" id="filter-city" placeholder="City">
@@ -67,7 +76,6 @@
     <div id="listings-grid" class="listings-grid"></div>
   </div>
 
-  <!-- LOGIN PAGE -->
   <div id="page-login" class="page" style="display:none">
     <div class="form-box">
       <h2>Login</h2>
@@ -79,7 +87,6 @@
     </div>
   </div>
 
-  <!-- REGISTER PAGE -->
   <div id="page-register" class="page" style="display:none">
     <div class="form-box">
       <h2>Register</h2>
@@ -97,7 +104,6 @@
     </div>
   </div>
 
-  <!-- POST LISTING PAGE -->
   <div id="page-post" class="page" style="display:none">
     <div class="form-box wide">
       <h2>Post a Listing</h2>
@@ -110,7 +116,7 @@
       </select>
       <input type="text" id="post-city" placeholder="City">
       <input type="text" id="post-address" placeholder="Full Address">
-      <input type="number" id="post-price" placeholder="Monthly Rent (₹)">
+      <input type="number" id="post-price" placeholder="Monthly Rent (Rs)">
       <select id="post-gender">
         <option value="any">Any Gender</option>
         <option value="male">Male Only</option>
@@ -124,7 +130,6 @@
     </div>
   </div>
 
-  <!-- LISTING DETAIL PAGE -->
   <div id="page-detail" class="page" style="display:none">
     <div id="detail-content"></div>
   </div>
