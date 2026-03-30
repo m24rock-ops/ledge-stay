@@ -3,6 +3,10 @@ const ROUTE_PATHS = {
   dashboard: '/dashboard'
 };
 
+window.addEventListener('unhandledrejection', (event) => {
+  console.error('Unhandled error:', event.reason);
+});
+
 let selectedReviewRating = 0;
 let editingListingId = null;
 
@@ -148,8 +152,11 @@ async function readJsonSafely(response) {
 }
 
 async function apiFetchJson(path, options = {}) {
+  console.log('api request:', path, options?.method || 'GET');
   const response = await fetch(apiUrl(path), options);
+  console.log('api response status:', path, response.status);
   const { data, rawText } = await readJsonSafely(response);
+  console.log('api response data:', path, data ?? rawText);
 
   if (!response.ok) {
     throw new Error(data?.message || `API error ${response.status}`);
@@ -419,6 +426,7 @@ async function showDetail(id) {
 }
 
 async function register() {
+  console.log('register called');
   const name = document.getElementById('reg-name').value;
   const email = document.getElementById('reg-email').value;
   const password = document.getElementById('reg-password').value;
@@ -429,22 +437,26 @@ async function register() {
   errorField.textContent = '';
 
   try {
+    console.log('register request url:', '/api/auth/register');
     const data = await apiFetchJson('/api/auth/register', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name, email, password, role, phone })
     });
 
+    console.log('register response data:', data);
     localStorage.setItem('token', data.token);
     localStorage.setItem('user', JSON.stringify(data.user));
     updateNav();
     showPage(data.user.role === 'owner' ? 'dashboard' : 'listings');
   } catch (err) {
+    console.error('register error:', err);
     errorField.textContent = err.message || 'Unable to register right now.';
   }
 }
 
 async function login() {
+  console.log('login called');
   const email = document.getElementById('login-email').value;
   const password = document.getElementById('login-password').value;
   const errorField = document.getElementById('login-error');
@@ -452,17 +464,20 @@ async function login() {
   errorField.textContent = '';
 
   try {
+    console.log('login request url:', '/api/auth/login');
     const data = await apiFetchJson('/api/auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password })
     });
 
+    console.log('login response data:', data);
     localStorage.setItem('token', data.token);
     localStorage.setItem('user', JSON.stringify(data.user));
     updateNav();
     showPage(data.user.role === 'owner' ? 'dashboard' : 'listings');
   } catch (err) {
+    console.error('login error:', err);
     errorField.textContent = err.message || 'Unable to login right now.';
   }
 }
