@@ -1,16 +1,73 @@
 const API = '';
-let selectedReviewRating = 0;
+const ROUTE_PATHS = {
+  home: '/',
+  dashboard: '/dashboard'
+};
 
-function showPage(page) {
+let selectedReviewRating = 0;
+let editingListingId = null;
+
+function resolvePathForPage(page) {
+  return ROUTE_PATHS[page] || '/';
+}
+
+function navigateToPath(page, replace = false) {
+  const path = resolvePathForPage(page);
+  const method = replace ? 'replaceState' : 'pushState';
+
+  if (window.location.pathname !== path) {
+    window.history[method]({ page }, '', path);
+  } else if (replace) {
+    window.history.replaceState({ page }, '', path);
+  }
+}
+
+function showPage(page, options = {}) {
+  const { updateHistory = true, replaceHistory = false, skipReset = false } = options;
   closeMenu();
+
+  if (!ensurePageAccess(page)) {
+    return;
+  }
+
+  if (page === 'post' && !skipReset && !editingListingId) {
+    resetListingForm();
+  }
+
   document.querySelectorAll('.page').forEach((section) => {
     section.style.display = 'none';
   });
 
   const activePage = document.getElementById(`page-${page}`);
   if (activePage) activePage.style.display = 'block';
+
+  if (updateHistory) {
+    navigateToPath(page, replaceHistory);
+  }
+
   if (page === 'listings') loadListings();
   if (page === 'home') loadFeaturedListings();
+  if (page === 'dashboard') loadOwnerDashboard();
+}
+
+function ensurePageAccess(page) {
+  const user = getUser();
+
+  if (page === 'dashboard' || page === 'post') {
+    if (!user) {
+      document.getElementById('login-error').textContent = 'Please login as an owner to continue.';
+      showPage('login', { updateHistory: true, replaceHistory: true });
+      return false;
+    }
+
+    if (user.role !== 'owner') {
+      alert('Only property owners can access this section.');
+      showPage('home', { updateHistory: true, replaceHistory: true });
+      return false;
+    }
+  }
+
+  return true;
 }
 
 function getToken() {
@@ -23,8 +80,16 @@ function getUser() {
 
 function updateNav() {
   const user = getUser();
-  document.getElementById('nav-auth').style.display = user ? 'none' : 'inline-flex';
-  document.getElementById('nav-user').style.display = user ? 'inline-flex' : 'none';
+  const navAuth = document.getElementById('nav-auth');
+  const navUser = document.getElementById('nav-user');
+  const dashboardLink = document.getElementById('nav-dashboard-link');
+  const postLink = document.getElementById('nav-post-link');
+
+  navAuth.style.display = user ? 'none' : 'inline-flex';
+  navUser.style.display = user ? 'inline-flex' : 'none';
+
+  if (dashboardLink) dashboardLink.style.display = user && user.role === 'owner' ? 'inline-flex' : 'none';
+  if (postLink) postLink.style.display = user && user.role === 'owner' ? 'inline-flex' : 'none';
 }
 
 function toggleMenu() {
@@ -64,6 +129,60 @@ function renderListingImage(listing, altText) {
   }
 
   return '<div class="no-image">Home</div>';
+}
+
+function resetListingForm() {
+  editingListingId = null;
+  document.getElementById('post-form-title').textContent = 'Post a Listing';
+  document.getElementById('post-submit-button').textContent = 'Post Listing';
+  document.getElementById('post-title').value = '';
+  document.getElementById('post-type').value = 'pg';
+  document.getElementById('post-city').value = '';
+  document.getElementById('post-address').value = '';
+  document.getElementById('post-price').value = '';
+  document.getElementById('post-gender').value = 'any';
+  document.getElementById('post-description').value = '';
+  document.getElementById('post-amenities').value = '';
+  document.getElementById('post-available').checked = true;
+  document.getElementById('post-featured').checked = false;
+  document.getElementById('post-photos').value = '';
+  document.getElementById('post-error').textContent = '';
+}
+
+function populateListingForm(listing) {
+  editingListingId = listing._id;
+  document.getElementById('post-form-title').textContent = 'Edit Listing';
+  document.getElementById('post-submit-button').textContent = 'Save Changes';
+  document.getElementById('post-title').value = listing.title || '';
+  document.getElementById('post-type').value = listing.type || 'pg';
+  document.getElementById('post-city').value = listing.city || '';
+  document.getElementById('post-address').value = listing.address || '';
+  document.getElementById('post-price').value = listing.price || '';
+  document.getElementById('post-gender').value = listing.gender || 'any';
+  document.getElementById('post-description').value = listing.description || '';
+  document.getElementById('post-amenities').value = Array.isArray(listing.amenities) ? listing.amenities.join(', ') : '';
+  document.getElementById('post-available').checked = Boolean(listing.available);
+  document.getElementById('post-featured').checked = Boolean(listing.is_featured);
+  document.getElementById('post-photos').value = '';
+  document.getElementById('post-error').textContent = '';
+}
+
+function openCreateListingForm() {
+  resetListingForm();
+  showPage('post');
+}
+
+async function openEditListingForm(listingId) {
+  const res = await fetch(`/api/listings/${listingId}`);
+  const listing = await res.json();
+
+  if (!res.ok) {
+    alert(listing.message || 'Unable to load this listing.');
+    return;
+  }
+
+  populateListingForm(listing);
+  showPage('post', { skipReset: true });
 }
 
 async function loadFeaturedListings() {
@@ -158,6 +277,63 @@ async function loadListings() {
   `).join('');
 }
 
+async function loadOwnerDashboard() {
+  const user = getUser();
+  const dashboardList = document.getElementById('dashboard-listings');
+  if (!user || user.role !== 'owner' || !dashboardList) return;
+
+  dashboardList.innerHTML = '<div class="dashboard-empty">Loading your listings...</div>';
+
+  try {
+    const res = await fetch('/api/listings/mine', {
+      headers: { Authorization: `Bearer ${getToken()}` }
+    });
+    const data = await res.json();
+
+    if (!res.ok) {
+      dashboardList.innerHTML = `<div class="dashboard-empty">${data.message || 'Unable to load your dashboard right now.'}</div>`;
+      return;
+    }
+
+    document.getElementById('dashboard-total-listings').textContent = data.summary.totalListings;
+    document.getElementById('dashboard-total-enquiries').textContent = data.summary.totalEnquiries;
+
+    if (!Array.isArray(data.listings) || data.listings.length === 0) {
+      dashboardList.innerHTML = `
+        <div class="dashboard-empty">
+          You have not added any listings yet.
+          <button class="dashboard-empty-button" onclick="openCreateListingForm()">Add your first listing</button>
+        </div>
+      `;
+      return;
+    }
+
+    dashboardList.innerHTML = data.listings.map((listing) => `
+      <article class="dashboard-listing-card">
+        <div class="dashboard-listing-main">
+          <div class="dashboard-listing-copy">
+            <h3>${listing.title}</h3>
+            <p>${listing.address}, ${listing.city}</p>
+          </div>
+          <div class="dashboard-listing-metrics">
+            <div class="dashboard-chip ${listing.available ? 'is-active' : 'is-inactive'}">
+              ${listing.available ? 'Active' : 'Unavailable'}
+            </div>
+            ${listing.is_featured ? '<div class="dashboard-chip is-featured">Featured</div>' : ''}
+            <div class="dashboard-enquiries">${Number(listing.enquiryCount || 0)} enquiries</div>
+          </div>
+        </div>
+        <div class="dashboard-listing-actions">
+          <button class="dashboard-action-button" onclick="openEditListingForm('${listing._id}')">Edit</button>
+          <button class="dashboard-action-button is-danger" onclick="deleteListing('${listing._id}')">Delete</button>
+        </div>
+      </article>
+    `).join('');
+  } catch (err) {
+    dashboardList.innerHTML = '<div class="dashboard-empty">Unable to load your dashboard right now.</div>';
+  }
+}
+
 async function showDetail(id) {
   const res = await fetch(`/api/listings/${id}`);
   const listing = await res.json();
@@ -215,7 +391,7 @@ async function showDetail(id) {
   `;
 
   loadReviews(id);
-  showPage('detail');
+  showPage('detail', { updateHistory: true });
 }
 
 async function register() {
@@ -236,7 +412,7 @@ async function register() {
     localStorage.setItem('token', data.token);
     localStorage.setItem('user', JSON.stringify(data.user));
     updateNav();
-    showPage('listings');
+    showPage(data.user.role === 'owner' ? 'dashboard' : 'listings');
   } else {
     document.getElementById('reg-error').textContent = data.message;
   }
@@ -257,7 +433,7 @@ async function login() {
     localStorage.setItem('token', data.token);
     localStorage.setItem('user', JSON.stringify(data.user));
     updateNav();
-    showPage('listings');
+    showPage(data.user.role === 'owner' ? 'dashboard' : 'listings');
   } else {
     document.getElementById('login-error').textContent = data.message;
   }
@@ -266,12 +442,14 @@ async function login() {
 function logout() {
   localStorage.removeItem('token');
   localStorage.removeItem('user');
+  editingListingId = null;
+  resetListingForm();
   updateNav();
   closeMenu();
   showPage('home');
 }
 
-async function postListing() {
+async function saveListing() {
   const user = getUser();
   if (!user) {
     showPage('login');
@@ -279,7 +457,7 @@ async function postListing() {
   }
 
   if (user.role !== 'owner') {
-    document.getElementById('post-error').textContent = 'Only owners can post listings!';
+    document.getElementById('post-error').textContent = 'Only owners can post listings.';
     return;
   }
 
@@ -291,12 +469,13 @@ async function postListing() {
   formData.append('price', document.getElementById('post-price').value);
   formData.append('gender', document.getElementById('post-gender').value);
   formData.append('description', document.getElementById('post-description').value);
+  formData.append('available', String(document.getElementById('post-available').checked));
+  formData.append('is_featured', String(document.getElementById('post-featured').checked));
 
   const amenities = document.getElementById('post-amenities').value
     .split(',')
     .map((item) => item.trim())
     .filter(Boolean);
-
   amenities.forEach((amenity) => formData.append('amenities', amenity));
 
   const photos = document.getElementById('post-photos').files;
@@ -304,19 +483,46 @@ async function postListing() {
     formData.append('photos', photo);
   }
 
-  const res = await fetch('/api/listings', {
-    method: 'POST',
+  const isEditing = Boolean(editingListingId);
+  const endpoint = isEditing ? `/api/listings/${editingListingId}` : '/api/listings';
+  const method = isEditing ? 'PUT' : 'POST';
+
+  const res = await fetch(endpoint, {
+    method,
     headers: { Authorization: `Bearer ${getToken()}` },
     body: formData
   });
 
   const data = await res.json();
   if (res.ok) {
-    alert('Listing posted successfully!');
-    showPage('listings');
+    alert(isEditing ? 'Listing updated successfully!' : 'Listing posted successfully!');
+    resetListingForm();
+    showPage('dashboard');
   } else {
-    document.getElementById('post-error').textContent = data.message;
+    document.getElementById('post-error').textContent = data.message || 'Unable to save listing.';
   }
+}
+
+async function deleteListing(listingId) {
+  const confirmed = window.confirm('Delete this listing? This action cannot be undone.');
+  if (!confirmed) return;
+
+  const res = await fetch(`/api/listings/${listingId}`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${getToken()}` }
+  });
+
+  const data = await res.json();
+  if (!res.ok) {
+    alert(data.message || 'Unable to delete listing.');
+    return;
+  }
+
+  if (editingListingId === listingId) {
+    resetListingForm();
+  }
+
+  loadOwnerDashboard();
 }
 
 async function calculateDistance(listingId) {
@@ -532,10 +738,27 @@ async function deleteReview(reviewId, listingId) {
   }
 }
 
+function bootFromPath() {
+  const path = window.location.pathname;
+  if (path === '/dashboard') {
+    showPage('dashboard', { updateHistory: false, replaceHistory: true });
+    return;
+  }
+
+  showPage('home', { updateHistory: false, replaceHistory: true });
+}
+
 updateNav();
+resetListingForm();
 loadFeaturedListings();
+bootFromPath();
+
 window.addEventListener('resize', () => {
   if (window.innerWidth > 768) {
     closeMenu();
   }
+});
+
+window.addEventListener('popstate', () => {
+  bootFromPath();
 });

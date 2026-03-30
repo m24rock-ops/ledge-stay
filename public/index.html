@@ -30,7 +30,8 @@
         <a href="#" onclick="showPage('register')">Register</a>
       </span>
       <span id="nav-user" style="display:none">
-        <a href="#" onclick="showPage('post')">Post Listing</a>
+        <a href="#" id="nav-dashboard-link" onclick="showPage('dashboard')">Dashboard</a>
+        <a href="#" id="nav-post-link" onclick="showPage('post')">Post Listing</a>
         <a href="#" onclick="logout()">Logout</a>
       </span>
     </div>
@@ -122,7 +123,7 @@
 
   <div id="page-post" class="page" style="display:none">
     <div class="form-box wide">
-      <h2>Post a Listing</h2>
+      <h2 id="post-form-title">Post a Listing</h2>
       <input type="text" id="post-title" placeholder="Title (e.g. Spacious PG in Koramangala)">
       <select id="post-type">
         <option value="pg">PG</option>
@@ -140,10 +141,46 @@
       </select>
       <textarea id="post-description" placeholder="Description"></textarea>
       <input type="text" id="post-amenities" placeholder="Amenities (comma separated e.g. WiFi, AC, Food)">
+      <label class="checkbox-field">
+        <input type="checkbox" id="post-available" checked>
+        <span>Available for booking</span>
+      </label>
+      <label class="checkbox-field">
+        <input type="checkbox" id="post-featured">
+        <span>Mark as featured</span>
+      </label>
       <input type="file" id="post-photos" multiple accept="image/*">
-      <button onclick="postListing()">Post Listing</button>
+      <button id="post-submit-button" onclick="saveListing()">Post Listing</button>
       <p id="post-error" class="error"></p>
     </div>
+  </div>
+
+  <div id="page-dashboard" class="page" style="display:none">
+    <section class="dashboard-page">
+      <div class="dashboard-header">
+        <div>
+          <p class="section-label">Owner Dashboard</p>
+          <h2>Manage your listings</h2>
+          <p class="dashboard-copy">Track all your properties, update details, and keep availability current.</p>
+        </div>
+        <button class="dashboard-add-button" onclick="openCreateListingForm()">Add New Listing</button>
+      </div>
+
+      <div class="dashboard-summary-grid">
+        <article class="dashboard-summary-card">
+          <p>Total Listings</p>
+          <h3 id="dashboard-total-listings">0</h3>
+        </article>
+        <article class="dashboard-summary-card">
+          <p>Total Enquiries</p>
+          <h3 id="dashboard-total-enquiries">0</h3>
+        </article>
+      </div>
+
+      <div id="dashboard-listings" class="dashboard-listings">
+        <div class="dashboard-empty">Loading your listings...</div>
+      </div>
+    </section>
   </div>
 
   <div id="page-detail" class="page" style="display:none">

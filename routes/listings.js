@@ -36,6 +36,25 @@ router.get('/', async (req, res) => {
   }
 });
 
+// Get dashboard listings for the logged-in owner
+router.get('/mine', auth, async (req, res) => {
+  try {
+    if (req.user.role !== 'owner') {
+      return res.status(403).json({ message: 'Only owners can access the dashboard' });
+    }
+
+    const listings = await Listing.find({ owner: req.user.id }).sort({ createdAt: -1 });
+    const summary = {
+      totalListings: listings.length,
+      totalEnquiries: listings.reduce((sum, listing) => sum + Number(listing.enquiryCount || 0), 0)
+    };
+
+    res.json({ summary, listings });
+  } catch (err) {
+    res.status(500).json({ message: 'Server error', error: err.message });
+  }
+});
+
 // Get single listing
 router.get('/:id', async (req, res) => {
   try {
