@@ -770,7 +770,7 @@ async function showDetail(id) {
       <div class="price">Rs ${Number(listing.price).toLocaleString()}/month</div>
       <p>${listing.address}, ${listing.city}</p>
       <p>Type: ${listing.type.toUpperCase()} | Gender: ${listing.gender}</p>
-      <p>Owner: ${listing.owner.name} - ${listing.owner.email}</p>
+      <p>Owner: ${listing.owner.name  || "unknown"} - ${listing.owner.email || "unknown"}</p>
       ${renderWishlistButton(listing, { detail: true })}
       ${listing.amenities && listing.amenities.length > 0 ? `<p>Amenities: ${listing.amenities.join(', ')}</p>` : ''}
       ${listing.description ? `<p>${listing.description}</p>` : ''}
