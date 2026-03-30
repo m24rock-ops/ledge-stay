@@ -1,4 +1,4 @@
-const API = '';
+const BASE_URL = 'http://localhost:3000';
 const ROUTE_PATHS = {
   home: '/',
   dashboard: '/dashboard'
@@ -131,6 +131,39 @@ function renderListingImage(listing, altText) {
   return '<div class="no-image">Home</div>';
 }
 
+function apiUrl(path) {
+  if (/^https?:\/\//i.test(path)) return path;
+  return `${BASE_URL}${path}`;
+}
+
+async function readJsonSafely(response) {
+  const rawText = await response.text();
+  if (!rawText) {
+    return { data: null, rawText: '' };
+  }
+
+  try {
+    return { data: JSON.parse(rawText), rawText };
+  } catch (err) {
+    return { data: null, rawText };
+  }
+}
+
+async function apiFetchJson(path, options = {}) {
+  const response = await fetch(apiUrl(path), options);
+  const { data, rawText } = await readJsonSafely(response);
+
+  if (!response.ok) {
+    throw new Error(data?.message || `API error ${response.status}`);
+  }
+
+  if (data === null) {
+    throw new Error(rawText ? 'Invalid JSON response from server.' : 'Empty response from server.');
+  }
+
+  return data;
+}
+
 function resetListingForm() {
   editingListingId = null;
   document.getElementById('post-form-title').textContent = 'Post a Listing';
@@ -173,16 +206,14 @@ function openCreateListingForm() {
 }
 
 async function openEditListingForm(listingId) {
-  const res = await fetch(`/api/listings/${listingId}`);
-  const listing = await res.json();
-
-  if (!res.ok) {
-    alert(listing.message || 'Unable to load this listing.');
+  try {
+    const listing = await apiFetchJson(`/api/listings/${listingId}`);
+    populateListingForm(listing);
+    showPage('post', { skipReset: true });
+  } catch (err) {
+    alert(err.message || 'Unable to load this listing.');
     return;
   }
-
-  populateListingForm(listing);
-  showPage('post', { skipReset: true });
 }
 
 async function loadFeaturedListings() {
@@ -192,13 +223,7 @@ async function loadFeaturedListings() {
   featuredGrid.innerHTML = '<div class="featured-empty">Loading featured listings...</div>';
 
   try {
-    const res = await fetch('/api/listings?featured=true&limit=6');
-    const listings = await res.json();
-
-    if (!res.ok) {
-      featuredGrid.innerHTML = '<div class="featured-empty">Unable to load featured listings right now.</div>';
-      return;
-    }
+    const listings = await apiFetchJson('/api/listings?featured=true&limit=6');
 
     if (!Array.isArray(listings) || listings.length === 0) {
       featuredGrid.innerHTML = '<div class="featured-empty">No featured listings yet. Add <code>is_featured: true</code> to a listing to highlight it here.</div>';
@@ -242,39 +267,43 @@ async function loadListings() {
   if (maxPrice) query.append('maxPrice', maxPrice);
   if (sort) query.append('sort', sort);
 
-  const res = await fetch(`/api/listings?${query.toString()}`);
-  const listings = await res.json();
   const grid = document.getElementById('listings-grid');
 
-  if (!Array.isArray(listings) || listings.length === 0) {
-    grid.innerHTML = '<p style="padding:20px;color:#888">No listings found.</p>';
-    return;
-  }
+  try {
+    const listings = await apiFetchJson(`/api/listings?${query.toString()}`);
 
-  grid.innerHTML = listings.map((listing) => `
-    <div class="listing-card" onclick="showDetail('${listing._id}')">
-      ${renderListingImage(listing, listing.title)}
-      <div class="card-body">
-        <h3>${listing.title}</h3>
-        <div class="price">Rs ${Number(listing.price).toLocaleString()}/mo</div>
-        <div class="meta">${listing.address}, ${listing.city}</div>
-        <div>
-          <span class="badge">${listing.type.toUpperCase()}</span>
-          <span class="badge">${listing.gender}</span>
+    if (!Array.isArray(listings) || listings.length === 0) {
+      grid.innerHTML = '<p style="padding:20px;color:#888">No listings found.</p>';
+      return;
+    }
+
+    grid.innerHTML = listings.map((listing) => `
+      <div class="listing-card" onclick="showDetail('${listing._id}')">
+        ${renderListingImage(listing, listing.title)}
+        <div class="card-body">
+          <h3>${listing.title}</h3>
+          <div class="price">Rs ${Number(listing.price).toLocaleString()}/mo</div>
+          <div class="meta">${listing.address}, ${listing.city}</div>
+          <div>
+            <span class="badge">${listing.type.toUpperCase()}</span>
+            <span class="badge">${listing.gender}</span>
+          </div>
+          ${listing.owner?.phone ? `
+            <a
+              href="https://wa.me/91${listing.owner.phone}?text=Hi, I am interested in your listing: ${encodeURIComponent(listing.title)}"
+              target="_blank"
+              onclick="event.stopPropagation()"
+              style="display:inline-block;margin-top:10px;padding:8px 16px;background:#25D366;color:white;border-radius:8px;text-decoration:none;font-size:13px;font-weight:600"
+            >
+              WhatsApp Owner
+            </a>
+          ` : ''}
         </div>
-        ${listing.owner?.phone ? `
-          <a
-            href="https://wa.me/91${listing.owner.phone}?text=Hi, I am interested in your listing: ${encodeURIComponent(listing.title)}"
-            target="_blank"
-            onclick="event.stopPropagation()"
-            style="display:inline-block;margin-top:10px;padding:8px 16px;background:#25D366;color:white;border-radius:8px;text-decoration:none;font-size:13px;font-weight:600"
-          >
-            WhatsApp Owner
-          </a>
-        ` : ''}
       </div>
-    </div>
-  `).join('');
+    `).join('');
+  } catch (err) {
+    grid.innerHTML = `<p style="padding:20px;color:#c0392b">${err.message || 'Unable to load listings.'}</p>`;
+  }
 }
 
 async function loadOwnerDashboard() {
@@ -285,15 +314,9 @@ async function loadOwnerDashboard() {
   dashboardList.innerHTML = '<div class="dashboard-empty">Loading your listings...</div>';
 
   try {
-    const res = await fetch('/api/listings/mine', {
+    const data = await apiFetchJson('/api/listings/mine', {
       headers: { Authorization: `Bearer ${getToken()}` }
     });
-    const data = await res.json();
-
-    if (!res.ok) {
-      dashboardList.innerHTML = `<div class="dashboard-empty">${data.message || 'Unable to load your dashboard right now.'}</div>`;
-      return;
-    }
 
     document.getElementById('dashboard-total-listings').textContent = data.summary.totalListings;
     document.getElementById('dashboard-total-enquiries').textContent = data.summary.totalEnquiries;
@@ -335,11 +358,11 @@ async function loadOwnerDashboard() {
 }
 
 async function showDetail(id) {
-  const res = await fetch(`/api/listings/${id}`);
-  const listing = await res.json();
-  selectedReviewRating = 0;
+  try {
+    const listing = await apiFetchJson(`/api/listings/${id}`);
+    selectedReviewRating = 0;
 
-  document.getElementById('detail-content').innerHTML = `
+    document.getElementById('detail-content').innerHTML = `
     <div class="detail-photos">
       ${listing.photos && listing.photos.length > 0
         ? listing.photos.map((photo) => `<img src="${photo}" alt="Listing photo">`).join('')
@@ -390,8 +413,11 @@ async function showDetail(id) {
     </div>
   `;
 
-  loadReviews(id);
-  showPage('detail', { updateHistory: true });
+    loadReviews(id);
+    showPage('detail', { updateHistory: true });
+  } catch (err) {
+    alert(err.message || 'Unable to load the listing.');
+  }
 }
 
 async function register() {
@@ -400,42 +426,46 @@ async function register() {
   const password = document.getElementById('reg-password').value;
   const role = document.getElementById('reg-role').value;
   const phone = document.getElementById('reg-phone').value;
+  const errorField = document.getElementById('reg-error');
 
-  const res = await fetch('/api/auth/register', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name, email, password, role, phone })
-  });
+  errorField.textContent = '';
 
-  const data = await res.json();
-  if (res.ok) {
+  try {
+    const data = await apiFetchJson('/api/auth/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, email, password, role, phone })
+    });
+
     localStorage.setItem('token', data.token);
     localStorage.setItem('user', JSON.stringify(data.user));
     updateNav();
     showPage(data.user.role === 'owner' ? 'dashboard' : 'listings');
-  } else {
-    document.getElementById('reg-error').textContent = data.message;
+  } catch (err) {
+    errorField.textContent = err.message || 'Unable to register right now.';
   }
 }
 
 async function login() {
   const email = document.getElementById('login-email').value;
   const password = document.getElementById('login-password').value;
+  const errorField = document.getElementById('login-error');
 
-  const res = await fetch('/api/auth/login', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email, password })
-  });
+  errorField.textContent = '';
 
-  const data = await res.json();
-  if (res.ok) {
+  try {
+    const data = await apiFetchJson('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password })
+    });
+
     localStorage.setItem('token', data.token);
     localStorage.setItem('user', JSON.stringify(data.user));
     updateNav();
     showPage(data.user.role === 'owner' ? 'dashboard' : 'listings');
-  } else {
-    document.getElementById('login-error').textContent = data.message;
+  } catch (err) {
+    errorField.textContent = err.message || 'Unable to login right now.';
   }
 }
 
@@ -487,19 +517,18 @@ async function saveListing() {
   const endpoint = isEditing ? `/api/listings/${editingListingId}` : '/api/listings';
   const method = isEditing ? 'PUT' : 'POST';
 
-  const res = await fetch(endpoint, {
-    method,
-    headers: { Authorization: `Bearer ${getToken()}` },
-    body: formData
-  });
+  try {
+    await apiFetchJson(endpoint, {
+      method,
+      headers: { Authorization: `Bearer ${getToken()}` },
+      body: formData
+    });
 
-  const data = await res.json();
-  if (res.ok) {
     alert(isEditing ? 'Listing updated successfully!' : 'Listing posted successfully!');
     resetListingForm();
     showPage('dashboard');
-  } else {
-    document.getElementById('post-error').textContent = data.message || 'Unable to save listing.';
+  } catch (err) {
+    document.getElementById('post-error').textContent = err.message || 'Unable to save listing.';
   }
 }
 
@@ -507,14 +536,13 @@ async function deleteListing(listingId) {
   const confirmed = window.confirm('Delete this listing? This action cannot be undone.');
   if (!confirmed) return;
 
-  const res = await fetch(`/api/listings/${listingId}`, {
-    method: 'DELETE',
-    headers: { Authorization: `Bearer ${getToken()}` }
-  });
-
-  const data = await res.json();
-  if (!res.ok) {
-    alert(data.message || 'Unable to delete listing.');
+  try {
+    await apiFetchJson(`/api/listings/${listingId}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${getToken()}` }
+    });
+  } catch (err) {
+    alert(err.message || 'Unable to delete listing.');
     return;
   }
 
@@ -537,19 +565,14 @@ async function calculateDistance(listingId) {
   button.disabled = true;
 
   try {
-    const res = await fetch(`/api/listings/${listingId}/distance?from=${encodeURIComponent(from)}`);
-    const data = await res.json();
-    if (res.ok) {
-      document.getElementById('distance-result').innerHTML = `
-        <div class="distance-result-card">
-          <strong>${data.distanceKm} km</strong> away - approximately <strong>${data.durationMin} minutes</strong> by car
-        </div>
-      `;
-    } else {
-      document.getElementById('distance-result').innerHTML = `<p style="color:red">${data.message}</p>`;
-    }
+    const data = await apiFetchJson(`/api/listings/${listingId}/distance?from=${encodeURIComponent(from)}`);
+    document.getElementById('distance-result').innerHTML = `
+      <div class="distance-result-card">
+        <strong>${data.distanceKm} km</strong> away - approximately <strong>${data.durationMin} minutes</strong> by car
+      </div>
+    `;
   } catch (err) {
-    document.getElementById('distance-result').innerHTML = '<p style="color:red">Error calculating distance</p>';
+    document.getElementById('distance-result').innerHTML = `<p style="color:red">${err.message || 'Error calculating distance'}</p>`;
   }
 
   button.textContent = 'Calculate Distance';
@@ -563,13 +586,7 @@ async function loadReviews(listingId) {
   container.innerHTML = '<div class="reviews-loading">Loading reviews...</div>';
 
   try {
-    const res = await fetch(`/api/reviews?listingId=${encodeURIComponent(listingId)}`);
-    const data = await res.json();
-
-    if (!res.ok) {
-      container.innerHTML = `<div class="review-error-box">${data.message || 'Unable to load reviews right now.'}</div>`;
-      return;
-    }
+    const data = await apiFetchJson(`/api/reviews?listingId=${encodeURIComponent(listingId)}`);
 
     const user = getUser();
     const reviews = Array.isArray(data.reviews) ? data.reviews : [];
@@ -709,32 +726,32 @@ async function submitReview(listingId) {
     return;
   }
 
-  const res = await fetch('/api/reviews', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${getToken()}`
-    },
-    body: JSON.stringify({ listingId, rating, comment })
-  });
+  try {
+    await apiFetchJson('/api/reviews', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${getToken()}`
+      },
+      body: JSON.stringify({ listingId, rating, comment })
+    });
 
-  if (res.ok) {
     selectedReviewRating = 0;
     loadReviews(listingId);
-  } else {
-    const data = await res.json();
-    errorField.textContent = data.message || 'Unable to submit review.';
+  } catch (err) {
+    errorField.textContent = err.message || 'Unable to submit review.';
   }
 }
 
 async function deleteReview(reviewId, listingId) {
-  const res = await fetch(`/api/reviews/${reviewId}`, {
-    method: 'DELETE',
-    headers: { Authorization: `Bearer ${getToken()}` }
-  });
-
-  if (res.ok) {
+  try {
+    await apiFetchJson(`/api/reviews/${reviewId}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${getToken()}` }
+    });
     loadReviews(listingId);
+  } catch (err) {
+    alert(err.message || 'Unable to delete review.');
   }
 }
 

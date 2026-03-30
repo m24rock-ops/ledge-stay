@@ -18,6 +18,8 @@ app.get('/dashboard', (req, res) => {
 
 // Routes
 app.use('/api/auth', require('./routes/auth'));
+app.use('/api', require('./routes/auth'));
+app.use('/', require('./routes/auth'));
 app.use('/api/listings', require('./routes/listings'));
 app.use('/api/reviews', require('./routes/reviews'));
 
