@@ -23,16 +23,16 @@
       <span></span>
     </button>
     <div class="nav-links" id="nav-links">
-      <a href="#" onclick="showPage('home')">Home</a>
-      <a href="#" onclick="showPage('listings')">Browse</a>
+      <a href="/" data-page-link="home">Home</a>
+      <a href="/browse" data-page-link="browse">Browse</a>
       <span id="nav-auth">
-        <a href="#" onclick="showPage('login')">Login</a>
-        <a href="#" onclick="showPage('register')">Register</a>
+        <a href="/login" data-page-link="login">Login</a>
+        <a href="/register" data-page-link="register">Register</a>
       </span>
       <span id="nav-user" style="display:none">
-        <a href="#" id="nav-dashboard-link" onclick="showPage('dashboard')">Dashboard</a>
-        <a href="#" id="nav-post-link" onclick="showPage('post')">Post Listing</a>
-        <a href="#" onclick="logout()">Logout</a>
+        <a href="/dashboard" id="nav-dashboard-link" data-page-link="dashboard">Dashboard</a>
+        <a href="/post" id="nav-post-link" data-page-link="post">Post Listing</a>
+        <a href="/" data-action-link="logout">Logout</a>
       </span>
     </div>
   </nav>

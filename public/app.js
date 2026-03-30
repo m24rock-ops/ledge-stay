@@ -1,5 +1,10 @@
 const ROUTE_PATHS = {
   home: '/',
+  browse: '/browse',
+  listings: '/browse',
+  login: '/login',
+  register: '/register',
+  post: '/post',
   dashboard: '/dashboard'
 };
 
@@ -10,8 +15,16 @@ window.addEventListener('unhandledrejection', (event) => {
 let selectedReviewRating = 0;
 let editingListingId = null;
 
+function normalizePageName(page) {
+  const aliases = {
+    browse: 'listings'
+  };
+
+  return aliases[page] || page;
+}
+
 function resolvePathForPage(page) {
-  return ROUTE_PATHS[page] || '/';
+  return ROUTE_PATHS[normalizePageName(page)] || '/';
 }
 
 function navigateToPath(page, replace = false) {
@@ -27,13 +40,14 @@ function navigateToPath(page, replace = false) {
 
 function showPage(page, options = {}) {
   const { updateHistory = true, replaceHistory = false, skipReset = false } = options;
+  const normalizedPage = normalizePageName(page);
   closeMenu();
 
-  if (!ensurePageAccess(page)) {
+  if (!ensurePageAccess(normalizedPage)) {
     return;
   }
 
-  if (page === 'post' && !skipReset && !editingListingId) {
+  if (normalizedPage === 'post' && !skipReset && !editingListingId) {
     resetListingForm();
   }
 
@@ -41,16 +55,16 @@ function showPage(page, options = {}) {
     section.style.display = 'none';
   });
 
-  const activePage = document.getElementById(`page-${page}`);
+  const activePage = document.getElementById(`page-${normalizedPage}`);
   if (activePage) activePage.style.display = 'block';
 
   if (updateHistory) {
-    navigateToPath(page, replaceHistory);
+    navigateToPath(normalizedPage, replaceHistory);
   }
 
-  if (page === 'listings') loadListings();
-  if (page === 'home') loadFeaturedListings();
-  if (page === 'dashboard') loadOwnerDashboard();
+  if (normalizedPage === 'listings') loadListings();
+  if (normalizedPage === 'home') loadFeaturedListings();
+  if (normalizedPage === 'dashboard') loadOwnerDashboard();
 }
 
 function ensurePageAccess(page) {
@@ -93,6 +107,23 @@ function updateNav() {
 
   if (dashboardLink) dashboardLink.style.display = user && user.role === 'owner' ? 'inline-flex' : 'none';
   if (postLink) postLink.style.display = user && user.role === 'owner' ? 'inline-flex' : 'none';
+}
+
+function attachNavbarListeners() {
+  document.querySelectorAll('[data-page-link]').forEach((link) => {
+    link.addEventListener('click', (event) => {
+      event.preventDefault();
+      const page = event.currentTarget.getAttribute('data-page-link');
+      showPage(page);
+    });
+  });
+
+  document.querySelectorAll('[data-action-link="logout"]').forEach((link) => {
+    link.addEventListener('click', (event) => {
+      event.preventDefault();
+      logout();
+    });
+  });
 }
 
 function toggleMenu() {
@@ -775,13 +806,36 @@ function bootFromPath() {
     return;
   }
 
+  if (path === '/browse') {
+    showPage('browse', { updateHistory: false, replaceHistory: true });
+    return;
+  }
+
+  if (path === '/login') {
+    showPage('login', { updateHistory: false, replaceHistory: true });
+    return;
+  }
+
+  if (path === '/register') {
+    showPage('register', { updateHistory: false, replaceHistory: true });
+    return;
+  }
+
+  if (path === '/post') {
+    showPage('post', { updateHistory: false, replaceHistory: true });
+    return;
+  }
+
   showPage('home', { updateHistory: false, replaceHistory: true });
 }
 
-updateNav();
-resetListingForm();
-loadFeaturedListings();
-bootFromPath();
+document.addEventListener('DOMContentLoaded', () => {
+  attachNavbarListeners();
+  updateNav();
+  resetListingForm();
+  loadFeaturedListings();
+  bootFromPath();
+});
 
 window.addEventListener('resize', () => {
   if (window.innerWidth > 768) {
