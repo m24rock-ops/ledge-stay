@@ -1,7 +1,6 @@
 const API = '';
 let selectedReviewRating = 0;
 
-// Show/hide pages
 function showPage(page) {
   closeMenu();
   document.querySelectorAll('.page').forEach((section) => {
@@ -11,9 +10,9 @@ function showPage(page) {
   const activePage = document.getElementById(`page-${page}`);
   if (activePage) activePage.style.display = 'block';
   if (page === 'listings') loadListings();
+  if (page === 'home') loadFeaturedListings();
 }
 
-// Auth state
 function getToken() {
   return localStorage.getItem('token');
 }
@@ -48,7 +47,6 @@ function closeMenu() {
   toggleButton.setAttribute('aria-expanded', 'false');
 }
 
-// Hero search
 function heroSearch() {
   const city = document.getElementById('hero-search').value;
   document.getElementById('filter-city').value = city;
@@ -60,7 +58,55 @@ function renderStars(rating) {
   return `${'★'.repeat(safeRating)}${'☆'.repeat(5 - safeRating)}`;
 }
 
-// Load listings
+function renderListingImage(listing, altText) {
+  if (listing.photos && listing.photos.length > 0) {
+    return `<img src="${listing.photos[0]}" alt="${altText}">`;
+  }
+
+  return '<div class="no-image">Home</div>';
+}
+
+async function loadFeaturedListings() {
+  const featuredGrid = document.getElementById('featured-grid');
+  if (!featuredGrid) return;
+
+  featuredGrid.innerHTML = '<div class="featured-empty">Loading featured listings...</div>';
+
+  try {
+    const res = await fetch('/api/listings?featured=true&limit=6');
+    const listings = await res.json();
+
+    if (!res.ok) {
+      featuredGrid.innerHTML = '<div class="featured-empty">Unable to load featured listings right now.</div>';
+      return;
+    }
+
+    if (!Array.isArray(listings) || listings.length === 0) {
+      featuredGrid.innerHTML = '<div class="featured-empty">No featured listings yet. Add <code>is_featured: true</code> to a listing to highlight it here.</div>';
+      return;
+    }
+
+    featuredGrid.innerHTML = listings.map((listing) => `
+      <article class="featured-card">
+        <div class="featured-image-wrap">
+          ${renderListingImage(listing, listing.title)}
+        </div>
+        <div class="featured-card-body">
+          <p class="featured-location">${listing.city}</p>
+          <h3>${listing.title}</h3>
+          <p class="featured-address">${listing.address}</p>
+          <div class="featured-card-footer">
+            <div class="featured-price">Rs ${Number(listing.price).toLocaleString()}/month</div>
+            <button class="featured-view-button" onclick="showDetail('${listing._id}')">View</button>
+          </div>
+        </div>
+      </article>
+    `).join('');
+  } catch (err) {
+    featuredGrid.innerHTML = '<div class="featured-empty">Unable to load featured listings right now.</div>';
+  }
+}
+
 async function loadListings() {
   const city = document.getElementById('filter-city').value;
   const type = document.getElementById('filter-type').value;
@@ -88,9 +134,7 @@ async function loadListings() {
 
   grid.innerHTML = listings.map((listing) => `
     <div class="listing-card" onclick="showDetail('${listing._id}')">
-      ${listing.photos && listing.photos.length > 0
-        ? `<img src="${listing.photos[0]}" alt="${listing.title}">`
-        : '<div class="no-image">Home</div>'}
+      ${renderListingImage(listing, listing.title)}
       <div class="card-body">
         <h3>${listing.title}</h3>
         <div class="price">Rs ${Number(listing.price).toLocaleString()}/mo</div>
@@ -114,7 +158,6 @@ async function loadListings() {
   `).join('');
 }
 
-// Show listing detail
 async function showDetail(id) {
   const res = await fetch(`/api/listings/${id}`);
   const listing = await res.json();
@@ -124,7 +167,7 @@ async function showDetail(id) {
     <div class="detail-photos">
       ${listing.photos && listing.photos.length > 0
         ? listing.photos.map((photo) => `<img src="${photo}" alt="Listing photo">`).join('')
-        : '<div class="no-image" style="height:300px;background:#f0f0f0;display:flex;align-items:center;justify-content:center;font-size:32px;border-radius:12px">No photo available</div>'}
+        : '<div class="no-image detail-no-image">No photo available</div>'}
     </div>
     <div class="detail-info">
       <h1>${listing.title}</h1>
@@ -136,14 +179,12 @@ async function showDetail(id) {
         <a
           href="https://wa.me/91${listing.owner.phone}?text=Hi, I am interested in your listing: ${encodeURIComponent(listing.title)}"
           target="_blank"
-          style="display:inline-block;margin-top:8px;padding:12px 24px;background:#25D366;color:white;border-radius:8px;text-decoration:none;font-weight:600"
+          class="contact-link"
         >
           Contact on WhatsApp
         </a>
       ` : ''}
-      ${listing.amenities && listing.amenities.length > 0
-        ? `<p>Amenities: ${listing.amenities.join(', ')}</p>`
-        : ''}
+      ${listing.amenities && listing.amenities.length > 0 ? `<p>Amenities: ${listing.amenities.join(', ')}</p>` : ''}
       ${listing.description ? `<p>${listing.description}</p>` : ''}
       <button onclick="showPage('listings')" class="back-button">Back</button>
 
@@ -177,7 +218,6 @@ async function showDetail(id) {
   showPage('detail');
 }
 
-// Register
 async function register() {
   const name = document.getElementById('reg-name').value;
   const email = document.getElementById('reg-email').value;
@@ -202,7 +242,6 @@ async function register() {
   }
 }
 
-// Login
 async function login() {
   const email = document.getElementById('login-email').value;
   const password = document.getElementById('login-password').value;
@@ -224,7 +263,6 @@ async function login() {
   }
 }
 
-// Logout
 function logout() {
   localStorage.removeItem('token');
   localStorage.removeItem('user');
@@ -233,7 +271,6 @@ function logout() {
   showPage('home');
 }
 
-// Post listing
 async function postListing() {
   const user = getUser();
   if (!user) {
@@ -298,7 +335,7 @@ async function calculateDistance(listingId) {
     const data = await res.json();
     if (res.ok) {
       document.getElementById('distance-result').innerHTML = `
-        <div style="background:#e8f5e9;padding:16px;border-radius:8px;margin-top:16px">
+        <div class="distance-result-card">
           <strong>${data.distanceKm} km</strong> away - approximately <strong>${data.durationMin} minutes</strong> by car
         </div>
       `;
@@ -495,8 +532,8 @@ async function deleteReview(reviewId, listingId) {
   }
 }
 
-// Init
 updateNav();
+loadFeaturedListings();
 window.addEventListener('resize', () => {
   if (window.innerWidth > 768) {
     closeMenu();

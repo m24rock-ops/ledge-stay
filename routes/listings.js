@@ -7,12 +7,13 @@ const { upload } = require('../middleware/cloudinary');
 // Get all listings (with search & filters)
 router.get('/', async (req, res) => {
   try {
-    const { city, type, gender, minPrice, maxPrice, sort } = req.query;
+    const { city, type, gender, minPrice, maxPrice, sort, featured, limit } = req.query;
     let query = { available: true };
 
     if (city) query.city = { $regex: city, $options: 'i' };
     if (type) query.type = type;
     if (gender) query.gender = gender;
+    if (featured === 'true') query.is_featured = true;
     if (minPrice || maxPrice) {
       query.price = {};
       if (minPrice) query.price.$gte = Number(minPrice);
@@ -23,8 +24,12 @@ router.get('/', async (req, res) => {
     if (sort === 'price_asc') sortOption.price = 1;
     if (sort === 'price_desc') sortOption.price = -1;
     if (sort === 'newest') sortOption.createdAt = -1;
+    if (featured === 'true' && !sort) sortOption.createdAt = -1;
 
-    const listings = await Listing.find(query).sort(sortOption).populate('owner', 'name email');
+    let listingQuery = Listing.find(query).sort(sortOption).populate('owner', 'name email');
+    if (limit) listingQuery = listingQuery.limit(Number(limit));
+
+    const listings = await listingQuery;
     res.json(listings);
   } catch (err) {
     res.status(500).json({ message: 'Server error', error: err.message });

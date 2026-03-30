@@ -11,6 +11,7 @@ const listingSchema = new mongoose.Schema({
   amenities: [String],
   photos: [String],
   description: { type: String },
+  is_featured: { type: Boolean, default: false },
   available: { type: Boolean, default: true }
 }, { timestamps: true });
 
