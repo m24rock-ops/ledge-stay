@@ -332,27 +332,10 @@ function buildGoogleMapEmbedUrl(listing) {
 }
 
 function renderMapSection(listing) {
-  const embedUrl = buildGoogleMapEmbedUrl(listing);
-  if (!embedUrl) return '';
-
   return `
     <section class="map-section">
-      <div class="map-section-header">
-        <div>
-          <h2>Location</h2>
-          <p class="reviews-subtitle">See where this property sits before you decide to enquire or visit.</p>
-        </div>
-      </div>
-      <div class="map-frame-wrap">
-        <iframe
-          class="listing-map-frame"
-          src="${embedUrl}"
-          loading="lazy"
-          allowfullscreen
-          referrerpolicy="no-referrer-when-downgrade"
-          title="Map showing ${escapeHtml(listing.title)}"
-        ></iframe>
-      </div>
+      <h2>Location</h2>
+      <div id="map" style="height:400px;"></div>
     </section>
   `;
 }
@@ -872,11 +855,21 @@ async function showDetail(id) {
   `;
 
     loadReviews(id);
-    showPage('detail', { updateHistory: true });
-  } catch (err) {
-    alert(err.message || 'Unable to load the listing.');
-  }
-}
+    setTimeout(() => {
+  if (!document.getElementById('map')) return;
+
+  var map = L.map('map').setView([12.9716, 77.5946], 13);
+
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; OpenStreetMap contributors'
+  }).addTo(map);
+
+  L.marker([12.9716, 77.5946])
+    .addTo(map)
+    .bindPopup('📍 Location')
+    .openPopup();
+
+}, 300);
 
 async function register() {
   console.log('register called');
