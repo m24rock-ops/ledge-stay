@@ -3,6 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <title>Ledge Stay</title>
   <link rel="stylesheet" href="style.css">
 </head>
@@ -46,9 +49,11 @@
         <h1>Find a place that feels easy from day one.</h1>
         <p class="hero-copy">Browse handpicked PGs, hostels, apartments, and rooms with the essentials already in place.</p>
         <div class="search-bar hero-search-bar">
-          <input type="text" id="hero-search" placeholder="Search by city...">
+          <input type="text" id="hero-search" placeholder="Location (city)...">
+          <input type="number" id="hero-budget" placeholder="Budget (Rs/month)" min="0" step="100">
           <button onclick="heroSearch()">Search stays</button>
         </div>
+        <button class="hero-cta" onclick="showPage('listings')">Browse featured stays</button>
       </div>
     </div>
 

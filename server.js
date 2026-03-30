@@ -22,8 +22,6 @@ app.use('/uploads', express.static(path.join(__dirname, 'public/uploads')));
 
 // Routes
 app.use('/api/auth', require('./routes/auth'));
-app.use('/api', require('./routes/auth'));
-app.use('/', require('./routes/auth'));
 app.use('/api/listings', require('./routes/listings'));
 app.use('/api/reviews', require('./routes/reviews'));
 app.use('/api/wishlist', require('./routes/wishlist'));
@@ -37,8 +35,9 @@ app.get('/api/config', (req, res) => {
   });
 });
 
+// Catch-all for ALL non-API routes (SPA entrypoint)
 app.get(/^\/(?!api).*/, (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+  return res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
 // Connect to MongoDB
