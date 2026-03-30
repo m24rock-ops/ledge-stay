@@ -32,6 +32,7 @@
       <span id="nav-user" style="display:none">
         <a href="/wishlist" id="nav-wishlist-link" data-page-link="wishlist">Saved Listings</a>
         <a href="/dashboard" id="nav-dashboard-link" data-page-link="dashboard">Dashboard</a>
+        <a href="/admin" id="nav-admin-link" data-page-link="admin">Admin</a>
         <a href="/post" id="nav-post-link" data-page-link="post">Post Listing</a>
         <a href="/" data-action-link="logout">Logout</a>
       </span>
@@ -189,6 +190,20 @@
       <section class="dashboard-enquiries-section">
         <div class="dashboard-header dashboard-subheader">
           <div>
+            <p class="section-label">Notifications</p>
+            <h2>Listing updates</h2>
+            <p class="dashboard-copy">See when your listings are approved or rejected by an admin.</p>
+          </div>
+        </div>
+
+        <div id="dashboard-notifications-list" class="dashboard-enquiries-list">
+          <div class="dashboard-empty">Loading notifications...</div>
+        </div>
+      </section>
+
+      <section class="dashboard-enquiries-section">
+        <div class="dashboard-header dashboard-subheader">
+          <div>
             <p class="section-label">Enquiries</p>
             <h2>Messages from tenants</h2>
             <p class="dashboard-copy">Review incoming questions and keep track of which ones still need a reply.</p>
@@ -197,6 +212,61 @@
 
         <div id="dashboard-enquiries-list" class="dashboard-enquiries-list">
           <div class="dashboard-empty">Loading enquiries...</div>
+        </div>
+      </section>
+    </section>
+  </div>
+
+  <div id="page-admin" class="page" style="display:none">
+    <section class="dashboard-page">
+      <div class="dashboard-header">
+        <div>
+          <p class="section-label">Admin Panel</p>
+          <h2>Review property listings</h2>
+          <p class="dashboard-copy">Approve trusted listings, reject incomplete ones, and keep a clear moderation trail.</p>
+        </div>
+      </div>
+
+      <div class="admin-filter-bar">
+        <button class="admin-filter-button is-active" data-admin-filter="all" onclick="loadAdminPanel('all')">All</button>
+        <button class="admin-filter-button" data-admin-filter="pending" onclick="loadAdminPanel('pending')">Pending</button>
+        <button class="admin-filter-button" data-admin-filter="approved" onclick="loadAdminPanel('approved')">Approved</button>
+        <button class="admin-filter-button" data-admin-filter="rejected" onclick="loadAdminPanel('rejected')">Rejected</button>
+      </div>
+
+      <div id="admin-summary-grid" class="dashboard-summary-grid">
+        <article class="dashboard-summary-card">
+          <p>All Listings</p>
+          <h3 id="admin-count-all">0</h3>
+        </article>
+        <article class="dashboard-summary-card">
+          <p>Pending</p>
+          <h3 id="admin-count-pending">0</h3>
+        </article>
+        <article class="dashboard-summary-card">
+          <p>Approved</p>
+          <h3 id="admin-count-approved">0</h3>
+        </article>
+        <article class="dashboard-summary-card">
+          <p>Rejected</p>
+          <h3 id="admin-count-rejected">0</h3>
+        </article>
+      </div>
+
+      <div id="admin-listings" class="dashboard-listings">
+        <div class="dashboard-empty">Loading listings...</div>
+      </div>
+
+      <section class="dashboard-enquiries-section">
+        <div class="dashboard-header dashboard-subheader">
+          <div>
+            <p class="section-label">Action Log</p>
+            <h2>Recent moderation activity</h2>
+            <p class="dashboard-copy">Every approval and rejection is recorded here with the admin and timestamp.</p>
+          </div>
+        </div>
+        <div id="admin-action-log" class="dashboard-enquiries-list">
+          <div class="dashboard-empty">Loading admin activity...</div>
         </div>
       </section>
     </section>

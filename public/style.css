@@ -584,6 +584,21 @@ nav {
   color: #b7791f;
 }
 
+.dashboard-chip.is-status-pending {
+  background: #fff4db;
+  color: #b7791f;
+}
+
+.dashboard-chip.is-status-approved {
+  background: #e8f7ee;
+  color: #0f8a4b;
+}
+
+.dashboard-chip.is-status-rejected {
+  background: #fff1f0;
+  color: #c0392b;
+}
+
 .dashboard-chip.is-read {
   background: #eef2f6;
   color: #475467;
@@ -695,6 +710,35 @@ nav {
   line-height: 1.7;
   color: #344054;
   overflow-wrap: anywhere;
+}
+
+.dashboard-status-note {
+  margin-top: 10px;
+  color: #b54708;
+  line-height: 1.6;
+}
+
+.admin-filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 24px;
+}
+
+.admin-filter-button {
+  min-height: 40px;
+  padding: 10px 16px;
+  border: 1px solid #efb1a8;
+  border-radius: 999px;
+  background: #fff;
+  color: #e74c3c;
+}
+
+.admin-filter-button.is-active,
+.admin-approve-button {
+  background: #e74c3c;
+  color: #fff;
+  border-color: #e74c3c;
 }
 
 #page-detail { padding: 32px; max-width: 800px; margin: 0 auto; }
@@ -1155,6 +1199,10 @@ nav {
 
   .dashboard-enquiry-status-wrap {
     justify-content: flex-start;
+  }
+
+  .admin-filter-button {
+    width: 100%;
   }
 
   .listings-grid {

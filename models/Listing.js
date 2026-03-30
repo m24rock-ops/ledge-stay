@@ -13,7 +13,15 @@ const listingSchema = new mongoose.Schema({
   description: { type: String },
   enquiryCount: { type: Number, default: 0 },
   is_featured: { type: Boolean, default: false },
-  available: { type: Boolean, default: true }
+  available: { type: Boolean, default: true },
+  approvalStatus: {
+    type: String,
+    enum: ['pending', 'approved', 'rejected'],
+    default: 'pending'
+  },
+  rejectionNote: { type: String, default: '' },
+  reviewedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+  reviewedAt: { type: Date, default: null }
 }, { timestamps: true });
 
 module.exports = mongoose.model('Listing', listingSchema);

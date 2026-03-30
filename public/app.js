@@ -6,7 +6,8 @@ const ROUTE_PATHS = {
   login: '/login',
   register: '/register',
   post: '/post',
-  dashboard: '/dashboard'
+  dashboard: '/dashboard',
+  admin: '/admin'
 };
 
 window.addEventListener('unhandledrejection', (event) => {
@@ -67,6 +68,7 @@ function showPage(page, options = {}) {
   if (normalizedPage === 'listings') loadListings();
   if (normalizedPage === 'home') loadFeaturedListings();
   if (normalizedPage === 'dashboard') loadOwnerDashboard();
+  if (normalizedPage === 'admin') loadAdminPanel();
   if (normalizedPage === 'wishlist') loadWishlistPage();
 }
 
@@ -101,6 +103,20 @@ function ensurePageAccess(page) {
     }
   }
 
+  if (page === 'admin') {
+    if (!user) {
+      document.getElementById('login-error').textContent = 'Please login as an admin to continue.';
+      showPage('login', { updateHistory: true, replaceHistory: true });
+      return false;
+    }
+
+    if (user.role !== 'admin') {
+      alert('Only admins can access this section.');
+      showPage('home', { updateHistory: true, replaceHistory: true });
+      return false;
+    }
+  }
+
   return true;
 }
 
@@ -119,6 +135,7 @@ function updateNav() {
   const wishlistLink = document.getElementById('nav-wishlist-link');
   const dashboardLink = document.getElementById('nav-dashboard-link');
   const postLink = document.getElementById('nav-post-link');
+  const adminLink = document.getElementById('nav-admin-link');
 
   navAuth.style.display = user ? 'none' : 'inline-flex';
   navUser.style.display = user ? 'inline-flex' : 'none';
@@ -126,6 +143,7 @@ function updateNav() {
   if (wishlistLink) wishlistLink.style.display = user && user.role === 'tenant' ? 'inline-flex' : 'none';
   if (dashboardLink) dashboardLink.style.display = user && user.role === 'owner' ? 'inline-flex' : 'none';
   if (postLink) postLink.style.display = user && user.role === 'owner' ? 'inline-flex' : 'none';
+  if (adminLink) adminLink.style.display = user && user.role === 'admin' ? 'inline-flex' : 'none';
 }
 
 function attachNavbarListeners() {
@@ -432,6 +450,39 @@ function renderDashboardEnquiries(enquiries = [], unreadCount = 0) {
   }
 }
 
+function renderOwnerNotifications(notifications = []) {
+  const container = document.getElementById('dashboard-notifications-list');
+  if (!container) return;
+
+  if (!Array.isArray(notifications) || notifications.length === 0) {
+    container.innerHTML = '<div class="dashboard-empty">No admin updates yet. Listing approvals and rejections will appear here.</div>';
+    return;
+  }
+
+  container.innerHTML = notifications.map((notification) => `
+    <article class="dashboard-enquiry-card ${notification.isRead ? 'is-read' : 'is-unread'}">
+      <div class="dashboard-enquiry-top">
+        <div>
+          <p class="dashboard-enquiry-listing">${escapeHtml(notification.title)}</p>
+          <h3>${escapeHtml(notification.listing?.title || 'Listing update')}</h3>
+          <p class="dashboard-enquiry-meta">${new Date(notification.createdAt).toLocaleDateString()}</p>
+        </div>
+        <div class="dashboard-enquiry-status-wrap">
+          <span class="dashboard-chip ${notification.isRead ? 'is-read' : 'is-unread'}">${notification.isRead ? 'Seen' : 'New'}</span>
+          ${notification.isRead ? '' : `<button class="dashboard-action-button" onclick="markNotificationRead('${notification._id}')">Mark as read</button>`}
+        </div>
+      </div>
+      <p class="dashboard-enquiry-message">${escapeHtml(notification.message)}</p>
+    </article>
+  `).join('');
+}
+
+function renderApprovalChip(status) {
+  const normalizedStatus = status || 'pending';
+  const label = normalizedStatus.charAt(0).toUpperCase() + normalizedStatus.slice(1);
+  return `<div class="dashboard-chip is-status-${normalizedStatus}">${label}</div>`;
+}
+
 function populateListingForm(listing) {
   editingListingId = listing._id;
   document.getElementById('post-form-title').textContent = 'Edit Listing';
@@ -557,15 +608,20 @@ async function loadOwnerDashboard() {
 
   dashboardList.innerHTML = '<div class="dashboard-empty">Loading your listings...</div>';
   const enquiryList = document.getElementById('dashboard-enquiries-list');
+  const notificationList = document.getElementById('dashboard-notifications-list');
   if (enquiryList) {
     enquiryList.innerHTML = '<div class="dashboard-empty">Loading enquiries...</div>';
+  }
+  if (notificationList) {
+    notificationList.innerHTML = '<div class="dashboard-empty">Loading notifications...</div>';
   }
 
   try {
     const headers = { Authorization: `Bearer ${getToken()}` };
-    const [listingData, enquiryData] = await Promise.all([
+    const [listingData, enquiryData, notificationData] = await Promise.all([
       apiFetchJson('/api/listings/mine', { headers }),
-      apiFetchJson('/api/enquiries/owner', { headers })
+      apiFetchJson('/api/enquiries/owner', { headers }),
+      apiFetchJson('/api/notifications/mine', { headers })
     ]);
 
     document.getElementById('dashboard-total-listings').textContent = listingData.summary.totalListings;
@@ -573,6 +629,7 @@ async function loadOwnerDashboard() {
     const unreadNode = document.getElementById('dashboard-unread-enquiries');
     if (unreadNode) unreadNode.textContent = enquiryData.summary.unreadEnquiries;
 
+    renderOwnerNotifications(notificationData.notifications);
     renderDashboardEnquiries(enquiryData.enquiries, enquiryData.summary.unreadEnquiries);
 
     if (!Array.isArray(listingData.listings) || listingData.listings.length === 0) {
@@ -591,11 +648,13 @@ async function loadOwnerDashboard() {
           <div class="dashboard-listing-copy">
             <h3>${listing.title}</h3>
             <p>${listing.address}, ${listing.city}</p>
+            ${listing.rejectionNote ? `<p class="dashboard-status-note">Rejection note: ${escapeHtml(listing.rejectionNote)}</p>` : ''}
           </div>
           <div class="dashboard-listing-metrics">
             <div class="dashboard-chip ${listing.available ? 'is-active' : 'is-inactive'}">
               ${listing.available ? 'Active' : 'Unavailable'}
             </div>
+            ${renderApprovalChip(listing.approvalStatus)}
             ${listing.is_featured ? '<div class="dashboard-chip is-featured">Featured</div>' : ''}
             <div class="dashboard-enquiries">${Number(listing.enquiryCount || 0)} enquiries</div>
           </div>
@@ -611,6 +670,9 @@ async function loadOwnerDashboard() {
     dashboardList.innerHTML = '<div class="dashboard-empty">Unable to load your dashboard right now.</div>';
     if (enquiryList) {
       enquiryList.innerHTML = '<div class="dashboard-empty">Unable to load enquiries right now.</div>';
+    }
+    if (notificationList) {
+      notificationList.innerHTML = '<div class="dashboard-empty">Unable to load notifications right now.</div>';
     }
   }
 }
@@ -747,7 +809,13 @@ async function register() {
     localStorage.setItem('user', JSON.stringify(data.user));
     await loadWishlistState();
     updateNav();
-    showPage(data.user.role === 'owner' ? 'dashboard' : 'wishlist');
+    if (data.user.role === 'admin') {
+      showPage('admin');
+    } else if (data.user.role === 'owner') {
+      showPage('dashboard');
+    } else {
+      showPage('wishlist');
+    }
   } catch (err) {
     console.error('register error:', err);
     errorField.textContent = err.message || 'Unable to register right now.';
@@ -775,7 +843,13 @@ async function login() {
     localStorage.setItem('user', JSON.stringify(data.user));
     await loadWishlistState();
     updateNav();
-    showPage(data.user.role === 'owner' ? 'dashboard' : 'wishlist');
+    if (data.user.role === 'admin') {
+      showPage('admin');
+    } else if (data.user.role === 'owner') {
+      showPage('dashboard');
+    } else {
+      showPage('wishlist');
+    }
   } catch (err) {
     console.error('login error:', err);
     errorField.textContent = err.message || 'Unable to login right now.';
@@ -838,7 +912,7 @@ async function saveListing() {
       body: formData
     });
 
-    alert(isEditing ? 'Listing updated successfully!' : 'Listing posted successfully!');
+    alert(isEditing ? 'Listing updated successfully!' : 'Listing submitted for admin review.');
     resetListingForm();
     showPage('dashboard');
   } catch (err) {
@@ -969,6 +1043,120 @@ async function toggleEnquiryRead(enquiryId, isRead) {
     loadOwnerDashboard();
   } catch (err) {
     alert(err.message || 'Unable to update enquiry status.');
+  }
+}
+
+async function markNotificationRead(notificationId) {
+  try {
+    await apiFetchJson(`/api/notifications/${notificationId}/read`, {
+      method: 'PATCH',
+      headers: { Authorization: `Bearer ${getToken()}` }
+    });
+    loadOwnerDashboard();
+  } catch (err) {
+    alert(err.message || 'Unable to update notification.');
+  }
+}
+
+async function loadAdminPanel(status = null) {
+  const user = getUser();
+  const adminList = document.getElementById('admin-listings');
+  const adminLog = document.getElementById('admin-action-log');
+  if (!user || user.role !== 'admin' || !adminList || !adminLog) return;
+
+  const activeFilter = status || document.querySelector('.admin-filter-button.is-active')?.dataset.adminFilter || 'pending';
+  adminList.innerHTML = '<div class="dashboard-empty">Loading listings...</div>';
+  adminLog.innerHTML = '<div class="dashboard-empty">Loading admin activity...</div>';
+
+  document.querySelectorAll('.admin-filter-button').forEach((button) => {
+    button.classList.toggle('is-active', button.dataset.adminFilter === activeFilter);
+  });
+
+  try {
+    const data = await apiFetchJson(`/api/admin/listings?status=${encodeURIComponent(activeFilter)}`, {
+      headers: { Authorization: `Bearer ${getToken()}` }
+    });
+
+    document.getElementById('admin-count-all').textContent = data.counts.all;
+    document.getElementById('admin-count-pending').textContent = data.counts.pending;
+    document.getElementById('admin-count-approved').textContent = data.counts.approved;
+    document.getElementById('admin-count-rejected').textContent = data.counts.rejected;
+
+    const listings = Array.isArray(data.listings) ? data.listings : [];
+    if (listings.length === 0) {
+      adminList.innerHTML = '<div class="dashboard-empty">No listings match this filter right now.</div>';
+    } else {
+      adminList.innerHTML = listings.map((listing) => `
+        <article class="dashboard-listing-card">
+          <div class="dashboard-listing-main">
+            <div class="dashboard-listing-copy">
+              <h3>${escapeHtml(listing.title)}</h3>
+              <p>Owner: ${escapeHtml(listing.owner?.name || 'Unknown owner')}</p>
+              <p>Submitted: ${new Date(listing.createdAt).toLocaleDateString()}</p>
+              ${listing.rejectionNote ? `<p class="dashboard-status-note">Rejection note: ${escapeHtml(listing.rejectionNote)}</p>` : ''}
+            </div>
+            <div class="dashboard-listing-metrics">
+              ${renderApprovalChip(listing.approvalStatus)}
+            </div>
+          </div>
+          <div class="dashboard-listing-actions">
+            <button class="dashboard-action-button admin-approve-button" onclick="reviewListing('${listing._id}', 'approve')">Approve</button>
+            <button class="dashboard-action-button is-danger" onclick="reviewListing('${listing._id}', 'reject')">Reject</button>
+          </div>
+        </article>
+      `).join('');
+    }
+
+    const logs = Array.isArray(data.logs) ? data.logs : [];
+    if (logs.length === 0) {
+      adminLog.innerHTML = '<div class="dashboard-empty">No admin actions logged yet.</div>';
+    } else {
+      adminLog.innerHTML = logs.map((log) => `
+        <article class="dashboard-enquiry-card">
+          <div class="dashboard-enquiry-top">
+            <div>
+              <p class="dashboard-enquiry-listing">${escapeHtml(log.action)}</p>
+              <h3>${escapeHtml(log.listing?.title || 'Listing')}</h3>
+              <p class="dashboard-enquiry-meta">
+                ${escapeHtml(log.admin?.name || 'Admin')} · ${new Date(log.createdAt).toLocaleString()}
+              </p>
+            </div>
+          </div>
+          <p class="dashboard-enquiry-message">
+            ${escapeHtml(log.owner?.name || 'Owner')} was ${escapeHtml(log.action)}.${log.note ? ` Note: ${escapeHtml(log.note)}` : ''}
+          </p>
+        </article>
+      `).join('');
+    }
+  } catch (err) {
+    adminList.innerHTML = '<div class="dashboard-empty">Unable to load admin listings right now.</div>';
+    adminLog.innerHTML = '<div class="dashboard-empty">Unable to load admin activity right now.</div>';
+  }
+}
+
+async function reviewListing(listingId, action) {
+  const note = action === 'reject'
+    ? window.prompt('Add a rejection note for the owner:', '') ?? ''
+    : '';
+
+  if (action === 'reject' && !note.trim()) {
+    alert('Please add a rejection note so the owner knows what to fix.');
+    return;
+  }
+
+  try {
+    await apiFetchJson(`/api/admin/listings/${listingId}/review`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${getToken()}`
+      },
+      body: JSON.stringify({ action, note })
+    });
+
+    loadAdminPanel();
+  } catch (err) {
+    alert(err.message || 'Unable to review listing right now.');
   }
 }
 
@@ -1152,6 +1340,11 @@ function bootFromPath() {
   const path = window.location.pathname;
   if (path === '/dashboard') {
     showPage('dashboard', { updateHistory: false, replaceHistory: true });
+    return;
+  }
+
+  if (path === '/admin') {
+    showPage('admin', { updateHistory: false, replaceHistory: true });
     return;
   }
 

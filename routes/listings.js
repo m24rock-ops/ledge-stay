@@ -3,12 +3,30 @@ const router = express.Router();
 const Listing = require('../models/Listing');
 const auth = require('../middleware/auth');
 const { upload } = require('../middleware/cloudinary');
+const jwt = require('jsonwebtoken');
+
+function parseBoolean(value, fallback = false) {
+  if (typeof value === 'boolean') return value;
+  if (typeof value === 'string') return value === 'true';
+  return fallback;
+}
+
+function getOptionalUser(req) {
+  const token = req.headers.authorization?.split(' ')[1];
+  if (!token) return null;
+
+  try {
+    return jwt.verify(token, process.env.JWT_SECRET);
+  } catch (err) {
+    return null;
+  }
+}
 
 // Get all listings (with search & filters)
 router.get('/', async (req, res) => {
   try {
     const { city, type, gender, minPrice, maxPrice, sort, featured, limit } = req.query;
-    let query = { available: true };
+    let query = { available: true, approvalStatus: 'approved' };
 
     if (city) query.city = { $regex: city, $options: 'i' };
     if (type) query.type = type;
@@ -46,7 +64,10 @@ router.get('/mine', auth, async (req, res) => {
     const listings = await Listing.find({ owner: req.user.id }).sort({ createdAt: -1 });
     const summary = {
       totalListings: listings.length,
-      totalEnquiries: listings.reduce((sum, listing) => sum + Number(listing.enquiryCount || 0), 0)
+      totalEnquiries: listings.reduce((sum, listing) => sum + Number(listing.enquiryCount || 0), 0),
+      pendingListings: listings.filter((listing) => listing.approvalStatus === 'pending').length,
+      approvedListings: listings.filter((listing) => listing.approvalStatus === 'approved').length,
+      rejectedListings: listings.filter((listing) => listing.approvalStatus === 'rejected').length
     };
 
     res.json({ summary, listings });
@@ -58,8 +79,19 @@ router.get('/mine', auth, async (req, res) => {
 // Get single listing
 router.get('/:id', async (req, res) => {
   try {
+    const user = getOptionalUser(req);
     const listing = await Listing.findById(req.params.id).populate('owner', 'name email');
     if (!listing) return res.status(404).json({ message: 'Listing not found' });
+
+    const ownerId = String(listing.owner?._id || listing.owner || '');
+    const canViewHiddenListing = Boolean(
+      user && (user.role === 'admin' || String(user.id) === ownerId)
+    );
+
+    if (listing.approvalStatus !== 'approved' && !canViewHiddenListing) {
+      return res.status(404).json({ message: 'Listing not found' });
+    }
+
     res.json(listing);
   } catch (err) {
     res.status(500).json({ message: 'Server error', error: err.message });
@@ -72,7 +104,15 @@ router.post('/', auth, upload.array('photos', 5), async (req, res) => {
     if (req.user.role !== 'owner') return res.status(403).json({ message: 'Only owners can post listings' });
 
     const photos = req.files ? req.files.map(f => f.path) : [];
-    const listing = await Listing.create({ ...req.body, owner: req.user.id, photos });
+    const listing = await Listing.create({
+      ...req.body,
+      owner: req.user.id,
+      photos,
+      available: parseBoolean(req.body.available, true),
+      is_featured: parseBoolean(req.body.is_featured, false),
+      approvalStatus: 'pending',
+      rejectionNote: ''
+    });
     res.status(201).json(listing);
   } catch (err) {
     res.status(500).json({ message: 'Server error', error: err.message });
@@ -85,8 +125,13 @@ async function updateListing(req, res) {
     if (!listing) return res.status(404).json({ message: 'Listing not found' });
     if (listing.owner.toString() !== req.user.id) return res.status(403).json({ message: 'Not authorized' });
     const photos = req.files?.length ? req.files.map(f => f.path) : listing.photos;
-   
-    const updated = await Listing.findByIdAndUpdate(req.params.id, { ...req.body, photos }, { new: true });
+
+    const updated = await Listing.findByIdAndUpdate(req.params.id, {
+      ...req.body,
+      photos,
+      available: parseBoolean(req.body.available, listing.available),
+      is_featured: parseBoolean(req.body.is_featured, listing.is_featured)
+    }, { new: true });
     res.json(updated);
   } catch (err) {
     res.status(500).json({ message: 'Server error', error: err.message });
