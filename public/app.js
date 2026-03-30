@@ -871,6 +871,7 @@ async function showDetail(id) {
 
 }, 300);
 
+
 async function register() {
   console.log('register called');
   const name = document.getElementById('reg-name').value;
