@@ -521,7 +521,7 @@ nav {
 .form-box a { color: var(--primary); text-decoration: none; }
 
 .error {
-  color: var(--primary);
+  color: #dc2626;
   font-size: 14px;
   margin-top: 8px;
   overflow-wrap: anywhere;

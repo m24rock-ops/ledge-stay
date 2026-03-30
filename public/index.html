@@ -105,9 +105,20 @@
       <h2>Login</h2>
       <input type="email" id="login-email" placeholder="Email">
       <input type="password" id="login-password" placeholder="Password">
+      <a href="#" onclick="showForgotPassword(event)" id="forgot-password-link" style="display:inline-block;margin-top:-4px;margin-bottom:12px;font-size:14px;color:#6B7280;text-decoration:none;">
+        Forgot password?
+      </a>
       <button onclick="login()">Login</button>
       <p>No account? <a href="#" onclick="showPage('register')">Register</a></p>
       <p id="login-error" class="error"></p>
+
+      <div id="forgot-password-section" style="display:none;">
+        <input type="email" id="forgot-password-email" placeholder="Email">
+        <a href="#" onclick="requestPasswordReset(event)" style="display:inline-block;margin-top:-8px;font-size:14px;color:#2563EB;text-decoration:none;">
+          Send reset link
+        </a>
+        <p id="forgot-password-message" style="display:none; margin-top:10px; color:#6B7280; font-size:14px; overflow-wrap:anywhere;"></p>
+      </div>
     </div>
   </div>
 
@@ -115,13 +126,16 @@
     <div class="form-box">
       <h2>Register</h2>
       <input type="text" id="reg-name" placeholder="Full Name">
+      <p id="reg-name-error" class="error" style="margin-top:-8px;"></p>
       <input type="email" id="reg-email" placeholder="Email">
+      <p id="reg-email-error" class="error" style="margin-top:-8px;"></p>
       <input type="password" id="reg-password" placeholder="Password">
-      <input type="text" id="reg-phone" placeholder="WhatsApp Number (10 digits)">
+      <p id="reg-password-error" class="error" style="margin-top:-8px;"></p>
       <select id="reg-role">
         <option value="tenant">I am looking for a place (Tenant)</option>
         <option value="owner">I want to post a listing (Owner)</option>
       </select>
+      <p id="reg-role-error" class="error" style="margin-top:-8px;"></p>
       <button onclick="register()">Register</button>
       <p>Have an account? <a href="#" onclick="showPage('login')">Login</a></p>
       <p id="reg-error" class="error"></p>

@@ -17,7 +17,7 @@ router.get('/', async (req, res) => {
   try {
     const user = await User.findById(req.user.id).populate({
       path: 'wishlist',
-      populate: { path: 'owner', select: 'name email phone' },
+      populate: { path: 'owner', select: 'name email' },
       options: { sort: { createdAt: -1 } }
     });
 

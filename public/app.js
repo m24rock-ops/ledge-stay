@@ -64,6 +64,33 @@ function showPage(page, options = {}) {
   const activePage = document.getElementById(`page-${normalizedPage}`);
   if (activePage) activePage.style.display = 'block';
 
+  // Reset auth UI whenever switching between auth pages.
+  if (normalizedPage === 'login') {
+    const forgotSection = document.getElementById('forgot-password-section');
+    const forgotMessage = document.getElementById('forgot-password-message');
+    if (forgotSection) forgotSection.style.display = 'none';
+    if (forgotMessage) {
+      forgotMessage.style.display = 'none';
+      forgotMessage.textContent = '';
+    }
+
+    const loginError = document.getElementById('login-error');
+    if (loginError) loginError.textContent = '';
+
+    const loginButton = document.querySelector('#page-login button[onclick="login()"]');
+    if (loginButton) loginButton.style.display = '';
+  }
+
+  if (normalizedPage === 'register') {
+    const regError = document.getElementById('reg-error');
+    if (regError) regError.textContent = '';
+
+    ['reg-name-error', 'reg-email-error', 'reg-password-error', 'reg-role-error'].forEach((id) => {
+      const el = document.getElementById(id);
+      if (el) el.textContent = '';
+    });
+  }
+
   if (updateHistory) {
     navigateToPath(normalizedPage, replaceHistory);
   }
@@ -857,17 +884,57 @@ async function register() {
   const email = document.getElementById('reg-email').value;
   const password = document.getElementById('reg-password').value;
   const role = document.getElementById('reg-role').value;
-  const phone = document.getElementById('reg-phone').value;
   const errorField = document.getElementById('reg-error');
+  const nameErrorField = document.getElementById('reg-name-error');
+  const emailErrorField = document.getElementById('reg-email-error');
+  const passwordErrorField = document.getElementById('reg-password-error');
+  const roleErrorField = document.getElementById('reg-role-error');
 
   errorField.textContent = '';
+  if (nameErrorField) nameErrorField.textContent = '';
+  if (emailErrorField) emailErrorField.textContent = '';
+  if (passwordErrorField) passwordErrorField.textContent = '';
+  if (roleErrorField) roleErrorField.textContent = '';
+
+  const trimmedName = String(name || '').trim();
+  const trimmedEmail = String(email || '').trim();
+  const emailLower = trimmedEmail.toLowerCase();
+  const passwordStr = String(password || '');
+
+  const isValidEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail);
+  const isValidName = /^[A-Za-z ]+$/.test(trimmedName) && trimmedName.replace(/\s/g, '').length >= 2;
+  const isValidPassword = passwordStr.length >= 8 && /\d/.test(passwordStr) && /[A-Za-z]/.test(passwordStr);
+  const isValidRole = ['tenant', 'owner'].includes(String(role || ''));
+
+  let hasErrors = false;
+  if (!trimmedName || !isValidName) {
+    if (nameErrorField) nameErrorField.textContent = 'Please enter a valid name';
+    hasErrors = true;
+  }
+
+  if (!trimmedEmail || !isValidEmail) {
+    if (emailErrorField) emailErrorField.textContent = 'Please enter a valid email address';
+    hasErrors = true;
+  }
+
+  if (!passwordStr || !isValidPassword) {
+    if (passwordErrorField) passwordErrorField.textContent = 'Password must be 8+ characters with letters and numbers';
+    hasErrors = true;
+  }
+
+  if (!isValidRole) {
+    if (roleErrorField) roleErrorField.textContent = 'Please select a valid account type';
+    hasErrors = true;
+  }
+
+  if (hasErrors) return;
 
   try {
     console.log('register request url:', '/api/auth/register');
     const data = await apiFetchJson('/api/auth/register', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, email, password, role, phone })
+      body: JSON.stringify({ name: trimmedName, email: emailLower, password, role: String(role) })
     });
 
     console.log('register response data:', data);
@@ -898,10 +965,11 @@ async function login() {
 
   try {
     console.log('login request url:', '/api/auth/login');
+    const trimmedEmail = String(email || '').trim();
     const data = await apiFetchJson('/api/auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password })
+      body: JSON.stringify({ email: trimmedEmail, password })
     });
 
     console.log('login response data:', data);
@@ -920,6 +988,37 @@ async function login() {
     console.error('login error:', err);
     errorField.textContent = err.message || 'Unable to login right now.';
   }
+}
+
+function showForgotPassword(event) {
+  if (event?.preventDefault) event.preventDefault();
+  const section = document.getElementById('forgot-password-section');
+  const message = document.getElementById('forgot-password-message');
+  const loginError = document.getElementById('login-error');
+  const loginButton = document.querySelector('#page-login button[onclick="login()"]');
+
+  if (loginError) loginError.textContent = '';
+  if (message) {
+    message.style.display = 'none';
+    message.textContent = '';
+  }
+  if (section) section.style.display = 'block';
+  if (loginButton) loginButton.style.display = '';
+}
+
+function requestPasswordReset(event) {
+  if (event?.preventDefault) event.preventDefault();
+  const email = document.getElementById('forgot-password-email')?.value || '';
+  const message = document.getElementById('forgot-password-message');
+
+  if (!message) return;
+
+  message.textContent =
+    'If this email is registered, a reset link will be sent. Please contact support.';
+  message.style.display = 'block';
+
+  const loginButton = document.querySelector('#page-login button[onclick="login()"]');
+  if (loginButton) loginButton.style.display = '';
 }
 
 function logout() {
@@ -1448,6 +1547,72 @@ document.addEventListener('DOMContentLoaded', () => {
   attachNavbarListeners();
   updateNav();
   resetListingForm();
+
+  // Clear auth errors while user types.
+  const loginError = document.getElementById('login-error');
+  const loginEmailInput = document.getElementById('login-email');
+  const loginPasswordInput = document.getElementById('login-password');
+
+  if (loginEmailInput) {
+    loginEmailInput.addEventListener('input', () => {
+      if (loginError) loginError.textContent = '';
+    });
+  }
+
+  if (loginPasswordInput) {
+    loginPasswordInput.addEventListener('input', () => {
+      if (loginError) loginError.textContent = '';
+    });
+  }
+
+  const regError = document.getElementById('reg-error');
+  const regNameInput = document.getElementById('reg-name');
+  const regEmailInput = document.getElementById('reg-email');
+  const regPasswordInput = document.getElementById('reg-password');
+  const regRoleInput = document.getElementById('reg-role');
+
+  const regNameError = document.getElementById('reg-name-error');
+  const regEmailError = document.getElementById('reg-email-error');
+  const regPasswordError = document.getElementById('reg-password-error');
+  const regRoleError = document.getElementById('reg-role-error');
+
+  if (regNameInput) {
+    regNameInput.addEventListener('input', () => {
+      if (regError) regError.textContent = '';
+      if (regNameError) regNameError.textContent = '';
+    });
+  }
+
+  if (regEmailInput) {
+    regEmailInput.addEventListener('input', () => {
+      if (regError) regError.textContent = '';
+      if (regEmailError) regEmailError.textContent = '';
+    });
+  }
+
+  if (regPasswordInput) {
+    regPasswordInput.addEventListener('input', () => {
+      if (regError) regError.textContent = '';
+      if (regPasswordError) regPasswordError.textContent = '';
+    });
+  }
+
+  if (regRoleInput) {
+    regRoleInput.addEventListener('change', () => {
+      if (regError) regError.textContent = '';
+      if (regRoleError) regRoleError.textContent = '';
+    });
+  }
+
+  const forgotEmailInput = document.getElementById('forgot-password-email');
+  const forgotMessage = document.getElementById('forgot-password-message');
+  if (forgotEmailInput && forgotMessage) {
+    forgotEmailInput.addEventListener('input', () => {
+      forgotMessage.style.display = 'none';
+      forgotMessage.textContent = '';
+    });
+  }
+
   Promise.allSettled([loadAppConfig(), loadWishlistState()]).finally(() => {
     loadFeaturedListings();
     bootFromPath();
