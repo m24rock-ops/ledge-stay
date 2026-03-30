@@ -22,7 +22,7 @@ async function registerHandler(req, res) {
 
     res.json({
       token,
-      user: { id: user._id, name: user.name, role: user.role, phone: user.phone || '' }
+      user: { id: user._id, name: user.name, email: user.email, role: user.role, phone: user.phone || '' }
     });
   } catch (err) {
     res.status(500).json({ message: 'Server error', error: err.message });
@@ -47,7 +47,7 @@ async function loginHandler(req, res) {
 
     res.json({
       token,
-      user: { id: user._id, name: user.name, role: user.role, phone: user.phone || '' }
+      user: { id: user._id, name: user.name, email: user.email, role: user.role, phone: user.phone || '' }
     });
   } catch (err) {
     res.status(500).json({ message: 'Server error', error: err.message });

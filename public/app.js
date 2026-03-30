@@ -211,6 +211,11 @@ function canUseWishlist() {
   return Boolean(user && user.role === 'tenant');
 }
 
+function canSendEnquiry() {
+  const user = getUser();
+  return Boolean(user && user.role === 'tenant');
+}
+
 function isListingSaved(listingId) {
   return savedListingIds.has(String(listingId));
 }
@@ -236,6 +241,15 @@ function renderWishlistButton(listing, options = {}) {
 
 function apiUrl(path) {
   return path;
+}
+
+function escapeHtml(value) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }
 
 async function readJsonSafely(response) {
@@ -383,6 +397,41 @@ function resetListingForm() {
   document.getElementById('post-error').textContent = '';
 }
 
+function renderDashboardEnquiries(enquiries = [], unreadCount = 0) {
+  const enquiryList = document.getElementById('dashboard-enquiries-list');
+  if (!enquiryList) return;
+
+  if (!Array.isArray(enquiries) || enquiries.length === 0) {
+    enquiryList.innerHTML = '<div class="dashboard-empty">No enquiries yet. New tenant messages will show up here.</div>';
+    return;
+  }
+
+  enquiryList.innerHTML = enquiries.map((enquiry) => `
+    <article class="dashboard-enquiry-card ${enquiry.isRead ? 'is-read' : 'is-unread'}">
+      <div class="dashboard-enquiry-top">
+        <div>
+          <p class="dashboard-enquiry-listing">${escapeHtml(enquiry.listing?.title || 'Listing unavailable')}</p>
+          <h3>${escapeHtml(enquiry.name)}</h3>
+          <p class="dashboard-enquiry-meta">${escapeHtml(enquiry.email)} · ${new Date(enquiry.createdAt).toLocaleDateString()}</p>
+        </div>
+        <div class="dashboard-enquiry-status-wrap">
+          <span class="dashboard-chip ${enquiry.isRead ? 'is-read' : 'is-unread'}">${enquiry.isRead ? 'Read' : 'Unread'}</span>
+          <button class="dashboard-action-button" onclick="toggleEnquiryRead('${enquiry._id}', ${!enquiry.isRead})">
+            Mark as ${enquiry.isRead ? 'Unread' : 'Read'}
+          </button>
+        </div>
+      </div>
+      ${enquiry.listing?.address ? `<p class="dashboard-enquiry-location">${escapeHtml(enquiry.listing.address)}, ${escapeHtml(enquiry.listing.city || '')}</p>` : ''}
+      <p class="dashboard-enquiry-message">${escapeHtml(enquiry.message)}</p>
+    </article>
+  `).join('');
+
+  const unreadNode = document.getElementById('dashboard-unread-enquiries');
+  if (unreadNode) {
+    unreadNode.textContent = unreadCount;
+  }
+}
+
 function populateListingForm(listing) {
   editingListingId = listing._id;
   document.getElementById('post-form-title').textContent = 'Edit Listing';
@@ -491,16 +540,6 @@ async function loadListings() {
             <span class="badge">${listing.type.toUpperCase()}</span>
             <span class="badge">${listing.gender}</span>
           </div>
-          ${listing.owner?.phone ? `
-            <a
-              href="https://wa.me/91${listing.owner.phone}?text=Hi, I am interested in your listing: ${encodeURIComponent(listing.title)}"
-              target="_blank"
-              onclick="event.stopPropagation()"
-              style="display:inline-block;margin-top:10px;padding:8px 16px;background:#25D366;color:white;border-radius:8px;text-decoration:none;font-size:13px;font-weight:600"
-            >
-              WhatsApp Owner
-            </a>
-          ` : ''}
           ${renderWishlistButton(listing)}
           ${renderOwnerListingActions(listing)}
         </div>
@@ -517,16 +556,26 @@ async function loadOwnerDashboard() {
   if (!user || user.role !== 'owner' || !dashboardList) return;
 
   dashboardList.innerHTML = '<div class="dashboard-empty">Loading your listings...</div>';
+  const enquiryList = document.getElementById('dashboard-enquiries-list');
+  if (enquiryList) {
+    enquiryList.innerHTML = '<div class="dashboard-empty">Loading enquiries...</div>';
+  }
 
   try {
-    const data = await apiFetchJson('/api/listings/mine', {
-      headers: { Authorization: `Bearer ${getToken()}` }
-    });
+    const headers = { Authorization: `Bearer ${getToken()}` };
+    const [listingData, enquiryData] = await Promise.all([
+      apiFetchJson('/api/listings/mine', { headers }),
+      apiFetchJson('/api/enquiries/owner', { headers })
+    ]);
 
-    document.getElementById('dashboard-total-listings').textContent = data.summary.totalListings;
-    document.getElementById('dashboard-total-enquiries').textContent = data.summary.totalEnquiries;
+    document.getElementById('dashboard-total-listings').textContent = listingData.summary.totalListings;
+    document.getElementById('dashboard-total-enquiries').textContent = enquiryData.summary.totalEnquiries;
+    const unreadNode = document.getElementById('dashboard-unread-enquiries');
+    if (unreadNode) unreadNode.textContent = enquiryData.summary.unreadEnquiries;
 
-    if (!Array.isArray(data.listings) || data.listings.length === 0) {
+    renderDashboardEnquiries(enquiryData.enquiries, enquiryData.summary.unreadEnquiries);
+
+    if (!Array.isArray(listingData.listings) || listingData.listings.length === 0) {
       dashboardList.innerHTML = `
         <div class="dashboard-empty">
           You have not added any listings yet.
@@ -536,7 +585,7 @@ async function loadOwnerDashboard() {
       return;
     }
 
-    dashboardList.innerHTML = data.listings.map((listing) => `
+    dashboardList.innerHTML = listingData.listings.map((listing) => `
       <article class="dashboard-listing-card">
         <div class="dashboard-listing-main">
           <div class="dashboard-listing-copy">
@@ -557,8 +606,12 @@ async function loadOwnerDashboard() {
         </div>
       </article>
     `).join('');
+
   } catch (err) {
     dashboardList.innerHTML = '<div class="dashboard-empty">Unable to load your dashboard right now.</div>';
+    if (enquiryList) {
+      enquiryList.innerHTML = '<div class="dashboard-empty">Unable to load enquiries right now.</div>';
+    }
   }
 }
 
@@ -566,6 +619,9 @@ async function showDetail(id) {
   try {
     const listing = await apiFetchJson(`/api/listings/${id}`);
     selectedReviewRating = 0;
+    const user = getUser();
+    const enquiryName = canSendEnquiry() ? escapeHtml(user?.name || '') : '';
+    const enquiryEmail = canSendEnquiry() ? escapeHtml(user?.email || '') : '';
 
     document.getElementById('detail-content').innerHTML = `
     <div class="detail-photos">
@@ -579,15 +635,6 @@ async function showDetail(id) {
       <p>${listing.address}, ${listing.city}</p>
       <p>Type: ${listing.type.toUpperCase()} | Gender: ${listing.gender}</p>
       <p>Owner: ${listing.owner.name} - ${listing.owner.email}</p>
-      ${listing.owner.phone ? `
-        <a
-          href="https://wa.me/91${listing.owner.phone}?text=Hi, I am interested in your listing: ${encodeURIComponent(listing.title)}"
-          target="_blank"
-          class="contact-link"
-        >
-          Contact on WhatsApp
-        </a>
-      ` : ''}
       ${renderWishlistButton(listing, { detail: true })}
       ${listing.amenities && listing.amenities.length > 0 ? `<p>Amenities: ${listing.amenities.join(', ')}</p>` : ''}
       ${listing.description ? `<p>${listing.description}</p>` : ''}
@@ -613,6 +660,55 @@ async function showDetail(id) {
         </div>
         <div id="distance-result"></div>
       </div>
+
+      <section class="enquiry-section">
+        <div class="enquiry-section-header">
+          <div>
+            <h2>Send Enquiry</h2>
+            <p class="reviews-subtitle">Message the owner inside the app and keep your interest in one place.</p>
+          </div>
+        </div>
+        <div class="enquiry-form-card">
+          <div class="review-form-grid enquiry-form-grid">
+            <div class="review-form-field">
+              <label for="enquiry-name">Name</label>
+              <input
+                id="enquiry-name"
+                class="review-input"
+                type="text"
+                value="${enquiryName}"
+                placeholder="${canSendEnquiry() ? 'Your full name' : 'Login as a tenant to continue'}"
+                ${canSendEnquiry() ? '' : 'disabled'}
+              >
+            </div>
+            <div class="review-form-field">
+              <label for="enquiry-email">Email</label>
+              <input
+                id="enquiry-email"
+                class="review-input"
+                type="email"
+                value="${enquiryEmail}"
+                placeholder="${canSendEnquiry() ? 'you@example.com' : 'Login required'}"
+                ${canSendEnquiry() ? '' : 'disabled'}
+              >
+            </div>
+          </div>
+          <div class="review-form-field">
+            <label for="enquiry-message">Message</label>
+            <textarea
+              id="enquiry-message"
+              class="review-input review-textarea enquiry-textarea"
+              placeholder="${canSendEnquiry() ? 'Hi, I would like to know if this listing is still available and when I can visit.' : 'Login as a tenant to send an enquiry'}"
+              ${canSendEnquiry() ? '' : 'disabled'}
+            ></textarea>
+          </div>
+          <button class="review-submit enquiry-submit" onclick="submitEnquiry('${listing._id}')" ${canSendEnquiry() ? '' : 'disabled'}>
+            Send Enquiry
+          </button>
+          <p id="enquiry-feedback" class="review-message"></p>
+          ${canSendEnquiry() ? '' : '<p class="review-message">Only logged-in tenants can send enquiries.</p>'}
+        </div>
+      </section>
 
       <section id="reviews-section" class="reviews-section">
         <div class="reviews-loading">Loading reviews...</div>
@@ -810,6 +906,70 @@ async function calculateDistance(listingId) {
 
   button.textContent = 'Calculate Distance';
   button.disabled = false;
+}
+
+async function submitEnquiry(listingId) {
+  const user = getUser();
+  const feedbackField = document.getElementById('enquiry-feedback');
+  const nameField = document.getElementById('enquiry-name');
+  const emailField = document.getElementById('enquiry-email');
+  const messageField = document.getElementById('enquiry-message');
+
+  if (!feedbackField || !nameField || !emailField || !messageField) return;
+
+  const name = nameField.value.trim();
+  const email = emailField.value.trim();
+  const message = messageField.value.trim();
+
+  feedbackField.textContent = '';
+  feedbackField.className = 'review-message';
+
+  if (!user || user.role !== 'tenant') {
+    feedbackField.textContent = 'Please login as a tenant to send an enquiry.';
+    feedbackField.className = 'review-message review-message-error';
+    return;
+  }
+
+  if (!name || !email || !message) {
+    feedbackField.textContent = 'Name, email, and message are required.';
+    feedbackField.className = 'review-message review-message-error';
+    return;
+  }
+
+  try {
+    await apiFetchJson('/api/enquiries', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${getToken()}`
+      },
+      body: JSON.stringify({ listingId, name, email, message })
+    });
+
+    messageField.value = '';
+    feedbackField.textContent = 'Your enquiry has been sent to the owner.';
+    feedbackField.className = 'review-message review-message-success';
+  } catch (err) {
+    feedbackField.textContent = err.message || 'Unable to send enquiry right now.';
+    feedbackField.className = 'review-message review-message-error';
+  }
+}
+
+async function toggleEnquiryRead(enquiryId, isRead) {
+  try {
+    await apiFetchJson(`/api/enquiries/${enquiryId}/read`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${getToken()}`
+      },
+      body: JSON.stringify({ isRead })
+    });
+
+    loadOwnerDashboard();
+  } catch (err) {
+    alert(err.message || 'Unable to update enquiry status.');
+  }
 }
 
 async function loadReviews(listingId) {
