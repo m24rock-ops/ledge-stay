@@ -6,6 +6,8 @@ const listingSchema = new mongoose.Schema({
   type: { type: String, enum: ['pg', 'hostel', 'apartment', 'room'], required: true },
   city: { type: String, required: true },
   address: { type: String, required: true },
+  lat: { type: Number, default: null },
+  lng: { type: Number, default: null },
   price: { type: Number, required: true },
   gender: { type: String, enum: ['male', 'female', 'any'], default: 'any' },
   amenities: [String],

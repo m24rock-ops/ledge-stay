@@ -31,6 +31,12 @@ app.use('/api/enquiries', require('./routes/enquiries'));
 app.use('/api/admin', require('./routes/admin'));
 app.use('/api/notifications', require('./routes/notifications'));
 
+app.get('/api/config', (req, res) => {
+  res.json({
+    mapsEmbedApiKey: process.env.GOOGLE_MAPS_EMBED_API_KEY || ''
+  });
+});
+
 app.get(/^\/(?!api).*/, (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });

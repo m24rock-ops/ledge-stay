@@ -17,6 +17,9 @@ window.addEventListener('unhandledrejection', (event) => {
 let selectedReviewRating = 0;
 let editingListingId = null;
 let savedListingIds = new Set();
+let appConfig = {
+  mapsEmbedApiKey: ''
+};
 
 function normalizePageName(page) {
   const aliases = {
@@ -270,6 +273,63 @@ function escapeHtml(value) {
     .replace(/'/g, '&#39;');
 }
 
+async function loadAppConfig() {
+  try {
+    const data = await apiFetchJson('/api/config');
+    appConfig = {
+      mapsEmbedApiKey: data.mapsEmbedApiKey || ''
+    };
+  } catch (err) {
+    console.error('config load error:', err);
+    appConfig = { mapsEmbedApiKey: '' };
+  }
+}
+
+function hasMapCoordinates(listing) {
+  return Number.isFinite(Number(listing?.lat)) && Number.isFinite(Number(listing?.lng));
+}
+
+function buildGoogleMapEmbedUrl(listing) {
+  if (!appConfig.mapsEmbedApiKey) return '';
+
+  let query = '';
+  if (hasMapCoordinates(listing)) {
+    query = `${Number(listing.lat)},${Number(listing.lng)}`;
+  } else {
+    const addressParts = [listing?.address, listing?.city].filter(Boolean);
+    if (!addressParts.length) return '';
+    query = addressParts.join(', ');
+  }
+
+  return `https://www.google.com/maps/embed/v1/place?key=${encodeURIComponent(appConfig.mapsEmbedApiKey)}&q=${encodeURIComponent(query)}`;
+}
+
+function renderMapSection(listing) {
+  const embedUrl = buildGoogleMapEmbedUrl(listing);
+  if (!embedUrl) return '';
+
+  return `
+    <section class="map-section">
+      <div class="map-section-header">
+        <div>
+          <h2>Location</h2>
+          <p class="reviews-subtitle">See where this property sits before you decide to enquire or visit.</p>
+        </div>
+      </div>
+      <div class="map-frame-wrap">
+        <iframe
+          class="listing-map-frame"
+          src="${embedUrl}"
+          loading="lazy"
+          allowfullscreen
+          referrerpolicy="no-referrer-when-downgrade"
+          title="Map showing ${escapeHtml(listing.title)}"
+        ></iframe>
+      </div>
+    </section>
+  `;
+}
+
 async function readJsonSafely(response) {
   const rawText = await response.text();
   if (!rawText) {
@@ -405,6 +465,8 @@ function resetListingForm() {
   document.getElementById('post-type').value = 'pg';
   document.getElementById('post-city').value = '';
   document.getElementById('post-address').value = '';
+  document.getElementById('post-lat').value = '';
+  document.getElementById('post-lng').value = '';
   document.getElementById('post-price').value = '';
   document.getElementById('post-gender').value = 'any';
   document.getElementById('post-description').value = '';
@@ -491,6 +553,8 @@ function populateListingForm(listing) {
   document.getElementById('post-type').value = listing.type || 'pg';
   document.getElementById('post-city').value = listing.city || '';
   document.getElementById('post-address').value = listing.address || '';
+  document.getElementById('post-lat').value = listing.lat ?? '';
+  document.getElementById('post-lng').value = listing.lng ?? '';
   document.getElementById('post-price').value = listing.price || '';
   document.getElementById('post-gender').value = listing.gender || 'any';
   document.getElementById('post-description').value = listing.description || '';
@@ -703,6 +767,8 @@ async function showDetail(id) {
       ${renderOwnerListingActions(listing, { detail: true })}
       <button onclick="showPage('listings')" class="back-button">Back</button>
 
+      ${renderMapSection(listing)}
+
       <div class="distance-card">
         <h3 class="distance-title">How far is this from your place?</h3>
         <div class="distance-form">
@@ -884,6 +950,8 @@ async function saveListing() {
   formData.append('type', document.getElementById('post-type').value);
   formData.append('city', document.getElementById('post-city').value);
   formData.append('address', document.getElementById('post-address').value);
+  formData.append('lat', document.getElementById('post-lat').value);
+  formData.append('lng', document.getElementById('post-lng').value);
   formData.append('price', document.getElementById('post-price').value);
   formData.append('gender', document.getElementById('post-gender').value);
   formData.append('description', document.getElementById('post-description').value);
@@ -1380,7 +1448,7 @@ document.addEventListener('DOMContentLoaded', () => {
   attachNavbarListeners();
   updateNav();
   resetListingForm();
-  loadWishlistState().finally(() => {
+  Promise.allSettled([loadAppConfig(), loadWishlistState()]).finally(() => {
     loadFeaturedListings();
     bootFromPath();
   });

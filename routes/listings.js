@@ -11,6 +11,12 @@ function parseBoolean(value, fallback = false) {
   return fallback;
 }
 
+function parseCoordinate(value) {
+  if (value === undefined || value === null || value === '') return null;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
 function getOptionalUser(req) {
   const token = req.headers.authorization?.split(' ')[1];
   if (!token) return null;
@@ -108,6 +114,8 @@ router.post('/', auth, upload.array('photos', 5), async (req, res) => {
       ...req.body,
       owner: req.user.id,
       photos,
+      lat: parseCoordinate(req.body.lat),
+      lng: parseCoordinate(req.body.lng),
       available: parseBoolean(req.body.available, true),
       is_featured: parseBoolean(req.body.is_featured, false),
       approvalStatus: 'pending',
@@ -129,6 +137,8 @@ async function updateListing(req, res) {
     const updated = await Listing.findByIdAndUpdate(req.params.id, {
       ...req.body,
       photos,
+      lat: parseCoordinate(req.body.lat),
+      lng: parseCoordinate(req.body.lng),
       available: parseBoolean(req.body.available, listing.available),
       is_featured: parseBoolean(req.body.is_featured, listing.is_featured)
     }, { new: true });
