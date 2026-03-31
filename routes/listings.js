@@ -32,8 +32,8 @@ function getOptionalUser(req) {
 router.get('/', async (req, res) => {
   try {
     const { city, type, gender, minPrice, maxPrice, sort, featured, limit: limitParam, page: pageParam } = req.query;
-    // Browse should show all listings (regardless of approval status)
-    let query = { available: true };
+    // Only show approved listings on the browse page
+    let query = { available: true, approvalStatus: 'approved' };
 
     if (city) query.city = { $regex: city, $options: 'i' };
     if (type) query.type = type;
@@ -139,8 +139,7 @@ router.post('/', auth, upload.array('photos', 10), async (req, res) => {
       lng: parseCoordinate(req.body.lng),
       available: parseBoolean(req.body.available, true),
       is_featured: parseBoolean(req.body.is_featured, false),
-      // Keep approval workflow consistent with the schema default.
-      approvalStatus: 'approved',
+      // approvalStatus defaults to 'pending' — admin must approve before it goes live
       rejectionNote: ''
     });
     res.status(201).json(listing);
