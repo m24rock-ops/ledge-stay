@@ -8,7 +8,8 @@ const ROUTE_PATHS = {
   register: '/register',
   post: '/post',
   dashboard: '/dashboard',
-  admin: '/admin'
+  admin: '/admin',
+  'reset-password': '/reset-password'
 };
 
 window.addEventListener('unhandledrejection', (event) => {
@@ -1124,19 +1125,33 @@ function showForgotPassword(event) {
   if (loginButton) loginButton.style.display = '';
 }
 
-function requestPasswordReset(event) {
+async function requestPasswordReset(event) {
   if (event?.preventDefault) event.preventDefault();
-  const email = document.getElementById('forgot-password-email')?.value || '';
+  const email = document.getElementById('forgot-password-email')?.value?.trim() || '';
   const message = document.getElementById('forgot-password-message');
+  const btn = document.querySelector('#forgot-password-section button');
 
-  if (!message) return;
+  if (!email) {
+    if (message) { message.textContent = 'Please enter your email address.'; message.style.display = 'block'; }
+    return;
+  }
 
-  message.textContent =
-    'If this email is registered, a reset link will be sent. Please contact support.';
-  message.style.display = 'block';
+  if (btn) btn.disabled = true;
+  if (message) { message.textContent = 'Sending...'; message.style.display = 'block'; }
 
-  const loginButton = document.querySelector('#page-login button[onclick="login()"]');
-  if (loginButton) loginButton.style.display = '';
+  try {
+    const res = await fetch('/api/auth/forgot-password', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email })
+    });
+    const data = await res.json();
+    if (message) { message.textContent = data.message; message.style.color = '#166534'; message.style.display = 'block'; }
+  } catch (err) {
+    if (message) { message.textContent = 'Something went wrong. Please try again.'; message.style.display = 'block'; }
+  } finally {
+    if (btn) btn.disabled = false;
+  }
 }
 
 function logout() {
@@ -1673,7 +1688,72 @@ function bootFromPath() {
     return;
   }
 
+  if (path === '/reset-password') {
+    const token = new URLSearchParams(window.location.search).get('token');
+    if (!token) {
+      showPage('login', { updateHistory: false, replaceHistory: true });
+      return;
+    }
+    // Store token so submitPasswordReset can read it
+    window._resetToken = token;
+    showPage('reset-password', { updateHistory: false, replaceHistory: true });
+    return;
+  }
+
   showPage('home', { updateHistory: false, replaceHistory: true });
+}
+
+async function submitPasswordReset() {
+  const password = document.getElementById('reset-password-input')?.value || '';
+  const confirm  = document.getElementById('reset-password-confirm')?.value || '';
+  const errorEl  = document.getElementById('reset-password-error');
+  const msgEl    = document.getElementById('reset-password-message');
+  const btn      = document.querySelector('#page-reset-password button');
+  const token    = window._resetToken;
+
+  if (errorEl) errorEl.textContent = '';
+  if (msgEl)   { msgEl.style.display = 'none'; msgEl.textContent = ''; }
+
+  if (!token) {
+    if (errorEl) errorEl.textContent = 'Invalid or missing reset token. Please request a new link.';
+    return;
+  }
+  if (!password) {
+    if (errorEl) errorEl.textContent = 'Please enter a new password.';
+    return;
+  }
+  if (password !== confirm) {
+    if (errorEl) errorEl.textContent = 'Passwords do not match.';
+    return;
+  }
+
+  if (btn) btn.disabled = true;
+
+  try {
+    const res  = await fetch('/api/auth/reset-password', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token, password })
+    });
+    const data = await res.json();
+
+    if (!res.ok) {
+      if (errorEl) errorEl.textContent = data.message || 'Something went wrong.';
+      return;
+    }
+
+    if (msgEl) {
+      msgEl.textContent = 'Password reset! Redirecting to login...';
+      msgEl.style.color = '#166534';
+      msgEl.style.display = 'block';
+    }
+    window._resetToken = null;
+    setTimeout(() => showPage('login', { updateHistory: true }), 2000);
+  } catch (err) {
+    if (errorEl) errorEl.textContent = 'Something went wrong. Please try again.';
+  } finally {
+    if (btn) btn.disabled = false;
+  }
 }
 
 document.addEventListener('DOMContentLoaded', () => {
