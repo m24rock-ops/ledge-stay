@@ -327,6 +327,38 @@ function renderOwnerListingActions(listing, options = {}) {
   `;
 }
 
+function normalizePhoneForWhatsApp(raw) {
+  if (!raw) return null;
+  let digits = String(raw).trim().replace(/[^0-9+]/g, '');
+
+  if (digits.startsWith('+')) {
+    digits = digits.slice(1);
+  }
+
+  // If only local 10-digit, add India code 91.
+  if (digits.length === 10) {
+    digits = `91${digits}`;
+  }
+
+  if (digits.length === 12 && digits.startsWith('91')) {
+    return digits;
+  }
+
+  if (digits.length > 0) {
+    return digits;
+  }
+
+  return null;
+}
+
+function renderWhatsAppButton(listing) {
+  const contact = normalizePhoneForWhatsApp(listing.contact || listing.owner?.phone || listing.owner?.mobile || '');
+  if (!contact) return '';
+
+  const url = `https://wa.me/${encodeURIComponent(contact)}`;
+  return `<a href="${url}" target="_blank" rel="noopener" class="btn btn-whatsapp" onclick="event.stopPropagation()">WhatsApp</a>`;
+}
+
 function canUseWishlist() {
   const user = getUser();
   return Boolean(user && user.role === 'tenant');
@@ -508,7 +540,10 @@ async function loadWishlistPage() {
           <p class="featured-address">${listing.address}</p>
           <div class="featured-card-footer">
             <div class="featured-price">Rs ${Number(listing.price).toLocaleString()}/month</div>
-            <button class="featured-view-button" onclick="showDetail('${listing._id}')">View</button>
+            <div class="featured-card-actions">
+              ${renderWhatsAppButton(listing)}
+              <button class="featured-view-button" onclick="showDetail('${listing._id}')">View</button>
+            </div>
           </div>
           ${renderWishlistButton(listing)}
         </div>
@@ -565,6 +600,7 @@ function resetListingForm() {
   document.getElementById('post-type').value = 'pg';
   document.getElementById('post-city').value = '';
   document.getElementById('post-address').value = '';
+  document.getElementById('post-contact').value = '';
   document.getElementById('post-lat').value = '';
   document.getElementById('post-lng').value = '';
   document.getElementById('post-price').value = '';
@@ -653,6 +689,7 @@ function populateListingForm(listing) {
   document.getElementById('post-type').value = listing.type || 'pg';
   document.getElementById('post-city').value = listing.city || '';
   document.getElementById('post-address').value = listing.address || '';
+  document.getElementById('post-contact').value = listing.contact || '';
   document.getElementById('post-lat').value = listing.lat ?? '';
   document.getElementById('post-lng').value = listing.lng ?? '';
   document.getElementById('post-price').value = listing.price || '';
@@ -706,7 +743,10 @@ async function loadFeaturedListings() {
           <p class="featured-address">${listing.address}</p>
           <div class="featured-card-footer">
             <div class="featured-price">Rs ${Number(listing.price).toLocaleString()}/month</div>
-            <button class="featured-view-button" onclick="showDetail('${listing._id}')">View</button>
+            <div class="featured-card-actions">
+              ${renderWhatsAppButton(listing)}
+              <button class="featured-view-button" onclick="showDetail('${listing._id}')">View</button>
+            </div>
           </div>
           ${renderWishlistButton(listing)}
           ${renderOwnerListingActions(listing)}
@@ -801,6 +841,7 @@ async function loadListings() {
             <span class="badge">${listing.type.toUpperCase()}</span>
             <span class="badge">${listing.gender}</span>
           </div>
+          ${renderWhatsAppButton(listing)}
           ${renderWishlistButton(listing)}
           ${renderOwnerListingActions(listing)}
         </div>
@@ -907,6 +948,7 @@ async function showDetail(id) {
       <p>${listing.address}, ${listing.city}</p>
       <p>Type: ${listing.type.toUpperCase()} | Gender: ${listing.gender}</p>
       <p>Owner: ${listing.owner.name} - ${listing.owner.email}</p>
+      ${renderWhatsAppButton(listing)}
       ${renderWishlistButton(listing, { detail: true })}
       ${listing.amenities && listing.amenities.length > 0 ? `<p>Amenities: ${listing.amenities.join(', ')}</p>` : ''}
       ${listing.description ? `<p>${listing.description}</p>` : ''}
@@ -1182,6 +1224,7 @@ async function saveListing() {
   formData.append('type', document.getElementById('post-type').value);
   formData.append('city', document.getElementById('post-city').value);
   formData.append('address', document.getElementById('post-address').value);
+  formData.append('contact', document.getElementById('post-contact').value);
   formData.append('lat', document.getElementById('post-lat').value);
   formData.append('lng', document.getElementById('post-lng').value);
   formData.append('price', document.getElementById('post-price').value);

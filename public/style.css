@@ -344,8 +344,29 @@ nav, .site-nav {
 }
 
 .featured-price { font-size: 22px; font-weight: 800; color: var(--primary); }
+.featured-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
 .featured-view-button { background: var(--primary); color: #fff; border-radius: 10px; padding: 9px 18px; font-size: 14px; font-weight: 600; border: none; cursor: pointer; }
 .featured-view-button:hover { background: var(--primary-dark); }
+
+.btn-whatsapp {
+  display: inline-block;
+  background: #25d366;
+  color: #fff;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  border: 1px solid rgba(0,0,0,0.04);
+}
+
+.btn-whatsapp:hover {
+  filter: brightness(0.95);
+}
 
 .featured-empty {
   grid-column: 1 / -1;
@@ -450,6 +471,14 @@ button:hover { background: var(--primary-dark); transform: translateY(-1px); }
   font-size: 12px;
   font-weight: 600;
   margin-right: 4px;
+}
+
+.card-body .listing-card-actions {
+  margin-top: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
 }
 
 /* ── OWNER ACTIONS ── */
