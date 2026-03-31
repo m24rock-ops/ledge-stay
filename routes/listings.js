@@ -28,10 +28,10 @@ function getOptionalUser(req) {
   }
 }
 
-// Get all listings (with search & filters)
+// Get all listings (with search, filters & pagination)
 router.get('/', async (req, res) => {
   try {
-    const { city, type, gender, minPrice, maxPrice, sort, featured, limit } = req.query;
+    const { city, type, gender, minPrice, maxPrice, sort, featured, limit: limitParam, page: pageParam } = req.query;
     // Browse should show all listings (regardless of approval status)
     let query = { available: true };
 
@@ -51,10 +51,30 @@ router.get('/', async (req, res) => {
     if (sort === 'newest') sortOption.createdAt = -1;
     if (featured === 'true' && !sort) sortOption.createdAt = -1;
 
-    let listingQuery = Listing.find(query).sort(sortOption).populate('owner', 'name email');
-    if (limit) listingQuery = listingQuery.limit(Number(limit));
+    // Pagination — default 12 per page; if a raw `limit` is passed without a
+    // page param (e.g. featured strip on home), behave like before.
+    const isPaginated = pageParam !== undefined;
+    const limit = Number(limitParam) || 12;
+    const page  = Math.max(1, Number(pageParam) || 1);
+    const skip  = isPaginated ? (page - 1) * limit : 0;
+
+    const total = await Listing.countDocuments(query);
+
+    let listingQuery = Listing.find(query).sort(sortOption).populate('owner', 'name email').skip(skip).limit(limit);
 
     const listings = await listingQuery;
+
+    if (isPaginated) {
+      return res.json({
+        listings,
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit)
+      });
+    }
+
+    // Legacy: callers that don't pass `page` get a plain array so nothing breaks
     res.json(listings);
   } catch (err) {
     res.status(500).json({ message: 'Server error', error: err.message });
@@ -106,7 +126,7 @@ router.get('/:id', async (req, res) => {
 });
 
 // Create listing (owners only)
-router.post('/', auth, upload.array('photos', 5), async (req, res) => {
+router.post('/', auth, upload.array('photos', 10), async (req, res) => {
   try {
     if (req.user.role !== 'owner') return res.status(403).json({ message: 'Only owners can post listings' });
 
@@ -151,8 +171,8 @@ async function updateListing(req, res) {
 }
 
 // Update listing
-router.put('/:id', auth, upload.array('photos', 5), updateListing);
-router.patch('/:id', auth, upload.array('photos', 5), updateListing);
+router.put('/:id', auth, upload.array('photos', 10), updateListing);
+router.patch('/:id', auth, upload.array('photos', 10), updateListing);
 
 // Delete listing
 router.delete('/:id', auth, async (req, res) => {

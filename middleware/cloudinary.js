@@ -13,10 +13,23 @@ const storage = new CloudinaryStorage({
   params: {
     folder: 'ledge-stay',
     allowed_formats: ['jpg', 'jpeg', 'png', 'webp'],
-    transformation: [{ width: 800, height: 600, crop: 'limit' }]
+    transformation: [{ width: 1200, height: 900, crop: 'limit', quality: 'auto' }]
   }
 });
 
-const upload = multer({ storage });
+const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024; // 5 MB
+
+const upload = multer({
+  storage,
+  limits: { fileSize: MAX_FILE_SIZE_BYTES },
+  fileFilter: (_req, file, cb) => {
+    if (ALLOWED_MIME_TYPES.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only JPG, PNG, and WebP images are allowed'));
+    }
+  }
+});
 
 module.exports = { upload, cloudinary };

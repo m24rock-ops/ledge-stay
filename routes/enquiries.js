@@ -3,6 +3,8 @@ const router = express.Router();
 const auth = require('../middleware/auth');
 const Enquiry = require('../models/Enquiry');
 const Listing = require('../models/Listing');
+const User = require('../models/User');
+const { sendEnquiryNotificationToOwner, sendEnquiryConfirmationToTenant } = require('../services/email');
 
 function isValidEmail(email) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email || '').trim());
@@ -53,6 +55,27 @@ router.post('/', async (req, res) => {
 
     listing.enquiryCount = Number(listing.enquiryCount || 0) + 1;
     await listing.save();
+
+    // Send emails — failures are caught inside the service and never throw
+    const owner = await User.findById(listing.owner).select('name email');
+    if (owner) {
+      sendEnquiryNotificationToOwner({
+        ownerEmail: owner.email,
+        ownerName: owner.name,
+        tenantName: trimmedName,
+        tenantEmail: trimmedEmail,
+        message: trimmedMessage,
+        listingTitle: listing.title,
+        listingId: listing._id
+      });
+    }
+
+    sendEnquiryConfirmationToTenant({
+      tenantEmail: trimmedEmail,
+      tenantName: trimmedName,
+      listingTitle: listing.title,
+      listingId: listing._id
+    });
 
     res.status(201).json({
       message: 'Enquiry sent successfully',

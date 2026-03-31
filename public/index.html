@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <title>Ledge Stay</title>
   <link rel="stylesheet" href="style.css">
@@ -69,7 +68,7 @@
     </div>
 
     <section class="featured-section">
-       <div class="section-heading">
+      <div class="section-heading">
         <div>
           <p class="section-label">Featured Listings</p>
           <h2>Places worth a closer look</h2>
@@ -201,7 +200,8 @@
         <input type="checkbox" id="post-featured">
         <span>Mark as featured</span>
       </label>
-      <input type="file" id="post-photos" multiple accept="image/*">
+      <input type="file" id="post-photos" multiple accept="image/jpeg,image/png,image/webp">
+      <p style="font-size:13px;color:#64748b;margin:-8px 0 4px">Up to 10 photos · JPG, PNG or WebP · max 5 MB each</p>
       <button id="post-submit-button" onclick="saveListing()">Post Listing</button>
       <p id="post-error" class="error"></p>
     </div>
@@ -330,9 +330,7 @@
   <div id="page-detail" class="page" style="display:none">
     <div id="detail-content"></div>
   </div>
-  
-  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-<script src="/app.js"></script>
 
+  <script src="app.js"></script>
 </body>
 </html>
