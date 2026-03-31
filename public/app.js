@@ -2,6 +2,7 @@ const ROUTE_PATHS = {
   home: '/',
   browse: '/browse',
   listings: '/browse',
+  detail: '/browse',
   wishlist: '/wishlist',
   login: '/login',
   register: '/register',
@@ -95,7 +96,7 @@ function showPage(page, options = {}) {
     navigateToPath(normalizedPage, replaceHistory);
   }
 
-  if (normalizedPage === 'listings') loadListings();
+  if (normalizedPage === 'listings') { currentListingsPage = 1; loadListings(); }
   if (normalizedPage === 'home') loadFeaturedListings();
   if (normalizedPage === 'dashboard') loadOwnerDashboard();
   if (normalizedPage === 'admin') loadAdminPanel();
@@ -224,6 +225,77 @@ function renderStars(rating) {
   return `${'★'.repeat(safeRating)}${'☆'.repeat(5 - safeRating)}`;
 }
 
+// ── PHOTO CAROUSEL ──────────────────────────────────────────────────────────
+
+function renderPhotoCarousel(photos) {
+  if (!photos || photos.length === 0) {
+    return '<div class="no-image detail-no-image">No photo available</div>';
+  }
+
+  const slides = photos.map((src, i) => `
+    <div class="carousel-slide ${i === 0 ? 'is-active' : ''}" data-index="${i}">
+      <img src="${src}" alt="Listing photo ${i + 1}">
+    </div>`).join('');
+
+  const dots = photos.length > 1
+    ? `<div class="carousel-dots">
+        ${photos.map((_, i) => `<button class="carousel-dot ${i === 0 ? 'is-active' : ''}" aria-label="Photo ${i + 1}" onclick="carouselGoTo(this,${i})"></button>`).join('')}
+       </div>`
+    : '';
+
+  const arrows = photos.length > 1
+    ? `<button class="carousel-arrow carousel-arrow--prev" aria-label="Previous photo" onclick="carouselStep(this,-1)">&#8592;</button>
+       <button class="carousel-arrow carousel-arrow--next" aria-label="Next photo"     onclick="carouselStep(this, 1)">&#8594;</button>`
+    : '';
+
+  const thumbs = photos.length > 1
+    ? `<div class="carousel-thumbs">
+        ${photos.map((src, i) => `<img src="${src}" class="carousel-thumb ${i === 0 ? 'is-active' : ''}" alt="Thumb ${i + 1}" onclick="carouselGoTo(this,${i})">`).join('')}
+       </div>`
+    : '';
+
+  return `
+    <div class="carousel" data-current="0" tabindex="0"
+         onkeydown="carouselKey(event, this)">
+      <div class="carousel-track">${slides}</div>
+      ${arrows}
+      ${dots}
+    </div>
+    ${thumbs}`;
+}
+
+function carouselRoot(el) {
+  return el.closest('.detail-photos');
+}
+
+function carouselGoTo(triggerEl, index) {
+  const root = carouselRoot(triggerEl);
+  const carousel = root.querySelector('.carousel');
+  const slides   = carousel.querySelectorAll('.carousel-slide');
+  const dots     = root.querySelectorAll('.carousel-dot');
+  const thumbs   = root.querySelectorAll('.carousel-thumb');
+  const total    = slides.length;
+  const next     = ((index % total) + total) % total;
+
+  carousel.dataset.current = next;
+  slides.forEach((s, i) => s.classList.toggle('is-active', i === next));
+  dots.forEach((d, i)    => d.classList.toggle('is-active', i === next));
+  thumbs.forEach((t, i)  => t.classList.toggle('is-active', i === next));
+}
+
+function carouselStep(arrowEl, dir) {
+  const carousel = arrowEl.closest('.carousel');
+  const current  = parseInt(carousel.dataset.current || '0', 10);
+  carouselGoTo(arrowEl, current + dir);
+}
+
+function carouselKey(event, carouselEl) {
+  if (event.key === 'ArrowLeft')  carouselGoTo(carouselEl, parseInt(carouselEl.dataset.current || '0', 10) - 1);
+  if (event.key === 'ArrowRight') carouselGoTo(carouselEl, parseInt(carouselEl.dataset.current || '0', 10) + 1);
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+
 function renderListingImage(listing, altText) {
   if (listing.photos && listing.photos.length > 0) {
     return `<img src="${listing.photos[0]}" alt="${altText}">`;
@@ -332,10 +404,27 @@ function buildGoogleMapEmbedUrl(listing) {
 }
 
 function renderMapSection(listing) {
+  const embedUrl = buildGoogleMapEmbedUrl(listing);
+  if (!embedUrl) return '';
+
   return `
     <section class="map-section">
-      <h2>Location</h2>
-      <div id="map" style="height:400px;"></div>
+      <div class="map-section-header">
+        <div>
+          <h2>Location</h2>
+          <p class="reviews-subtitle">See where this property sits before you decide to enquire or visit.</p>
+        </div>
+      </div>
+      <div class="map-frame-wrap">
+        <iframe
+          class="listing-map-frame"
+          src="${embedUrl}"
+          loading="lazy"
+          allowfullscreen
+          referrerpolicy="no-referrer-when-downgrade"
+          title="Map showing ${escapeHtml(listing.title)}"
+        ></iframe>
+      </div>
     </section>
   `;
 }
@@ -628,26 +717,72 @@ async function loadFeaturedListings() {
   }
 }
 
-async function loadListings() {
-  const city = document.getElementById('filter-city').value;
-  const type = document.getElementById('filter-type').value;
-  const gender = document.getElementById('filter-gender').value;
+let currentListingsPage = 1;
+const LISTINGS_PER_PAGE = 12;
+
+function buildListingsQuery(page) {
+  const city     = document.getElementById('filter-city').value;
+  const type     = document.getElementById('filter-type').value;
+  const gender   = document.getElementById('filter-gender').value;
   const minPrice = document.getElementById('filter-min').value;
   const maxPrice = document.getElementById('filter-max').value;
-  const sort = document.getElementById('filter-sort').value;
+  const sort     = document.getElementById('filter-sort').value;
 
   const query = new URLSearchParams();
-  if (city) query.append('city', city);
-  if (type) query.append('type', type);
-  if (gender) query.append('gender', gender);
+  if (city)     query.append('city', city);
+  if (type)     query.append('type', type);
+  if (gender)   query.append('gender', gender);
   if (minPrice) query.append('minPrice', minPrice);
   if (maxPrice) query.append('maxPrice', maxPrice);
-  if (sort) query.append('sort', sort);
+  if (sort)     query.append('sort', sort);
+  query.append('page',  page);
+  query.append('limit', LISTINGS_PER_PAGE);
+  return query;
+}
 
-  const grid = document.getElementById('listings-grid');
+function renderPagination(currentPage, totalPages) {
+  if (totalPages <= 1) return '';
+
+  const pages = [];
+  for (let i = 1; i <= totalPages; i++) {
+    const active = i === currentPage ? 'pagination-btn--active' : '';
+    pages.push(`<button class="pagination-btn ${active}" onclick="goToListingsPage(${i})">${i}</button>`);
+  }
+
+  return `
+    <div class="pagination">
+      <button class="pagination-btn" onclick="goToListingsPage(${currentPage - 1})" ${currentPage === 1 ? 'disabled' : ''}>&#8592; Prev</button>
+      ${pages.join('')}
+      <button class="pagination-btn" onclick="goToListingsPage(${currentPage + 1})" ${currentPage === totalPages ? 'disabled' : ''}>Next &#8594;</button>
+    </div>`;
+}
+
+async function goToListingsPage(page) {
+  currentListingsPage = page;
+  await loadListings();
+  document.getElementById('page-listings')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+async function loadListings() {
+  const query = buildListingsQuery(currentListingsPage);
+  const grid  = document.getElementById('listings-grid');
+  let paginationEl = document.getElementById('listings-pagination');
+
+  if (!paginationEl) {
+    paginationEl = document.createElement('div');
+    paginationEl.id = 'listings-pagination';
+    grid.insertAdjacentElement('afterend', paginationEl);
+  }
+
+  grid.innerHTML = '<p style="padding:20px;color:#888">Loading...</p>';
+  paginationEl.innerHTML = '';
 
   try {
-    const listings = await apiFetchJson(`/api/listings?${query.toString()}`);
+    const data = await apiFetchJson(`/api/listings?${query.toString()}`);
+
+    // Support both paginated ({listings, total, ...}) and legacy plain-array responses
+    const listings   = Array.isArray(data) ? data : data.listings;
+    const totalPages = data.totalPages || 1;
 
     if (!Array.isArray(listings) || listings.length === 0) {
       grid.innerHTML = '<p style="padding:20px;color:#888">No listings found.</p>';
@@ -670,6 +805,8 @@ async function loadListings() {
         </div>
       </div>
     `).join('');
+
+    paginationEl.innerHTML = renderPagination(currentListingsPage, totalPages);
   } catch (err) {
     grid.innerHTML = `<p style="padding:20px;color:#c0392b">${err.message || 'Unable to load listings.'}</p>`;
   }
@@ -761,9 +898,7 @@ async function showDetail(id) {
 
     document.getElementById('detail-content').innerHTML = `
     <div class="detail-photos">
-      ${listing.photos && listing.photos.length > 0
-        ? listing.photos.map((photo) => `<img src="${photo}" alt="Listing photo">`).join('')
-        : '<div class="no-image detail-no-image">No photo available</div>'}
+      ${renderPhotoCarousel(listing.photos)}
     </div>
     <div class="detail-info">
       <h1>${listing.title}</h1>
@@ -855,24 +990,9 @@ async function showDetail(id) {
   `;
 
     loadReviews(id);
-
-    setTimeout(() => {
-      if (!document.getElementById('map')) return;
-
-      var map = L.map('map').setView([12.9716, 77.5946], 13);
-
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; OpenStreetMap contributors'
-      }).addTo(map);
-
-      L.marker([12.9716, 77.5946])
-        .addTo(map)
-        .bindPopup('📍 Location')
-        .openPopup();
-
-    }, 300);
+    showPage('detail', { updateHistory: true });
   } catch (err) {
-    alert(err.message || 'Unable to load listing details.');
+    alert(err.message || 'Unable to load the listing.');
   }
 }
 
@@ -1062,7 +1182,22 @@ async function saveListing() {
   amenities.forEach((amenity) => formData.append('amenities', amenity));
 
   const photos = document.getElementById('post-photos').files;
+  const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+  const MAX_SIZE = 5 * 1024 * 1024;
+
+  if (photos.length > 10) {
+    document.getElementById('post-error').textContent = 'You can upload a maximum of 10 photos.';
+    return;
+  }
   for (const photo of photos) {
+    if (!ALLOWED_TYPES.includes(photo.type)) {
+      document.getElementById('post-error').textContent = `"${photo.name}" is not a supported type. Use JPG, PNG or WebP.`;
+      return;
+    }
+    if (photo.size > MAX_SIZE) {
+      document.getElementById('post-error').textContent = `"${photo.name}" exceeds the 5 MB limit.`;
+      return;
+    }
     formData.append('photos', photo);
   }
 
