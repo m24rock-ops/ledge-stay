@@ -114,4 +114,32 @@ async function sendEnquiryConfirmationToTenant({ tenantEmail, tenantName, listin
   });
 }
 
-module.exports = { sendEnquiryNotificationToOwner, sendEnquiryConfirmationToTenant };
+module.exports = { sendEnquiryNotificationToOwner, sendEnquiryConfirmationToTenant, sendPasswordResetEmail };
+
+async function sendPasswordResetEmail({ toEmail, userName, resetUrl }) {
+  await sendEmail({
+    to: toEmail,
+    subject: 'Reset your LedgeStay password',
+    html: `
+      <div style="font-family:Inter,sans-serif;max-width:600px;margin:0 auto;color:#1e293b">
+        <div style="background:#2563eb;padding:32px 40px;border-radius:12px 12px 0 0">
+          <h1 style="color:#fff;margin:0;font-size:22px">Password Reset</h1>
+        </div>
+        <div style="background:#fff;padding:32px 40px;border:1px solid #e2e8f0;border-top:none;border-radius:0 0 12px 12px">
+          <p style="margin:0 0 16px">Hi <strong>${userName}</strong>,</p>
+          <p style="margin:0 0 24px">
+            We received a request to reset your password. Click the button below —
+            this link expires in <strong>1 hour</strong>.
+          </p>
+          <a href="${resetUrl}"
+             style="display:inline-block;background:#2563eb;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:600">
+            Reset Password
+          </a>
+          <p style="margin:24px 0 0;font-size:13px;color:#94a3b8">
+            If you did not request this, you can safely ignore this email.
+          </p>
+        </div>
+      </div>
+    `
+  });
+}
