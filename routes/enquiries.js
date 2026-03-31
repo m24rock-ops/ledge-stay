@@ -44,6 +44,12 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ message: 'You cannot send an enquiry to your own listing' });
     }
 
+    // Prevent duplicate enquiries from the same tenant on the same listing
+    const existing = await Enquiry.findOne({ listing: listing._id, tenant: req.user.id });
+    if (existing) {
+      return res.status(400).json({ message: 'You have already sent an enquiry for this listing' });
+    }
+
     const enquiry = await Enquiry.create({
       listing: listing._id,
       owner: listing.owner,

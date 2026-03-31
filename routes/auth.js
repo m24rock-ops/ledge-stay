@@ -111,6 +111,9 @@ async function loginHandler(req, res) {
   }
 }
 
+const crypto = require('crypto');
+const { sendPasswordResetEmail } = require('../services/email');
+
 router.route('/register')
   .post(registerHandler)
   .all((req, res) => res.status(405).json({ message: 'Method not allowed' }));
@@ -118,5 +121,60 @@ router.route('/register')
 router.route('/login')
   .post(loginHandler)
   .all((req, res) => res.status(405).json({ message: 'Method not allowed' }));
+
+// Request password reset — sends email with token
+router.post('/forgot-password', async (req, res) => {
+  try {
+    const email = String(req.body.email || '').trim().toLowerCase();
+    if (!email) return res.status(400).json({ message: 'Email is required' });
+
+    const user = await User.findOne({ email: { $regex: `^${escapeRegExp(email)}$`, $options: 'i' } });
+
+    // Always return success so we don't reveal whether the email exists
+    if (!user) return res.json({ message: 'If that email is registered, a reset link has been sent.' });
+
+    const token = crypto.randomBytes(32).toString('hex');
+    user.resetToken = token;
+    user.resetTokenExpiry = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+    await user.save();
+
+    const baseUrl = process.env.APP_BASE_URL || 'https://ledge-stay.up.railway.app';
+    const resetUrl = `${baseUrl}/reset-password?token=${token}`;
+
+    sendPasswordResetEmail({ toEmail: user.email, userName: user.name, resetUrl });
+
+    res.json({ message: 'If that email is registered, a reset link has been sent.' });
+  } catch (err) {
+    res.status(500).json({ message: 'Server error', error: err.message });
+  }
+});
+
+// Actually reset the password using the token
+router.post('/reset-password', async (req, res) => {
+  try {
+    const { token, password } = req.body;
+    if (!token || !password) return res.status(400).json({ message: 'Token and new password are required' });
+
+    if (!isValidPassword(password)) {
+      return res.status(400).json({ message: 'Password must be 8+ characters with letters and numbers' });
+    }
+
+    const user = await User.findOne({
+      resetToken: token,
+      resetTokenExpiry: { $gt: new Date() }
+    });
+
+    if (!user) return res.status(400).json({ message: 'Reset link is invalid or has expired' });
+
+    user.password = await bcrypt.hash(password, 10);
+    user.resetToken = null;
+    user.resetTokenExpiry = null;
+    await user.save();
+
+    res.json({ message: 'Password reset successfully. You can now log in.' });
+  } catch (err) {
+    res.status(500).json({ message: 'Server error', error: err.message });
+  }
+});
 
 module.exports = router;
