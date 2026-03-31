@@ -393,6 +393,10 @@ function renderWishlistButton(listing, options = {}) {
 }
 
 function apiUrl(path) {
+  // If running locally (file:// protocol), use deployed API
+  if (window.location.protocol === 'file:') {
+    return `https://ledge-stay.up.railway.app${path}`;
+  }
   return path;
 }
 
