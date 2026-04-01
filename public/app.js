@@ -966,12 +966,12 @@ async function showDetail(id) {
           <input
             type="text"
             id="distance-input"
-            placeholder="e.g. Christ University, Bangalore"
+            placeholder="e.g. bengaluru University, Bengaluru"
             class="distance-input"
           >
           <button
             id="distance-btn"
-            onclick="calculateDistance('${listing._id}', ${JSON.stringify(listing.address)}, ${JSON.stringify(listing.city)})"
+            onclick="calculateDistance('${listing._id}')"
             class="distance-button"
           >
             Calculate
@@ -988,7 +988,7 @@ async function showDetail(id) {
           </div>
         </div>
         <div class="enquiry-form-card">
-          <div class="review-form-grid enquiry-form-grid">
+          <div class="review-form-grid enquiry-form-grid-2">
             <div class="review-form-field">
               <label for="enquiry-name">Name</label>
               <input
@@ -1331,11 +1331,12 @@ async function calculateDistance(listingId, listingAddress, listingCity) {
     const bike = Math.round((km / 25) * 60);
     const walk = Math.round((km / 5) * 60);
     const auto = Math.round((km / 15) * 60);
+    const car  =  Math.round((km / 40) * 60);
 
-    const toAddress = encodeURIComponent(`${listingAddress}, ${listingCity}, India`);
+    const data2 = await apiFetchJson(`/api/listings/${listingId}`);
+    const toAddress = encodeURIComponent(`${data2.address}, ${data2.city}, India`);
     const fromAddress = encodeURIComponent(from);
     const mapsUrl = `https://www.google.com/maps/dir/?api=1&origin=${fromAddress}&destination=${toAddress}&travelmode=two-wheeler`;
-
     document.getElementById('distance-result').innerHTML = `
       <div class="distance-result-card">
         <div class="distance-km">${data.distanceKm} km away</div>
