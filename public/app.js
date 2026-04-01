@@ -961,19 +961,20 @@ async function showDetail(id) {
 
       <div class="distance-card">
         <h3 class="distance-title">How far is this from your place?</h3>
+        <p class="distance-subtitle">Enter your college or workplace to see commute time</p>
         <div class="distance-form">
           <input
             type="text"
             id="distance-input"
-            placeholder="Enter your college or workplace address..."
+            placeholder="e.g. Christ University, Bangalore"
             class="distance-input"
           >
           <button
             id="distance-btn"
-            onclick="calculateDistance('${listing._id}')"
+            onclick="calculateDistance('${listing._id}', ${JSON.stringify(listing.address)}, ${JSON.stringify(listing.city)})"
             class="distance-button"
           >
-            Calculate Distance
+            Calculate
           </button>
         </div>
         <div id="distance-result"></div>
@@ -1316,7 +1317,7 @@ async function deleteListing(listingId, options = {}) {
   loadOwnerDashboard();
 }
 
-async function calculateDistance(listingId) {
+async function calculateDistance(listingId, listingAddress, listingCity) {
   const from = document.getElementById('distance-input').value.trim();
   if (!from) { alert('Please enter your college or workplace address!'); return; }
 
@@ -1331,20 +1332,28 @@ async function calculateDistance(listingId) {
     const walk = Math.round((km / 5) * 60);
     const auto = Math.round((km / 15) * 60);
 
+    const toAddress = encodeURIComponent(`${listingAddress}, ${listingCity}, India`);
+    const fromAddress = encodeURIComponent(from);
+    const mapsUrl = `https://www.google.com/maps/dir/?api=1&origin=${fromAddress}&destination=${toAddress}&travelmode=two-wheeler`;
+
     document.getElementById('distance-result').innerHTML = `
       <div class="distance-result-card">
-        <strong>${data.distanceKm} km</strong> away
+        <div class="distance-km">${data.distanceKm} km away</div>
         <div class="distance-modes">
-          <span>🚲 Bike ~${bike} min</span>
-          <span>🚶 Walk ~${walk} min</span>
-          <span>🛺 Auto ~${auto} min</span>
+          <span class="distance-mode-pill">🚲 Bike ~${bike} min</span>
+          <span class="distance-mode-pill">🚶 Walk ~${walk} min</span>
+          <span class="distance-mode-pill">🛺 Auto ~${auto} min</span>
         </div>
+        <a class="distance-maps-btn" href="${mapsUrl}" target="_blank" rel="noopener">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/><circle cx="12" cy="9" r="2.5"/></svg>
+          Open in Google Maps
+        </a>
       </div>`;
   } catch (err) {
-    document.getElementById('distance-result').innerHTML = `<p style="color:red">${err.message || 'Error calculating distance'}</p>`;
+    document.getElementById('distance-result').innerHTML = `<p style="color:red;margin-top:12px;">${err.message || 'Could not calculate distance'}</p>`;
   }
 
-  button.textContent = 'Calculate Distance';
+  button.textContent = 'Calculate';
   button.disabled = false;
 }
 
