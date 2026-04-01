@@ -694,8 +694,6 @@ function populateListingForm(listing) {
   document.getElementById('post-city').value = listing.city || '';
   document.getElementById('post-address').value = listing.address || '';
   document.getElementById('post-contact').value = listing.contact || '';
-  document.getElementById('post-lat').value = listing.lat ?? '';
-  document.getElementById('post-lng').value = listing.lng ?? '';
   document.getElementById('post-price').value = listing.price || '';
   document.getElementById('post-gender').value = listing.gender || 'any';
   document.getElementById('post-description').value = listing.description || '';
@@ -1319,11 +1317,8 @@ async function deleteListing(listingId, options = {}) {
 }
 
 async function calculateDistance(listingId) {
-  const from = document.getElementById('distance-input').value;
-  if (!from) {
-    alert('Please enter your college or workplace address!');
-    return;
-  }
+  const from = document.getElementById('distance-input').value.trim();
+  if (!from) { alert('Please enter your college or workplace address!'); return; }
 
   const button = document.getElementById('distance-btn');
   button.textContent = 'Calculating...';
@@ -1331,11 +1326,20 @@ async function calculateDistance(listingId) {
 
   try {
     const data = await apiFetchJson(`/api/listings/${listingId}/distance?from=${encodeURIComponent(from)}`);
+    const km = parseFloat(data.distanceKm);
+    const bike = Math.round((km / 25) * 60);
+    const walk = Math.round((km / 5) * 60);
+    const auto = Math.round((km / 15) * 60);
+
     document.getElementById('distance-result').innerHTML = `
       <div class="distance-result-card">
-        <strong>${data.distanceKm} km</strong> away - approximately <strong>${data.durationMin} minutes</strong> by car
-      </div>
-    `;
+        <strong>${data.distanceKm} km</strong> away
+        <div class="distance-modes">
+          <span>🚲 Bike ~${bike} min</span>
+          <span>🚶 Walk ~${walk} min</span>
+          <span>🛺 Auto ~${auto} min</span>
+        </div>
+      </div>`;
   } catch (err) {
     document.getElementById('distance-result').innerHTML = `<p style="color:red">${err.message || 'Error calculating distance'}</p>`;
   }
