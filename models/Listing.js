@@ -25,7 +25,9 @@ const listingSchema = new mongoose.Schema({
   },
   rejectionNote: { type: String, default: '' },
   reviewedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
-  reviewedAt: { type: Date, default: null }
+  reviewedAt: { type: Date, default: null },
+  noBrokerage: { type: Boolean, default: false },
+  verified: { type: Boolean, default: false }
 }, { timestamps: true });
 
 module.exports = mongoose.model('Listing', listingSchema);
