@@ -356,7 +356,7 @@ function renderWhatsAppButton(listing) {
   if (!contact) return '';
 
   const url = `https://wa.me/${encodeURIComponent(contact)}`;
-  return `<a href="${url}" target="_blank" rel="noopener" class="btn btn-whatsapp" onclick="event.stopPropagation()">WhatsApp</a>`;
+  return `<a href="${url}" target="_blank" rel="noopener" class="btn btn-whatsapp" onclick="event.stopPropagation()">Contact owner</a>`;
 }
 
 function canUseWishlist() {
