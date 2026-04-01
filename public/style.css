@@ -896,6 +896,69 @@ button:hover { background: var(--primary-dark); transform: translateY(-1px); }
   .listing-map-frame { height: 240px; }
 }
 
+/* ── LISTING CARD NEW STYLES ─────────────────────────────────────────────── */
+.card-img-wrap {
+  position: relative;
+  width: 100%;
+  height: 180px;
+  background: #E2E8F0;
+  border-radius: 12px 12px 0 0;
+  overflow: hidden;
+}
+
+.card-img-wrap img,
+.card-img-wrap .no-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.card-img-wrap .no-image {
+  background: linear-gradient(135deg, #CBD5E1, #94A3B8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 32px;
+  color: #93C5FD;
+}
+
+.card-badges {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  pointer-events: none;
+}
+
+.badge {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 9px;
+  border-radius: 20px;
+  display: inline-block;
+  pointer-events: auto;
+}
+
+.badge-green {
+  background: #DCFCE7;
+  color: #166534;
+  border: 1px solid #BBF7D0;
+}
+
+.badge-blue {
+  background: #DBEAFE;
+  color: #1e40af;
+  border: 1px solid #BFDBFE;
+}
+
+.badge-gold {
+  background: #FEF9C3;
+  color: #854d0e;
+  border: 1px solid #FDE68A;
+}
+
 /* ── PAGINATION ─────────────────────────────────────────────────── */
 .pagination {
   display: flex;

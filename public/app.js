@@ -389,7 +389,8 @@ function renderWishlistButton(listing, options = {}) {
         ${saved ? 'Saved' : 'Save'}
       </button>
     </div>
-  `;\n}
+  `;
+}
 
 function apiUrl(path) {
   // If running locally (file:// protocol), use deployed API
@@ -831,23 +832,32 @@ async function loadListings() {
       return;
     }
 
-    grid.innerHTML = listings.map((listing) => `
-      <div class="listing-card" id="listing-card-${listing._id}" onclick="showDetail('${listing._id}')">
-        ${renderListingImage(listing, listing.title)}
-        <div class="card-body">
-          <h3>${listing.title}</h3>
-          <div class="price">Rs ${Number(listing.price).toLocaleString()}/mo</div>
-          <div class="meta">${listing.address}, ${listing.city}</div>
-          <div>
-            <span class="badge">${listing.type.toUpperCase()}</span>
-            <span class="badge">${listing.gender}</span>
+    grid.innerHTML = listings.map((listing) => {
+      const badges = [];
+      if (listing.noBrokerage) badges.push(`<span class="badge badge-green">No Brokerage</span>`);
+      if (listing.verified) badges.push(`<span class="badge badge-blue">Verified</span>`);
+      if (listing.is_featured) badges.push(`<span class="badge badge-gold">Featured</span>`);
+
+      return `
+        <div class="listing-card" id="listing-card-${listing._id}" onclick="showDetail('${listing._id}')">
+          <div class="card-img-wrap">
+            ${renderListingImage(listing, listing.title)}
+            ${badges.length > 0 ? `<div class="card-badges">${badges.join('')}</div>` : ''}
           </div>
-          ${renderWhatsAppButton(listing)}
-          ${renderWishlistButton(listing)}
-          ${renderOwnerListingActions(listing)}
-        </div>
-      </div>
-    `).join('');
+          <div class="card-body">
+            <h3>${listing.title}</h3>
+            <div class="price">Rs ${Number(listing.price).toLocaleString()}/mo</div>
+            <div class="meta">${listing.address}, ${listing.city}</div>
+            <div>
+              <span class="badge">${listing.type.toUpperCase()}</span>
+              <span class="badge">${listing.gender}</span>
+            </div>
+            ${renderWhatsAppButton(listing)}
+            ${renderWishlistButton(listing)}
+            ${renderOwnerListingActions(listing)}
+          </div>
+        </div>`;
+    }).join('');
 
     paginationEl.innerHTML = renderPagination(currentListingsPage, totalPages);
   } catch (err) {
