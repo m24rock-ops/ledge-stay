@@ -389,51 +389,7 @@ function renderWishlistButton(listing, options = {}) {
         ${saved ? 'Saved' : 'Save'}
       </button>
     </div>
-  `;
-}
-
-function renderListingCard(listing, options = {}) {
-  const avgRating = listing.averageRating ? listing.averageRating.toFixed(1) : null;
-  const reviewCount = listing.reviewCount || 0;
-  const stars = avgRating ? '★'.repeat(Math.round(avgRating)) + '☆'.repeat(5 - Math.round(avgRating)) : '';
-
-  const badges = [];
-  if (listing.noBrokerage) badges.push(`<span class="badge badge-green">No Brokerage</span>`);
-  if (listing.verified) badges.push(`<span class="badge badge-blue">Verified</span>`);
-  if (listing.is_featured) badges.push(`<span class="badge badge-gold">Featured</span>`);
-
-  const waNumber = listing.owner?.whatsapp || listing.owner?.phone || '';
-  const waMsg = encodeURIComponent(`Hi, I'm interested in your PG "${listing.title}" on Ledge Stay`);
-  const waUrl = `https://wa.me/${waNumber}?text=${waMsg}`;
-
-  return `
-    <div class="listing-card" onclick="showDetail('${listing._id}')">
-      <div class="card-img-wrap">
-        ${listing.photos?.[0]
-          ? `<img src="${listing.photos[0]}" alt="${escapeHtml(listing.title)}" class="card-img" loading="lazy">`
-          : `<div class="card-img-placeholder"></div>`}
-        <div class="card-badges">${badges.join('')}</div>
-      </div>
-      <div class="card-body">
-        <div class="card-city">${escapeHtml(listing.city || '')}</div>
-        <div class="card-title">${escapeHtml(listing.title)}</div>
-        <div class="card-addr">${escapeHtml(listing.address || '')}</div>
-        ${avgRating ? `
-        <div class="card-rating">
-          <span class="stars">${stars}</span>
-          <span class="rating-val">${avgRating}</span>
-          <span class="rating-count">(${reviewCount} reviews)</span>
-        </div>` : ''}
-        <div class="card-price">₹${Number(listing.price).toLocaleString('en-IN')}/month</div>
-        <div class="card-actions" onclick="event.stopPropagation()">
-          ${waNumber
-            ? `<a class="btn-wa" href="${waUrl}" target="_blank" rel="noopener">Contact Owner</a>`
-            : `<button class="btn-wa" disabled>Contact Owner</button>`}
-          <button class="btn-view" onclick="showDetail('${listing._id}')">View Details</button>
-        </div>
-      </div>
-    </div>`;
-}
+  `;\n}
 
 function apiUrl(path) {
   // If running locally (file:// protocol), use deployed API
@@ -875,11 +831,23 @@ async function loadListings() {
       return;
     }
 
-    grid.innerHTML = listings.map((listing) => {
-      const card = renderListingCard(listing);
-      // Add id to the card for reference
-      return card.replace('<div class="listing-card"', `<div class="listing-card" id="listing-card-${listing._id}"`);
-    }).join('');
+    grid.innerHTML = listings.map((listing) => `
+      <div class="listing-card" id="listing-card-${listing._id}" onclick="showDetail('${listing._id}')">
+        ${renderListingImage(listing, listing.title)}
+        <div class="card-body">
+          <h3>${listing.title}</h3>
+          <div class="price">Rs ${Number(listing.price).toLocaleString()}/mo</div>
+          <div class="meta">${listing.address}, ${listing.city}</div>
+          <div>
+            <span class="badge">${listing.type.toUpperCase()}</span>
+            <span class="badge">${listing.gender}</span>
+          </div>
+          ${renderWhatsAppButton(listing)}
+          ${renderWishlistButton(listing)}
+          ${renderOwnerListingActions(listing)}
+        </div>
+      </div>
+    `).join('');
 
     paginationEl.innerHTML = renderPagination(currentListingsPage, totalPages);
   } catch (err) {

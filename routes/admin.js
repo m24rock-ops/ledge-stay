@@ -72,8 +72,6 @@ router.patch('/listings/:id/review', async (req, res) => {
 
     listing.reviewedBy = req.user.id;
     listing.reviewedAt = new Date();
-    listing.noBrokerage = req.body.noBrokerage ?? listing.noBrokerage;
-    listing.verified = req.body.verified ?? listing.verified;
     await listing.save();
 
     await AdminAction.create({
