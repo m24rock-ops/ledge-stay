@@ -833,27 +833,42 @@ async function loadListings() {
     }
 
     grid.innerHTML = listings.map((listing) => {
+      const avg = listing.averageRating ? Number(listing.averageRating).toFixed(1) : null;
+      const count = listing.reviewCount || 0;
+      const fullStars = avg ? Math.round(avg) : 0;
+      const stars = '★'.repeat(fullStars) + '☆'.repeat(5 - fullStars);
+
       const badges = [];
-      if (listing.noBrokerage) badges.push(`<span class="badge badge-green">No Brokerage</span>`);
-      if (listing.verified) badges.push(`<span class="badge badge-blue">Verified</span>`);
-      if (listing.is_featured) badges.push(`<span class="badge badge-gold">Featured</span>`);
+      if (listing.noBrokerage) badges.push(`<span class="img-badge badge-green">✓ No Brokerage</span>`);
+      if (listing.verified) badges.push(`<span class="img-badge badge-teal">✓ Verified</span>`);
+      if (listing.is_featured) badges.push(`<span class="img-badge badge-gold">Best Deal</span>`);
+
+      const ownerPhone = listing.owner?.whatsapp || listing.owner?.phone || '';
+      const waMsg = encodeURIComponent(`Hi, I'm interested in your PG "${listing.title}" on Ledge Stay`);
+      const waUrl = ownerPhone ? `https://wa.me/${ownerPhone}?text=${waMsg}` : null;
+
+      const imgHtml = listing.photos?.[0]
+        ? `<img src="${listing.photos[0]}" alt="${escapeHtml(listing.title)}">`
+        : `<div class="no-image"></div>`;
 
       return `
         <div class="listing-card" id="listing-card-${listing._id}" onclick="showDetail('${listing._id}')">
           <div class="card-img-wrap">
-            ${renderListingImage(listing, listing.title)}
-            ${badges.length > 0 ? `<div class="card-badges">${badges.join('')}</div>` : ''}
+            ${imgHtml}
+            <div class="card-img-badges">${badges.join('')}</div>
           </div>
           <div class="card-body">
-            <h3>${listing.title}</h3>
-            <div class="price">Rs ${Number(listing.price).toLocaleString()}/mo</div>
-            <div class="meta">${listing.address}, ${listing.city}</div>
-            <div>
-              <span class="badge">${listing.type.toUpperCase()}</span>
-              <span class="badge">${listing.gender}</span>
+            <div class="card-city-label">${escapeHtml(listing.city || '').toUpperCase()}</div>
+            <h3>${escapeHtml(listing.title)}</h3>
+            <div class="meta">${escapeHtml(listing.address || '')}</div>
+            ${avg ? `<div class="card-rating"><span class="card-stars">${stars}</span><span class="card-rating-val">${avg}</span><span class="card-rating-count">(${count} reviews)</span></div>` : ''}
+            <div class="price">₹${Number(listing.price).toLocaleString('en-IN')}/month</div>
+            <div class="card-actions" onclick="event.stopPropagation()">
+              ${waUrl
+                ? `<a class="btn-contact" href="${waUrl}" target="_blank" rel="noopener">Contact Owner</a>`
+                : `<button class="btn-contact" disabled>Contact Owner</button>`}
+              <button class="btn-details" onclick="event.stopPropagation();showDetail('${listing._id}')">View Details</button>
             </div>
-            ${renderWhatsAppButton(listing)}
-            ${renderWishlistButton(listing)}
             ${renderOwnerListingActions(listing)}
           </div>
         </div>`;
