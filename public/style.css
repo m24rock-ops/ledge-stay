@@ -1059,3 +1059,6 @@ button:hover { background: var(--primary-dark); transform: translateY(-1px); }
   .carousel-arrow { width: 32px; height: 32px; font-size: 15px; }
   .pagination-btn { min-width: 32px; height: 32px; font-size: 13px; }
 }
+@media (max-width: 767px) {
+  a[data-page-link="home"] { display: none; }
+}
