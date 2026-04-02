@@ -28,6 +28,23 @@ function getOptionalUser(req) {
   }
 }
 
+function toRadians(value) {
+  return (Number(value) * Math.PI) / 180;
+}
+
+function calculateDistanceKm(fromLat, fromLng, toLat, toLng) {
+  const earthRadiusKm = 6371;
+  const dLat = toRadians(toLat - fromLat);
+  const dLng = toRadians(toLng - fromLng);
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRadians(fromLat)) *
+    Math.cos(toRadians(toLat)) *
+    Math.sin(dLng / 2) ** 2;
+
+  return earthRadiusKm * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
 // Get all listings (with search, filters & pagination)
 router.get('/', async (req, res) => {
   try {
@@ -76,6 +93,80 @@ router.get('/', async (req, res) => {
 
     // Legacy: callers that don't pass `page` get a plain array so nothing breaks
     res.json(listings);
+  } catch (err) {
+    res.status(500).json({ message: 'Server error', error: err.message });
+  }
+});
+
+router.get('/nearby', async (req, res) => {
+  try {
+    const {
+      lat,
+      lng,
+      radiusKm: radiusParam,
+      city,
+      type,
+      gender,
+      minPrice,
+      maxPrice,
+      limit: limitParam,
+      page: pageParam
+    } = req.query;
+
+    const userLat = Number(lat);
+    const userLng = Number(lng);
+    const radiusKm = Math.max(1, Number(radiusParam) || 10);
+    const limit = Math.max(1, Number(limitParam) || 12);
+    const page = Math.max(1, Number(pageParam) || 1);
+
+    if (!Number.isFinite(userLat) || !Number.isFinite(userLng)) {
+      return res.status(400).json({ message: 'Valid latitude and longitude are required.' });
+    }
+
+    const query = {
+      available: true,
+      approvalStatus: 'approved',
+      lat: { $ne: null },
+      lng: { $ne: null }
+    };
+
+    if (city) query.city = { $regex: city, $options: 'i' };
+    if (type) query.type = type;
+    if (gender) query.gender = gender;
+    if (minPrice || maxPrice) {
+      query.price = {};
+      if (minPrice) query.price.$gte = Number(minPrice);
+      if (maxPrice) query.price.$lte = Number(maxPrice);
+    }
+
+    const listings = await Listing.find(query)
+      .populate('owner', 'name email')
+      .lean();
+
+    const nearbyListings = listings
+      .map((listing) => {
+        const distanceKm = calculateDistanceKm(userLat, userLng, listing.lat, listing.lng);
+        return {
+          ...listing,
+          distanceKm: Number(distanceKm.toFixed(1))
+        };
+      })
+      .filter((listing) => listing.distanceKm <= radiusKm)
+      .sort((a, b) => a.distanceKm - b.distanceKm);
+
+    const total = nearbyListings.length;
+    const totalPages = Math.max(1, Math.ceil(total / limit));
+    const startIndex = (page - 1) * limit;
+    const paginatedListings = nearbyListings.slice(startIndex, startIndex + limit);
+
+    res.json({
+      listings: paginatedListings,
+      total,
+      page,
+      limit,
+      totalPages,
+      radiusKm
+    });
   } catch (err) {
     res.status(500).json({ message: 'Server error', error: err.message });
   }

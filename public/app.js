@@ -22,6 +22,12 @@ let savedListingIds = new Set();
 let appConfig = {
   mapsEmbedApiKey: ''
 };
+let nearbySearchState = {
+  active: false,
+  lat: null,
+  lng: null,
+  radiusKm: 10
+};
 const HOME_LOCATIONS = [
   {
     name: 'Koramangala',
@@ -267,6 +273,8 @@ function heroSearch() {
   const budget = document.getElementById('hero-budget').value;
   document.getElementById('filter-city').value = city;
   document.getElementById('filter-max').value = budget;
+  nearbySearchState.active = false;
+  updateNearbyResultsBanner();
   showPage('listings');
 }
 
@@ -286,12 +294,18 @@ function useNearMe() {
   setNearMeStatus('Finding stays near your current location...');
 
   navigator.geolocation.getCurrentPosition(
-    () => {
+    ({ coords }) => {
       const searchInput = document.getElementById('hero-search');
       if (searchInput && !searchInput.value.trim()) {
         searchInput.value = 'Nearby';
       }
 
+      nearbySearchState = {
+        active: true,
+        lat: Number(coords.latitude),
+        lng: Number(coords.longitude),
+        radiusKm: 10
+      };
       setNearMeStatus('Location found. Opening nearby listings now.');
       showPage('listings');
     },
@@ -924,6 +938,48 @@ function buildListingsQuery(page) {
   return query;
 }
 
+function buildNearbyListingsQuery(page) {
+  const query = buildListingsQuery(page);
+  query.append('lat', nearbySearchState.lat);
+  query.append('lng', nearbySearchState.lng);
+  query.append('radiusKm', nearbySearchState.radiusKm);
+  return query;
+}
+
+function updateNearbyResultsBanner(total = null, radiusKm = null) {
+  const banner = document.getElementById('nearby-results-banner');
+  const title = document.getElementById('nearby-results-title');
+  const copy = document.getElementById('nearby-results-copy');
+  if (!banner || !title || !copy) return;
+
+  if (!nearbySearchState.active) {
+    banner.style.display = 'none';
+    return;
+  }
+
+  banner.style.display = 'flex';
+  title.textContent = 'Showing stays near you';
+
+  if (typeof total === 'number') {
+    const safeRadius = radiusKm || nearbySearchState.radiusKm;
+    copy.textContent = `${total} nearby listing${total === 1 ? '' : 's'} found within ${safeRadius} km.`;
+  } else {
+    copy.textContent = 'Nearby listings are sorted by distance from your location.';
+  }
+}
+
+function clearNearMeSearch() {
+  nearbySearchState = {
+    active: false,
+    lat: null,
+    lng: null,
+    radiusKm: 10
+  };
+  updateNearbyResultsBanner();
+  currentListingsPage = 1;
+  loadListings();
+}
+
 function toggleBrowseFilters() {
   const panel = document.getElementById('browse-filters');
   const btn = document.getElementById('filter-toggle-btn');
@@ -980,6 +1036,50 @@ function renderPagination(currentPage, totalPages) {
     </div>`;
 }
 
+function renderListingsMarkup(listings) {
+  return listings.map((listing) => {
+    const avg = listing.averageRating ? Number(listing.averageRating).toFixed(1) : null;
+    const count = listing.reviewCount || 0;
+    const fullStars = avg ? Math.round(avg) : 0;
+    const stars = '★'.repeat(fullStars) + '☆'.repeat(5 - fullStars);
+
+    const badges = [];
+    if (listing.noBrokerage) badges.push('<span class="img-badge badge-green">No Brokerage</span>');
+    if (listing.verified) badges.push('<span class="img-badge badge-teal">Verified</span>');
+    if (listing.is_featured) badges.push('<span class="img-badge badge-gold">Best Deal</span>');
+
+    const ownerPhone = listing.owner?.whatsapp || listing.owner?.phone || '';
+    const waMsg = encodeURIComponent(`Hi, I'm interested in your PG "${listing.title}" on Ledge Stay`);
+    const waUrl = ownerPhone ? `https://wa.me/${ownerPhone}?text=${waMsg}` : null;
+    const imgHtml = listing.photos?.[0]
+      ? `<img src="${listing.photos[0]}" alt="${escapeHtml(listing.title)}">`
+      : '<div class="no-image"></div>';
+
+    return `
+      <div class="listing-card" id="listing-card-${listing._id}" onclick="showDetail('${listing._id}')">
+        <div class="card-img-wrap">
+          ${imgHtml}
+          <div class="card-img-badges">${badges.join('')}</div>
+        </div>
+        <div class="card-body">
+          <div class="card-city-label">${escapeHtml(listing.city || '').toUpperCase()}</div>
+          <h3>${escapeHtml(listing.title)}</h3>
+          <div class="meta">${escapeHtml(listing.address || '')}</div>
+          ${typeof listing.distanceKm === 'number' ? `<div class="card-distance">${listing.distanceKm.toFixed(1)} km away</div>` : ''}
+          ${avg ? `<div class="card-rating"><span class="card-stars">${stars}</span><span class="card-rating-val">${avg}</span><span class="card-rating-count">(${count} reviews)</span></div>` : ''}
+          <div class="price">₹${Number(listing.price).toLocaleString('en-IN')}/month</div>
+          <div class="card-actions" onclick="event.stopPropagation()">
+            ${waUrl
+              ? `<a class="btn-contact" href="${waUrl}" target="_blank" rel="noopener">Contact Owner</a>`
+              : '<button class="btn-contact" disabled>Contact Owner</button>'}
+            <button class="btn-details" onclick="event.stopPropagation();showDetail('${listing._id}')">View Details</button>
+          </div>
+          ${renderOwnerListingActions(listing)}
+        </div>
+      </div>`;
+  }).join('');
+}
+
 async function goToListingsPage(page) {
   currentListingsPage = page;
   await loadListings();
@@ -987,7 +1087,10 @@ async function goToListingsPage(page) {
 }
 
 async function loadListings() {
-  const query = buildListingsQuery(currentListingsPage);
+  const query = nearbySearchState.active
+    ? buildNearbyListingsQuery(currentListingsPage)
+    : buildListingsQuery(currentListingsPage);
+  const endpoint = nearbySearchState.active ? '/api/listings/nearby' : '/api/listings';
   const grid  = document.getElementById('listings-grid');
   let paginationEl = document.getElementById('listings-pagination');
 
@@ -999,16 +1102,19 @@ async function loadListings() {
 
   grid.innerHTML = '<p style="padding:20px;color:#888">Loading...</p>';
   paginationEl.innerHTML = '';
+  updateNearbyResultsBanner();
 
   try {
-    const data = await apiFetchJson(`/api/listings?${query.toString()}`);
+    const data = await apiFetchJson(`${endpoint}?${query.toString()}`);
 
     // Support both paginated ({listings, total, ...}) and legacy plain-array responses
     const listings   = Array.isArray(data) ? data : data.listings;
     const totalPages = data.totalPages || 1;
+    const total = Array.isArray(data) ? listings.length : Number(data.total || listings.length);
 
     if (!Array.isArray(listings) || listings.length === 0) {
-      grid.innerHTML = '<p style="padding:20px;color:#888">No listings found.</p>';
+      updateNearbyResultsBanner(0, data.radiusKm);
+      grid.innerHTML = `<p style="padding:20px;color:#888">${nearbySearchState.active ? 'No nearby listings found for this location.' : 'No listings found.'}</p>`;
       return;
     }
 
@@ -1041,6 +1147,7 @@ async function loadListings() {
             <div class="card-city-label">${escapeHtml(listing.city || '').toUpperCase()}</div>
             <h3>${escapeHtml(listing.title)}</h3>
             <div class="meta">${escapeHtml(listing.address || '')}</div>
+            ${typeof listing.distanceKm === 'number' ? `<div class="card-distance">${listing.distanceKm.toFixed(1)} km away</div>` : ''}
             ${avg ? `<div class="card-rating"><span class="card-stars">${stars}</span><span class="card-rating-val">${avg}</span><span class="card-rating-count">(${count} reviews)</span></div>` : ''}
             <div class="price">₹${Number(listing.price).toLocaleString('en-IN')}/month</div>
             <div class="card-actions" onclick="event.stopPropagation()">
@@ -1054,8 +1161,10 @@ async function loadListings() {
         </div>`;
     }).join('');
 
+    updateNearbyResultsBanner(total, data.radiusKm);
     paginationEl.innerHTML = renderPagination(currentListingsPage, totalPages);
   } catch (err) {
+    updateNearbyResultsBanner();
     grid.innerHTML = `<p style="padding:20px;color:#c0392b">${err.message || 'Unable to load listings.'}</p>`;
   }
 }
