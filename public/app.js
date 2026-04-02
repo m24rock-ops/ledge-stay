@@ -22,6 +22,53 @@ let savedListingIds = new Set();
 let appConfig = {
   mapsEmbedApiKey: ''
 };
+const HOME_LOCATIONS = [
+  {
+    name: 'Koramangala',
+    city: 'Bengaluru',
+    count: '120+ stays',
+    blurb: 'Popular for design, tech, and management students.',
+    image: 'https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?w=900&q=80'
+  },
+  {
+    name: 'Hinjewadi',
+    city: 'Pune',
+    count: '90+ stays',
+    blurb: 'Budget-friendly rooms with easy access to campuses and internships.',
+    image: 'https://images.unsplash.com/photo-1484154218962-a197022b5858?w=900&q=80'
+  },
+  {
+    name: 'Navrangpura',
+    city: 'Ahmedabad',
+    count: '70+ stays',
+    blurb: 'A student-heavy pocket with shared apartments and PG options.',
+    image: 'https://images.unsplash.com/photo-1494526585095-c41746248156?w=900&q=80'
+  },
+  {
+    name: 'Guindy',
+    city: 'Chennai',
+    count: '85+ stays',
+    blurb: 'Close to colleges, transit, and everyday essentials.',
+    image: 'https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?w=900&q=80'
+  }
+];
+const HOME_REVIEWS = [
+  {
+    name: 'Aarav S.',
+    meta: 'Engineering student, Bengaluru',
+    quote: 'I found a verified PG near campus in one evening. The pricing felt clear and the photos matched the actual place.'
+  },
+  {
+    name: 'Nisha R.',
+    meta: 'MBA student, Pune',
+    quote: 'Ledge-Stay felt easier than browsing generic property sites. I could quickly shortlist places that actually fit student life.'
+  },
+  {
+    name: 'Rahul P.',
+    meta: 'Parent, Chennai',
+    quote: 'The platform made it simpler to compare safe options for my son without calling ten different brokers first.'
+  }
+];
 
 function normalizePageName(page) {
   const aliases = {
@@ -216,9 +263,43 @@ function closeMenu() {
 }
 
 function heroSearch() {
-  const city = document.getElementById('hero-search').value;
+  const city = document.getElementById('hero-search').value.trim();
+  const budget = document.getElementById('hero-budget').value;
   document.getElementById('filter-city').value = city;
+  document.getElementById('filter-max').value = budget;
   showPage('listings');
+}
+
+function setNearMeStatus(message, isError = false) {
+  const statusEl = document.getElementById('near-me-status');
+  if (!statusEl) return;
+  statusEl.textContent = message;
+  statusEl.classList.toggle('is-error', isError);
+}
+
+function useNearMe() {
+  if (!navigator.geolocation) {
+    setNearMeStatus('Near Me needs location access in your browser.', true);
+    return;
+  }
+
+  setNearMeStatus('Detecting your location for a faster search...');
+
+  navigator.geolocation.getCurrentPosition(
+    () => {
+      const searchInput = document.getElementById('hero-search');
+      if (searchInput && !searchInput.value.trim()) {
+        searchInput.value = 'Nearby stays';
+      }
+
+      setNearMeStatus('Location detected. Showing the broadest nearby student stays.');
+      showPage('listings');
+    },
+    () => {
+      setNearMeStatus('Location access was blocked. Search by college, area, or city instead.', true);
+    },
+    { enableHighAccuracy: false, timeout: 7000, maximumAge: 300000 }
+  );
 }
 
 function renderStars(rating) {
@@ -745,17 +826,28 @@ async function loadFeaturedListings() {
     featuredGrid.innerHTML = listings.map((listing) => `
       <article class="featured-card">
         <div class="featured-image-wrap">
+          <div class="featured-card-badge-row">
+            <span class="featured-card-badge">Verified stay</span>
+          </div>
           ${renderListingImage(listing, listing.title)}
         </div>
         <div class="featured-card-body">
-          <p class="featured-location">${listing.city}</p>
+          <div class="featured-meta-row">
+            <p class="featured-location">${listing.city}</p>
+            <span class="featured-rating-pill">Top rated</span>
+          </div>
           <h3>${listing.title}</h3>
           <p class="featured-address">${listing.address}</p>
+          <div class="featured-amenities">
+            <span>Wi-Fi</span>
+            <span>Laundry</span>
+            <span>Student-ready</span>
+          </div>
           <div class="featured-card-footer">
             <div class="featured-price">Rs ${Number(listing.price).toLocaleString()}/month</div>
             <div class="featured-card-actions">
               ${renderWhatsAppButton(listing)}
-              <button class="featured-view-button" onclick="showDetail('${listing._id}')">View</button>
+              <button class="featured-view-button" onclick="showDetail('${listing._id}')">View Details</button>
             </div>
           </div>
           ${renderWishlistButton(listing)}
@@ -766,6 +858,46 @@ async function loadFeaturedListings() {
   } catch (err) {
     featuredGrid.innerHTML = '<div class="featured-empty">Unable to load featured listings right now.</div>';
   }
+}
+
+function renderPopularLocations() {
+  const grid = document.getElementById('popular-locations-grid');
+  if (!grid) return;
+
+  grid.innerHTML = HOME_LOCATIONS.map((location) => `
+    <article class="location-card" onclick="applyPopularLocation('${escapeHtml(location.city)}')">
+      <img src="${location.image}" alt="${escapeHtml(location.name)}, ${escapeHtml(location.city)}">
+      <div class="location-card-overlay"></div>
+      <div class="location-card-copy">
+        <p>${escapeHtml(location.city)}</p>
+        <h3>${escapeHtml(location.name)}</h3>
+        <span>${escapeHtml(location.count)}</span>
+        <div class="location-card-blurb">${escapeHtml(location.blurb)}</div>
+      </div>
+    </article>
+  `).join('');
+}
+
+function renderHomeReviews() {
+  const grid = document.getElementById('home-reviews-grid');
+  if (!grid) return;
+
+  grid.innerHTML = HOME_REVIEWS.map((review) => `
+    <article class="home-review-card">
+      <div class="home-review-stars">★★★★★</div>
+      <p class="home-review-quote">"${escapeHtml(review.quote)}"</p>
+      <div class="home-review-author">${escapeHtml(review.name)}</div>
+      <div class="home-review-meta">${escapeHtml(review.meta)}</div>
+    </article>
+  `).join('');
+}
+
+function applyPopularLocation(city) {
+  const filterCity = document.getElementById('filter-city');
+  const heroSearchInput = document.getElementById('hero-search');
+  if (filterCity) filterCity.value = city;
+  if (heroSearchInput) heroSearchInput.value = city;
+  showPage('listings');
 }
 
 let currentListingsPage = 1;
@@ -1832,7 +1964,7 @@ function bootFromPath() {
     return;
   }
 
-  const _startPage = window.innerWidth < 768 ? 'listings' : 'home';
+  const _startPage = 'home';
   showPage(_startPage, { updateHistory: false, replaceHistory: true });
 }
 
@@ -1893,6 +2025,8 @@ document.addEventListener('DOMContentLoaded', () => {
   attachNavbarListeners();
   updateNav();
   resetListingForm();
+  renderPopularLocations();
+  renderHomeReviews();
 
   document.getElementById('filter-city')?.addEventListener('input', debounce(() => loadListings(), 400));
 

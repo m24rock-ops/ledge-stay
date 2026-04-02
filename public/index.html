@@ -5,14 +5,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <title>Ledge Stay</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <title>Ledge-Stay</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
   <nav class="site-nav">
-    <div class="logo">Ledge Stay</div>
+    <div class="logo">Ledge-Stay</div>
     <button
       class="menu-toggle"
       type="button"
@@ -43,61 +43,103 @@
   </nav>
 
   <div id="page-home" class="page">
-    <div class="hero">
-      <div class="hero-content">
-        <span class="hero-tag">Student-friendly rentals across India</span>
-        <h1>Find a place that feels <span class="hero-accent">easy</span> from day one.</h1>
-        <p class="hero-sub">Browse handpicked PGs, hostels, apartments, and rooms with the essentials already in place.</p>
-        <div class="search-bar hero-search-bar">
-          <input type="text" id="hero-search" placeholder="Location (city)...">
-          <input type="number" id="hero-budget" placeholder="Budget (Rs/month)" min="0" step="100">
-          <button onclick="heroSearch()">Search stays</button>
+    <div class="hero-shell">
+      <div class="hero">
+        <div class="hero-content">
+          <span class="hero-tag">Student-first stays, minus the stress</span>
+          <h1>Find your best room near campus, faster.</h1>
+          <p class="hero-sub">Discover verified PGs, rooms, and apartments with clear pricing, student-friendly amenities, and a smoother move-in journey.</p>
+          <div class="hero-search-panel">
+            <div class="hero-search-bar">
+              <div class="hero-search-field hero-search-field-location">
+                <label for="hero-search">Location</label>
+                <input type="text" id="hero-search" placeholder="Search by college, area, or city">
+              </div>
+              <div class="hero-search-field">
+                <label for="hero-budget">Budget</label>
+                <input type="number" id="hero-budget" placeholder="Up to Rs/month" min="0" step="100">
+              </div>
+              <button class="hero-search-button" onclick="heroSearch()">Search</button>
+            </div>
+            <div class="hero-search-actions">
+              <button class="hero-near-me" type="button" onclick="useNearMe()">
+                <span class="hero-near-me-icon"></span>
+                Near Me
+              </button>
+              <span id="near-me-status" class="hero-search-note">Safe, verified listings for student life.</span>
+            </div>
+          </div>
+          <div class="hero-stats">
+            <div class="hero-stat-card">
+              <strong>Verified stays</strong>
+              <span>Only listings built for student comfort.</span>
+            </div>
+            <div class="hero-stat-card">
+              <strong>Transparent pricing</strong>
+              <span>Know rent, deposit, and essentials upfront.</span>
+            </div>
+            <div class="hero-stat-card">
+              <strong>Closer to campus</strong>
+              <span>Browse options that fit your daily routine.</span>
+            </div>
+          </div>
         </div>
-        <button class="hero-cta" onclick="showPage('listings')">Browse featured stays</button>
-      </div>
-      <div class="hero-image-wrap">
-        <img src="https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=700&q=80" alt="Modern room" class="hero-img">
-        <div class="hero-live-badge">
-          <span class="hero-live-dot"></span>
-          <div>
-            <div class="hero-live-title">24 new listings today</div>
-            <div class="hero-live-sub">Bengaluru</div>
+        <div class="hero-visual">
+          <div class="hero-visual-card hero-visual-card-primary">
+            <img src="https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=900&q=80" alt="Premium student room" class="hero-img">
+            <div class="hero-live-badge">
+              <span class="hero-live-dot"></span>
+              <div>
+                <div class="hero-live-title">24 fresh student listings</div>
+                <div class="hero-live-sub">Bengaluru, Pune, Chennai</div>
+              </div>
+            </div>
+          </div>
+          <div class="hero-mini-card hero-mini-card-top">
+            <span class="hero-mini-label">Featured pick</span>
+            <h3>Modern PG near Christ University</h3>
+            <p>Wi-Fi, meals, laundry, and walkable commute.</p>
+          </div>
+          <div class="hero-mini-card hero-mini-card-bottom">
+            <span class="hero-mini-rating">4.8/5 student rating</span>
+            <p>Trusted by students who want less searching and better move-ins.</p>
           </div>
         </div>
       </div>
     </div>
 
-    <section class="featured-section">
+    <section class="featured-section home-section">
       <div class="section-heading">
         <div>
-          <p class="section-label">Featured Listings</p>
-          <h2>Places worth a closer look</h2>
+          <p class="section-label">Featured Rooms</p>
+          <h2>Handpicked spaces worth seeing first</h2>
         </div>
-        <button class="section-link" onclick="showPage('listings')">Browse all listings</button>
+        <button class="section-link" onclick="showPage('listings')">Explore all stays</button>
       </div>
       <div id="featured-grid" class="featured-grid">
         <div class="featured-empty">Loading featured listings...</div>
       </div>
     </section>
 
-    <div class="trust-bar">
-      <div class="trust-item">
-        <div class="trust-num">20+</div>
-        <div class="trust-label">Verified listings</div>
+    <section class="locations-section home-section">
+      <div class="section-heading">
+        <div>
+          <p class="section-label">Popular Locations</p>
+          <h2>Top student neighborhoods right now</h2>
+        </div>
       </div>
-      <div class="trust-item">
-        <div class="trust-num">2</div>
-        <div class="trust-label">Cities covered</div>
+      <div id="popular-locations-grid" class="location-grid"></div>
+    </section>
+
+    <section class="reviews-section-home home-section">
+      <div class="section-heading">
+        <div>
+          <p class="section-label">Reviews</p>
+          <h2>Students trust the experience</h2>
+        </div>
       </div>
-      <div class="trust-item">
-        <div class="trust-num">1000+</div>
-        <div class="trust-label">Students housed</div>
-      </div>
-      <div class="trust-item">
-        <div class="trust-num">4.8 &#9733;</div>
-        <div class="trust-label">Average rating</div>
-      </div>
-    </div>
+      <div id="home-reviews-grid" class="home-reviews-grid"></div>
+    </section>
   </div>
 
   <div id="page-listings" class="page" style="display:none">
