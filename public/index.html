@@ -101,30 +101,63 @@
   </div>
 
   <div id="page-listings" class="page" style="display:none">
-    <div class="filters">
-      <input type="text" id="filter-city" placeholder="City">
-      <select id="filter-type">
-        <option value="">All Types</option>
-        <option value="pg">PG</option>
-        <option value="hostel">Hostel</option>
-        <option value="apartment">Apartment</option>
-        <option value="room">Room</option>
-      </select>
-      <select id="filter-gender">
-        <option value="">Any Gender</option>
-        <option value="male">Male</option>
-        <option value="female">Female</option>
-        <option value="any">Any</option>
-      </select>
-      <input type="number" id="filter-min" placeholder="Min Price">
-      <input type="number" id="filter-max" placeholder="Max Price">
-      <select id="filter-sort">
-        <option value="">Sort By</option>
-        <option value="price_asc">Price: Low to High</option>
-        <option value="price_desc">Price: High to Low</option>
-        <option value="newest">Newest</option>
-      </select>
-      <button onclick="loadListings()">Apply</button>
+    <div class="browse-header">
+      <div class="browse-search-row">
+        <div class="browse-search-bar">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" stroke-width="2.5" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+          <input type="text" id="filter-city" placeholder="Search city, area...">
+        </div>
+        <button class="filter-toggle-btn" onclick="toggleBrowseFilters()" id="filter-toggle-btn" aria-label="Filters">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="11" y1="18" x2="13" y2="18"/></svg>
+        </button>
+      </div>
+
+      <div class="browse-filters" id="browse-filters">
+        <div class="filter-group">
+          <div class="filter-group-label">Type</div>
+          <div class="filter-chips">
+            <button class="filter-chip active" data-filter="type" data-value="" onclick="selectChip(this,'type')">All</button>
+            <button class="filter-chip" data-filter="type" data-value="pg" onclick="selectChip(this,'type')">PG</button>
+            <button class="filter-chip" data-filter="type" data-value="hostel" onclick="selectChip(this,'type')">Hostel</button>
+            <button class="filter-chip" data-filter="type" data-value="apartment" onclick="selectChip(this,'type')">Apartment</button>
+            <button class="filter-chip" data-filter="type" data-value="room" onclick="selectChip(this,'type')">Room</button>
+          </div>
+        </div>
+        <div class="filter-group">
+          <div class="filter-group-label">Gender</div>
+          <div class="filter-chips">
+            <button class="filter-chip active" data-filter="gender" data-value="" onclick="selectChip(this,'gender')">Any</button>
+            <button class="filter-chip" data-filter="gender" data-value="male" onclick="selectChip(this,'gender')">Boys</button>
+            <button class="filter-chip" data-filter="gender" data-value="female" onclick="selectChip(this,'gender')">Girls</button>
+          </div>
+        </div>
+        <div class="filter-group">
+          <div class="filter-group-label">Budget</div>
+          <div class="filter-chips">
+            <button class="filter-chip active" data-filter="budget" data-value="" onclick="selectChip(this,'budget')">Any</button>
+            <button class="filter-chip" data-filter="budget" data-value="5000" onclick="selectChip(this,'budget')">Under ₹5k</button>
+            <button class="filter-chip" data-filter="budget" data-value="10000" onclick="selectChip(this,'budget')">₹5k–₹10k</button>
+            <button class="filter-chip" data-filter="budget" data-value="99999" onclick="selectChip(this,'budget')">₹10k+</button>
+          </div>
+        </div>
+        <div class="filter-group filter-group-sort">
+          <div class="filter-group-label">Sort</div>
+          <div class="filter-chips">
+            <button class="filter-chip active" data-filter="sort" data-value="" onclick="selectChip(this,'sort')">Default</button>
+            <button class="filter-chip" data-filter="sort" data-value="price_asc" onclick="selectChip(this,'sort')">Price ↑</button>
+            <button class="filter-chip" data-filter="sort" data-value="price_desc" onclick="selectChip(this,'sort')">Price ↓</button>
+            <button class="filter-chip" data-filter="sort" data-value="newest" onclick="selectChip(this,'sort')">Newest</button>
+          </div>
+        </div>
+
+        <div style="display:none">
+          <select id="filter-type"><option value=""></option></select>
+          <select id="filter-gender"><option value=""></option></select>
+          <input type="number" id="filter-min">
+          <input type="number" id="filter-max">
+          <select id="filter-sort"><option value=""></option></select>
+        </div>
+      </div>
     </div>
     <div id="listings-grid" class="listings-grid"></div>
   </div>
