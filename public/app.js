@@ -27,28 +27,28 @@ const HOME_LOCATIONS = [
     name: 'Koramangala',
     city: 'Bengaluru',
     count: '120+ stays',
-    blurb: 'Popular for design, tech, and management students.',
+    blurb: 'A well-known area with many student rooms and PG options.',
     image: 'https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?w=900&q=80'
   },
   {
     name: 'Hinjewadi',
     city: 'Pune',
     count: '90+ stays',
-    blurb: 'Budget-friendly rooms with easy access to campuses and internships.',
+    blurb: 'Good for budget-friendly stays near colleges and work hubs.',
     image: 'https://images.unsplash.com/photo-1484154218962-a197022b5858?w=900&q=80'
   },
   {
     name: 'Navrangpura',
     city: 'Ahmedabad',
     count: '70+ stays',
-    blurb: 'A student-heavy pocket with shared apartments and PG options.',
+    blurb: 'A student-friendly area with rooms, PGs, and shared flats.',
     image: 'https://images.unsplash.com/photo-1494526585095-c41746248156?w=900&q=80'
   },
   {
     name: 'Guindy',
     city: 'Chennai',
     count: '85+ stays',
-    blurb: 'Close to colleges, transit, and everyday essentials.',
+    blurb: 'Close to colleges, buses, and daily needs.',
     image: 'https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?w=900&q=80'
   }
 ];
@@ -56,17 +56,17 @@ const HOME_REVIEWS = [
   {
     name: 'Aarav S.',
     meta: 'Engineering student, Bengaluru',
-    quote: 'I found a verified PG near campus in one evening. The pricing felt clear and the photos matched the actual place.'
+    quote: 'I found a PG near college quickly. The price was clear and the room looked like the photos.'
   },
   {
     name: 'Nisha R.',
     meta: 'MBA student, Pune',
-    quote: 'Ledge-Stay felt easier than browsing generic property sites. I could quickly shortlist places that actually fit student life.'
+    quote: 'The site was easy to understand. I could compare places without opening too many pages.'
   },
   {
     name: 'Rahul P.',
     meta: 'Parent, Chennai',
-    quote: 'The platform made it simpler to compare safe options for my son without calling ten different brokers first.'
+    quote: 'As a parent, I liked that the listings were simple to read and easy to compare.'
   }
 ];
 
@@ -279,24 +279,24 @@ function setNearMeStatus(message, isError = false) {
 
 function useNearMe() {
   if (!navigator.geolocation) {
-    setNearMeStatus('Near Me needs location access in your browser.', true);
+    setNearMeStatus('Please allow location access to use Near Me.', true);
     return;
   }
 
-  setNearMeStatus('Detecting your location for a faster search...');
+  setNearMeStatus('Finding stays near your current location...');
 
   navigator.geolocation.getCurrentPosition(
     () => {
       const searchInput = document.getElementById('hero-search');
       if (searchInput && !searchInput.value.trim()) {
-        searchInput.value = 'Nearby stays';
+        searchInput.value = 'Nearby';
       }
 
-      setNearMeStatus('Location detected. Showing the broadest nearby student stays.');
+      setNearMeStatus('Location found. Opening nearby listings now.');
       showPage('listings');
     },
     () => {
-      setNearMeStatus('Location access was blocked. Search by college, area, or city instead.', true);
+      setNearMeStatus('Location was not available. Please search by college, area, or city.', true);
     },
     { enableHighAccuracy: false, timeout: 7000, maximumAge: 300000 }
   );
@@ -827,27 +827,27 @@ async function loadFeaturedListings() {
       <article class="featured-card">
         <div class="featured-image-wrap">
           <div class="featured-card-badge-row">
-            <span class="featured-card-badge">Verified stay</span>
+            <span class="featured-card-badge">Verified</span>
           </div>
           ${renderListingImage(listing, listing.title)}
         </div>
         <div class="featured-card-body">
           <div class="featured-meta-row">
             <p class="featured-location">${listing.city}</p>
-            <span class="featured-rating-pill">Top rated</span>
+            <span class="featured-rating-pill">Easy view</span>
           </div>
           <h3>${listing.title}</h3>
           <p class="featured-address">${listing.address}</p>
           <div class="featured-amenities">
             <span>Wi-Fi</span>
             <span>Laundry</span>
-            <span>Student-ready</span>
+            <span>Near campus</span>
           </div>
           <div class="featured-card-footer">
             <div class="featured-price">Rs ${Number(listing.price).toLocaleString()}/month</div>
             <div class="featured-card-actions">
               ${renderWhatsAppButton(listing)}
-              <button class="featured-view-button" onclick="showDetail('${listing._id}')">View Details</button>
+              <button class="featured-view-button" onclick="showDetail('${listing._id}')">See Details</button>
             </div>
           </div>
           ${renderWishlistButton(listing)}
@@ -873,6 +873,7 @@ function renderPopularLocations() {
         <h3>${escapeHtml(location.name)}</h3>
         <span>${escapeHtml(location.count)}</span>
         <div class="location-card-blurb">${escapeHtml(location.blurb)}</div>
+        <div class="location-card-action">Open stays</div>
       </div>
     </article>
   `).join('');

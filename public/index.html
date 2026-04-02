@@ -46,18 +46,18 @@
     <div class="hero-shell">
       <div class="hero">
         <div class="hero-content">
-          <span class="hero-tag">Student-first stays, minus the stress</span>
-          <h1>Find your best room near campus, faster.</h1>
-          <p class="hero-sub">Discover verified PGs, rooms, and apartments with clear pricing, student-friendly amenities, and a smoother move-in journey.</p>
+          <span class="hero-tag">Easy home search for students and families</span>
+          <h1>Find a safe and comfortable place to stay.</h1>
+          <p class="hero-sub">Search verified PGs, rooms, and apartments with clear prices, helpful details, and easy location search near college.</p>
           <div class="hero-search-panel">
             <div class="hero-search-bar">
               <div class="hero-search-field hero-search-field-location">
                 <label for="hero-search">Location</label>
-                <input type="text" id="hero-search" placeholder="Search by college, area, or city">
+                <input type="text" id="hero-search" placeholder="Enter college, area, or city">
               </div>
               <div class="hero-search-field">
-                <label for="hero-budget">Budget</label>
-                <input type="number" id="hero-budget" placeholder="Up to Rs/month" min="0" step="100">
+                <label for="hero-budget">Monthly Budget</label>
+                <input type="number" id="hero-budget" placeholder="Enter max rent" min="0" step="100">
               </div>
               <button class="hero-search-button" onclick="heroSearch()">Search</button>
             </div>
@@ -66,21 +66,21 @@
                 <span class="hero-near-me-icon"></span>
                 Near Me
               </button>
-              <span id="near-me-status" class="hero-search-note">Safe, verified listings for student life.</span>
+              <span id="near-me-status" class="hero-search-note">Use your location to see stays near you.</span>
             </div>
           </div>
           <div class="hero-stats">
             <div class="hero-stat-card">
-              <strong>Verified stays</strong>
-              <span>Only listings built for student comfort.</span>
+              <strong>Verified listings</strong>
+              <span>See places with trusted details and clear information.</span>
             </div>
             <div class="hero-stat-card">
-              <strong>Transparent pricing</strong>
-              <span>Know rent, deposit, and essentials upfront.</span>
+              <strong>Clear pricing</strong>
+              <span>Check rent and basic costs before you contact anyone.</span>
             </div>
             <div class="hero-stat-card">
-              <strong>Closer to campus</strong>
-              <span>Browse options that fit your daily routine.</span>
+              <strong>Near college</strong>
+              <span>Look for homes that reduce travel time every day.</span>
             </div>
           </div>
         </div>
@@ -90,19 +90,19 @@
             <div class="hero-live-badge">
               <span class="hero-live-dot"></span>
               <div>
-                <div class="hero-live-title">24 fresh student listings</div>
-                <div class="hero-live-sub">Bengaluru, Pune, Chennai</div>
+                <div class="hero-live-title">Verified rooms and PGs</div>
+                <div class="hero-live-sub">Simple search across popular student cities</div>
               </div>
             </div>
           </div>
           <div class="hero-mini-card hero-mini-card-top">
-            <span class="hero-mini-label">Featured pick</span>
-            <h3>Modern PG near Christ University</h3>
-            <p>Wi-Fi, meals, laundry, and walkable commute.</p>
+            <span class="hero-mini-label">Easy to compare</span>
+            <h3>Price, location, and amenities in one view</h3>
+            <p>Understand the listing quickly before you call or visit.</p>
           </div>
           <div class="hero-mini-card hero-mini-card-bottom">
-            <span class="hero-mini-rating">4.8/5 student rating</span>
-            <p>Trusted by students who want less searching and better move-ins.</p>
+            <span class="hero-mini-rating">Made for simple decisions</span>
+            <p>Designed to help students, parents, and older users browse with confidence.</p>
           </div>
         </div>
       </div>
@@ -112,9 +112,9 @@
       <div class="section-heading">
         <div>
           <p class="section-label">Featured Rooms</p>
-          <h2>Handpicked spaces worth seeing first</h2>
+          <h2>Popular stays you can understand at a glance</h2>
         </div>
-        <button class="section-link" onclick="showPage('listings')">Explore all stays</button>
+        <button class="section-link" onclick="showPage('listings')">View all stays</button>
       </div>
       <div id="featured-grid" class="featured-grid">
         <div class="featured-empty">Loading featured listings...</div>
@@ -125,7 +125,7 @@
       <div class="section-heading">
         <div>
           <p class="section-label">Popular Locations</p>
-          <h2>Top student neighborhoods right now</h2>
+          <h2>Choose a city and start with the most searched areas</h2>
         </div>
       </div>
       <div id="popular-locations-grid" class="location-grid"></div>
@@ -135,7 +135,7 @@
       <div class="section-heading">
         <div>
           <p class="section-label">Reviews</p>
-          <h2>Students trust the experience</h2>
+          <h2>Why students and parents like Ledge-Stay</h2>
         </div>
       </div>
       <div id="home-reviews-grid" class="home-reviews-grid"></div>
