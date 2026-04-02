@@ -1832,8 +1832,8 @@ function bootFromPath() {
     return;
   }
 
-  const isMobile = window.innerWidth < 768;
-  showPage(isMobile ? 'listings' : 'home', { updateHistory: false, replaceHistory: true });
+  const _startPage = window.innerWidth < 768 ? 'listings' : 'home';
+  showPage(_startPage, { updateHistory: false, replaceHistory: true });
 }
 
 async function submitPasswordReset() {
