@@ -226,6 +226,14 @@ function renderStars(rating) {
   return `${'★'.repeat(safeRating)}${'☆'.repeat(5 - safeRating)}`;
 }
 
+function debounce(fn, ms) {
+  let t;
+  return (...args) => {
+    clearTimeout(t);
+    t = setTimeout(() => fn(...args), ms);
+  };
+}
+
 // ── PHOTO CAROUSEL ──────────────────────────────────────────────────────────
 
 function renderPhotoCarousel(photos) {
@@ -1885,6 +1893,8 @@ document.addEventListener('DOMContentLoaded', () => {
   attachNavbarListeners();
   updateNav();
   resetListingForm();
+
+  document.getElementById('filter-city')?.addEventListener('input', debounce(() => loadListings(), 400));
 
   // Clear auth errors while user types.
   const loginError = document.getElementById('login-error');
