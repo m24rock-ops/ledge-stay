@@ -1065,3 +1065,7 @@ button:hover { background: var(--primary-dark); transform: translateY(-1px); }
 @media (max-width: 767px) {
   a[data-page-link="home"] { display: none; }
 }
+@media (max-width: 767px) {
+  #page-home { display: none !important; }
+  a[data-page-link="home"] { display: none !important; }
+}
