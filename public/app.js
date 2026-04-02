@@ -783,6 +783,45 @@ function buildListingsQuery(page) {
   return query;
 }
 
+function toggleBrowseFilters() {
+  const panel = document.getElementById('browse-filters');
+  const btn = document.getElementById('filter-toggle-btn');
+  const open = panel.classList.toggle('open');
+  btn.classList.toggle('active', open);
+}
+
+function selectChip(el, filterType) {
+  const chips = document.querySelectorAll(`.filter-chip[data-filter="${filterType}"]`);
+  chips.forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+
+  const value = el.dataset.value;
+
+  if (filterType === 'type') {
+    document.getElementById('filter-type').value = value;
+  } else if (filterType === 'gender') {
+    document.getElementById('filter-gender').value = value;
+  } else if (filterType === 'sort') {
+    document.getElementById('filter-sort').value = value;
+  } else if (filterType === 'budget') {
+    if (value === '') {
+      document.getElementById('filter-min').value = '';
+      document.getElementById('filter-max').value = '';
+    } else if (value === '5000') {
+      document.getElementById('filter-min').value = '';
+      document.getElementById('filter-max').value = '5000';
+    } else if (value === '10000') {
+      document.getElementById('filter-min').value = '5000';
+      document.getElementById('filter-max').value = '10000';
+    } else if (value === '99999') {
+      document.getElementById('filter-min').value = '10000';
+      document.getElementById('filter-max').value = '';
+    }
+  }
+
+  loadListings();
+}
+
 function renderPagination(currentPage, totalPages) {
   if (totalPages <= 1) return '';
 
