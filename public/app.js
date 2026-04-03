@@ -677,6 +677,45 @@ function cleanDisplayValue(value, options = {}) {
   return normalized;
 }
 
+function safeText(value, options = {}) {
+  return escapeHtml(cleanDisplayValue(value, options));
+}
+
+function sanitizeAssetUrl(value) {
+  const normalized = String(value ?? '').trim();
+  if (!normalized) return '';
+
+  if (/^(https?:)?\/\//i.test(normalized) || normalized.startsWith('/')) {
+    return normalized;
+  }
+
+  return '';
+}
+
+function normalizeListingTags(amenities) {
+  const source = Array.isArray(amenities)
+    ? amenities
+    : String(amenities || '')
+      .split(',')
+      .map((value) => value.trim());
+
+  const unique = [];
+  const seen = new Set();
+
+  source.forEach((item) => {
+    const cleaned = cleanDisplayValue(item, { fallback: '', minLength: 2 });
+    if (!cleaned) return;
+
+    const normalizedKey = cleaned.toLowerCase();
+    if (seen.has(normalizedKey)) return;
+
+    seen.add(normalizedKey);
+    unique.push(cleaned);
+  });
+
+  return unique.slice(0, 4);
+}
+
 function formatListingPrice(price) {
   const safePrice = Number(price);
   if (!Number.isFinite(safePrice) || safePrice <= 0) {
@@ -690,6 +729,7 @@ function buildListingCardData(listing = {}) {
   const city = cleanDisplayValue(listing.city, { fallback: 'Location unavailable', minLength: 3 });
   const title = cleanDisplayValue(listing.title, { fallback: 'Untitled stay', minLength: 3 });
   const address = cleanDisplayValue(listing.address, { fallback: 'Address will be shared on request', minLength: 4 });
+  const tags = normalizeListingTags(listing.amenities);
   const location = cleanDisplayValue(
     [address !== 'Address will be shared on request' ? address : '', city !== 'Location unavailable' ? city : '']
       .filter(Boolean)
@@ -718,8 +758,9 @@ function buildListingCardData(listing = {}) {
 
   const whatsappMessage = `Hi, I'm interested in your property: ${title}, located at ${location}. Please share details.`;
   const whatsappUrl = buildWhatsAppContactUrl(ownerPhone, whatsappMessage);
-  const imageHtml = listing.photos?.[0]
-    ? `<img src="${listing.photos[0]}" alt="${escapeHtml(title)}">`
+  const imageUrl = sanitizeAssetUrl(listing.photos?.[0] || '');
+  const imageHtml = imageUrl
+    ? `<img src="${imageUrl}" alt="${escapeHtml(title)}" loading="lazy">`
     : '<div class="no-image card-image-fallback">No photo available</div>';
 
   return {
@@ -727,6 +768,8 @@ function buildListingCardData(listing = {}) {
     city,
     title,
     address,
+    location,
+    tags,
     distanceKm,
     price,
     rating,
@@ -739,6 +782,10 @@ function buildListingCardData(listing = {}) {
 
 function renderListingCard(listing) {
   const card = buildListingCardData(listing);
+  const locationLine = card.location || card.address || card.city;
+  const tagsMarkup = card.tags.length
+    ? card.tags.map((tag) => `<span class="listing-tag-pill" title="${escapeHtml(tag)}">${escapeHtml(tag)}</span>`).join('')
+    : '<span class="listing-tag-pill is-muted">Essentials available</span>';
 
   return `
     <article class="listing-card" id="listing-card-${card.id}" onclick="showDetail('${card.id}')">
@@ -748,20 +795,21 @@ function renderListingCard(listing) {
       </div>
       <div class="card-body">
         <div class="card-copy">
-          <div class="card-city-label">${escapeHtml(card.city).toUpperCase()}</div>
+          <div class="card-city-label" title="${escapeHtml(card.city)}">${escapeHtml(card.city).toUpperCase()}</div>
           <h3 class="card-title">${escapeHtml(card.title)}</h3>
-          <p class="meta card-address">${escapeHtml(card.address)}</p>
+          <p class="card-location" title="${escapeHtml(locationLine)}">${escapeHtml(locationLine)}</p>
         </div>
         <div class="card-meta-stack">
           ${card.distanceKm ? `<div class="card-distance">${card.distanceKm}</div>` : ''}
           ${card.rating ? `<div class="card-rating"><span class="card-stars">${card.rating.stars}</span><span class="card-rating-val">${card.rating.value}</span><span class="card-rating-count">(${card.rating.count} review${card.rating.count === 1 ? '' : 's'})</span></div>` : '<div class="card-rating card-rating--empty">New listing</div>'}
+          <div class="listing-tag-row" aria-label="Amenities">${tagsMarkup}</div>
         </div>
         <div class="card-footer">
-          <div class="price">${card.price}</div>
+          <div class="price" title="${escapeHtml(card.price)}">${escapeHtml(card.price)}</div>
           <div class="card-actions" onclick="event.stopPropagation()">
             ${card.whatsappUrl
-              ? `<a class="btn-contact" href="${card.whatsappUrl}" target="_blank" rel="noopener noreferrer">Chat on whatsapp</a>`
-              : '<button class="btn-contact" disabled>Chat on whatsapp</button>'}
+              ? `<a class="btn-contact" href="${card.whatsappUrl}" target="_blank" rel="noopener noreferrer">Contact</a>`
+              : '<button class="btn-contact" disabled>Contact</button>'}
             <button class="btn-details" onclick="event.stopPropagation();showDetail('${card.id}')">View Details</button>
           </div>
         </div>
