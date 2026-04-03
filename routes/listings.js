@@ -4,6 +4,7 @@ const Listing = require('../models/Listing');
 const auth = require('../middleware/auth');
 const { upload } = require('../middleware/cloudinary');
 const jwt = require('jsonwebtoken');
+const { syncLocationForListingChange } = require('../services/locationSearch');
 
 function parseBoolean(value, fallback = false) {
   if (typeof value === 'boolean') return value;
@@ -25,12 +26,24 @@ function buildLocationFilter(location) {
   const trimmedLocation = typeof location === 'string' ? location.trim() : '';
   if (!trimmedLocation) return null;
 
-  const pattern = new RegExp(escapeRegex(trimmedLocation), 'i');
+  const segments = trimmedLocation
+    .split(',')
+    .map((segment) => segment.trim())
+    .filter(Boolean);
+
+  const searchTerms = segments.length ? segments : [trimmedLocation];
+
   return {
-    $or: [
-      { city: pattern },
-      { address: pattern }
-    ]
+    $and: searchTerms.map((term) => {
+      const pattern = new RegExp(escapeRegex(term), 'i');
+      return {
+        $or: [
+          { city: pattern },
+          { state: pattern },
+          { address: pattern }
+        ]
+      };
+    })
   };
 }
 
@@ -252,6 +265,7 @@ router.post('/', auth, upload.array('photos', 10), async (req, res) => {
       // approvalStatus defaults to 'pending' — admin must approve before it goes live
       rejectionNote: ''
     });
+    await syncLocationForListingChange(null, listing.toObject());
     res.status(201).json(listing);
   } catch (err) {
     res.status(500).json({ message: 'Server error', error: err.message });
@@ -263,6 +277,7 @@ async function updateListing(req, res) {
     const listing = await Listing.findById(req.params.id);
     if (!listing) return res.status(404).json({ message: 'Listing not found' });
     if (listing.owner.toString() !== req.user.id) return res.status(403).json({ message: 'Not authorized' });
+    const previousListing = listing.toObject();
     const photos = req.files?.length ? req.files.map(f => f.path) : listing.photos;
 
     const updated = await Listing.findByIdAndUpdate(req.params.id, {
@@ -273,6 +288,7 @@ async function updateListing(req, res) {
       available: parseBoolean(req.body.available, listing.available),
       is_featured: parseBoolean(req.body.is_featured, listing.is_featured)
     }, { new: true });
+    await syncLocationForListingChange(previousListing, updated.toObject());
     res.json(updated);
   } catch (err) {
     res.status(500).json({ message: 'Server error', error: err.message });
@@ -290,7 +306,9 @@ router.delete('/:id', auth, async (req, res) => {
     if (!listing) return res.status(404).json({ message: 'Listing not found' });
     if (listing.owner.toString() !== req.user.id) return res.status(403).json({ message: 'Not authorized' });
 
+    const previousListing = listing.toObject();
     await listing.deleteOne();
+    await syncLocationForListingChange(previousListing, null);
     res.json({ message: 'Listing deleted' });
   } catch (err) {
     res.status(500).json({ message: 'Server error', error: err.message });

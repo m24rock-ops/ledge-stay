@@ -5,6 +5,7 @@ const listingSchema = new mongoose.Schema({
   title: { type: String, required: true },
   type: { type: String, enum: ['pg', 'hostel', 'apartment', 'room'], required: true },
   city: { type: String, required: true },
+  state: { type: String, default: '' },
   address: { type: String, required: true },
   lat: { type: Number, default: null },
   lng: { type: Number, default: null },
@@ -31,6 +32,7 @@ const listingSchema = new mongoose.Schema({
 }, { timestamps: true });
 
 listingSchema.index({ approvalStatus: 1, available: 1, city: 1 });
+listingSchema.index({ approvalStatus: 1, available: 1, state: 1 });
 listingSchema.index({ approvalStatus: 1, available: 1, address: 1 });
 
 module.exports = mongoose.model('Listing', listingSchema);

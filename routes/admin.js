@@ -4,6 +4,7 @@ const auth = require('../middleware/auth');
 const Listing = require('../models/Listing');
 const AdminAction = require('../models/AdminAction');
 const Notification = require('../models/Notification');
+const { syncLocationForListingChange } = require('../services/locationSearch');
 
 router.use(auth);
 
@@ -61,6 +62,7 @@ router.patch('/listings/:id/review', async (req, res) => {
     }
 
     const normalizedNote = String(note || '').trim();
+    const previousListing = listing.toObject();
 
     if (action === 'approve') {
       listing.approvalStatus = 'approved';
@@ -75,6 +77,7 @@ router.patch('/listings/:id/review', async (req, res) => {
     listing.noBrokerage = req.body.noBrokerage ?? listing.noBrokerage;
     listing.verified = req.body.verified ?? listing.verified;
     await listing.save();
+    await syncLocationForListingChange(previousListing, listing.toObject());
 
     await AdminAction.create({
       admin: req.user.id,

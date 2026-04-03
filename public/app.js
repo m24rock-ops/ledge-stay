@@ -346,6 +346,17 @@ function buildSearchRedirectUrl(location) {
   return `/search?location=${encodeURIComponent(location)}`;
 }
 
+function formatLocationSuggestion(suggestion) {
+  if (typeof suggestion === 'string') return suggestion;
+  if (!suggestion || typeof suggestion !== 'object') return '';
+
+  const parts = [suggestion.name, suggestion.city, suggestion.state]
+    .map((value) => String(value || '').trim())
+    .filter(Boolean);
+
+  return parts.join(', ');
+}
+
 function highlightLocationMatch(text, query) {
   const source = String(text ?? '');
   const safeQuery = String(query ?? '').trim();
@@ -372,11 +383,14 @@ function renderLocationSuggestions(dropdown, suggestions, query) {
     return;
   }
 
-  dropdown.innerHTML = suggestions.map((suggestion) => `
-    <button type="button" class="location-suggestion" data-location-value="${escapeHtml(suggestion)}">
-      ${highlightLocationMatch(suggestion, query)}
+  dropdown.innerHTML = suggestions.map((suggestion) => {
+    const formattedSuggestion = formatLocationSuggestion(suggestion);
+    return `
+    <button type="button" class="location-suggestion" data-location-value="${escapeHtml(formattedSuggestion)}">
+      ${highlightLocationMatch(formattedSuggestion, query)}
     </button>
-  `).join('');
+  `;
+  }).join('');
   dropdown.classList.add('is-open');
 }
 
