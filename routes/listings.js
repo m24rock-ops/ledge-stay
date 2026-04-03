@@ -17,6 +17,23 @@ function parseCoordinate(value) {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
+function escapeRegex(value) {
+  return String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function buildLocationFilter(location) {
+  const trimmedLocation = typeof location === 'string' ? location.trim() : '';
+  if (!trimmedLocation) return null;
+
+  const pattern = new RegExp(escapeRegex(trimmedLocation), 'i');
+  return {
+    $or: [
+      { city: pattern },
+      { address: pattern }
+    ]
+  };
+}
+
 function getOptionalUser(req) {
   const token = req.headers.authorization?.split(' ')[1];
   if (!token) return null;
@@ -52,7 +69,8 @@ router.get('/', async (req, res) => {
     // Only show approved listings on the browse page
     let query = { available: true, approvalStatus: 'approved' };
 
-    if (city) query.city = { $regex: city, $options: 'i' };
+    const locationFilter = buildLocationFilter(city);
+    if (locationFilter) Object.assign(query, locationFilter);
     if (type) query.type = type;
     if (gender) query.gender = gender;
     if (featured === 'true') query.is_featured = true;
@@ -130,7 +148,8 @@ router.get('/nearby', async (req, res) => {
       lng: { $ne: null }
     };
 
-    if (city) query.city = { $regex: city, $options: 'i' };
+    const locationFilter = buildLocationFilter(city);
+    if (locationFilter) Object.assign(query, locationFilter);
     if (type) query.type = type;
     if (gender) query.gender = gender;
     if (minPrice || maxPrice) {

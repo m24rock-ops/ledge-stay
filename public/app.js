@@ -271,7 +271,7 @@ function closeMenu() {
 function heroSearch() {
   const city = document.getElementById('hero-search').value.trim();
   const budget = document.getElementById('hero-budget').value;
-  document.getElementById('filter-city').value = city;
+  syncLocationInputs(city);
   document.getElementById('filter-max').value = budget;
   nearbySearchState.active = false;
   updateNearbyResultsBanner();
@@ -327,6 +327,124 @@ function debounce(fn, ms) {
     clearTimeout(t);
     t = setTimeout(() => fn(...args), ms);
   };
+}
+
+function escapeRegex(value) {
+  return String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function syncLocationInputs(location) {
+  const safeLocation = typeof location === 'string' ? location : '';
+  const filterInput = document.getElementById('filter-city');
+  const heroInput = document.getElementById('hero-search');
+
+  if (filterInput) filterInput.value = safeLocation;
+  if (heroInput) heroInput.value = safeLocation;
+}
+
+function buildSearchRedirectUrl(location) {
+  return `/search?location=${encodeURIComponent(location)}`;
+}
+
+function highlightLocationMatch(text, query) {
+  const source = String(text ?? '');
+  const safeQuery = String(query ?? '').trim();
+  if (!safeQuery) return escapeHtml(source);
+
+  const matcher = new RegExp(`(${escapeRegex(safeQuery)})`, 'ig');
+  return source
+    .split(matcher)
+    .filter(Boolean)
+    .map((segment) => (
+      segment.toLowerCase() === safeQuery.toLowerCase()
+        ? `<span class="location-suggestion-match">${escapeHtml(segment)}</span>`
+        : escapeHtml(segment)
+    ))
+    .join('');
+}
+
+function renderLocationSuggestions(dropdown, suggestions, query) {
+  if (!dropdown) return;
+
+  if (!suggestions.length) {
+    dropdown.innerHTML = '<div class="location-autocomplete-empty">No locations found.</div>';
+    dropdown.classList.add('is-open');
+    return;
+  }
+
+  dropdown.innerHTML = suggestions.map((suggestion) => `
+    <button type="button" class="location-suggestion" data-location-value="${escapeHtml(suggestion)}">
+      ${highlightLocationMatch(suggestion, query)}
+    </button>
+  `).join('');
+  dropdown.classList.add('is-open');
+}
+
+function setupLocationAutocomplete(inputId, dropdownId) {
+  const input = document.getElementById(inputId);
+  const dropdown = document.getElementById(dropdownId);
+  if (!input || !dropdown) return;
+
+  let activeRequest = 0;
+
+  const hideDropdown = () => {
+    dropdown.classList.remove('is-open');
+    dropdown.innerHTML = '';
+    input.setAttribute('aria-expanded', 'false');
+  };
+
+  const fetchSuggestions = debounce(async () => {
+    const query = input.value.trim();
+    if (!query) {
+      hideDropdown();
+      return;
+    }
+
+    const requestId = ++activeRequest;
+
+    try {
+      const response = await fetch(`/api/search?query=${encodeURIComponent(query)}`);
+      if (!response.ok) throw new Error('Search request failed.');
+
+      const suggestions = await response.json();
+      if (requestId !== activeRequest) return;
+
+      renderLocationSuggestions(dropdown, Array.isArray(suggestions) ? suggestions : [], query);
+      input.setAttribute('aria-expanded', 'true');
+    } catch (err) {
+      if (requestId !== activeRequest) return;
+      dropdown.innerHTML = '<div class="location-autocomplete-empty">Unable to load suggestions.</div>';
+      dropdown.classList.add('is-open');
+      input.setAttribute('aria-expanded', 'true');
+    }
+  }, 300);
+
+  input.addEventListener('input', fetchSuggestions);
+  input.addEventListener('focus', () => {
+    if (input.value.trim()) fetchSuggestions();
+  });
+  input.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') hideDropdown();
+  });
+
+  dropdown.addEventListener('mousedown', (event) => {
+    event.preventDefault();
+  });
+
+  dropdown.addEventListener('click', (event) => {
+    const button = event.target.closest('[data-location-value]');
+    if (!button) return;
+
+    const location = button.getAttribute('data-location-value') || '';
+    syncLocationInputs(location);
+    hideDropdown();
+    window.location.assign(buildSearchRedirectUrl(location));
+  });
+
+  document.addEventListener('click', (event) => {
+    if (event.target === input || dropdown.contains(event.target)) return;
+    hideDropdown();
+  });
 }
 
 // ── PHOTO CAROUSEL ──────────────────────────────────────────────────────────
@@ -908,10 +1026,7 @@ function renderHomeReviews() {
 }
 
 function applyPopularLocation(city) {
-  const filterCity = document.getElementById('filter-city');
-  const heroSearchInput = document.getElementById('hero-search');
-  if (filterCity) filterCity.value = city;
-  if (heroSearchInput) heroSearchInput.value = city;
+  syncLocationInputs(city);
   showPage('listings');
 }
 
@@ -2027,6 +2142,7 @@ async function deleteReview(reviewId, listingId) {
 
 function bootFromPath() {
   const path = window.location.pathname;
+  const locationQuery = new URLSearchParams(window.location.search).get('location')?.trim() || '';
   if (path === '/dashboard') {
     showPage('dashboard', { updateHistory: false, replaceHistory: true });
     return;
@@ -2038,6 +2154,15 @@ function bootFromPath() {
   }
 
   if (path === '/browse') {
+    if (locationQuery) syncLocationInputs(locationQuery);
+    showPage('browse', { updateHistory: false, replaceHistory: true });
+    return;
+  }
+
+  if (path === '/search') {
+    syncLocationInputs(locationQuery);
+    nearbySearchState.active = false;
+    updateNearbyResultsBanner();
     showPage('browse', { updateHistory: false, replaceHistory: true });
     return;
   }
@@ -2137,6 +2262,8 @@ document.addEventListener('DOMContentLoaded', () => {
   resetListingForm();
   renderPopularLocations();
   renderHomeReviews();
+  setupLocationAutocomplete('hero-search', 'hero-search-suggestions');
+  setupLocationAutocomplete('filter-city', 'filter-city-suggestions');
 
   document.getElementById('filter-city')?.addEventListener('input', debounce(() => loadListings(), 400));
 

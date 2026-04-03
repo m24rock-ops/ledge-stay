@@ -53,7 +53,8 @@
             <div class="hero-search-bar">
               <div class="hero-search-field hero-search-field-location">
                 <label for="hero-search">Location</label>
-                <input type="text" id="hero-search" placeholder="Enter college, area, or city">
+                <input type="text" id="hero-search" placeholder="Enter college, area, or city" autocomplete="off" aria-autocomplete="list" aria-controls="hero-search-suggestions" aria-expanded="false">
+                <div class="location-autocomplete" id="hero-search-suggestions"></div>
               </div>
               <div class="hero-search-field">
                 <label for="hero-budget">Monthly Budget</label>
@@ -154,7 +155,8 @@
       <div class="browse-search-row">
         <div class="browse-search-bar">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" stroke-width="2.5" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
-          <input type="text" id="filter-city" placeholder="Search city, area...">
+          <input type="text" id="filter-city" placeholder="Search city, area..." autocomplete="off" aria-autocomplete="list" aria-controls="filter-city-suggestions" aria-expanded="false">
+          <div class="location-autocomplete" id="filter-city-suggestions"></div>
         </div>
         <button class="filter-toggle-btn" onclick="toggleBrowseFilters()" id="filter-toggle-btn" aria-label="Filters">
           <span class="filter-toggle-icon" aria-hidden="true">

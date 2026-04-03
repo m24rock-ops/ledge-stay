@@ -30,4 +30,7 @@ const listingSchema = new mongoose.Schema({
   verified: { type: Boolean, default: false }
 }, { timestamps: true });
 
+listingSchema.index({ approvalStatus: 1, available: 1, city: 1 });
+listingSchema.index({ approvalStatus: 1, available: 1, address: 1 });
+
 module.exports = mongoose.model('Listing', listingSchema);
