@@ -436,7 +436,7 @@ function renderPhotoCarousel(photos) {
 
   const slides = photos.map((src, i) => `
     <div class="carousel-slide ${i === 0 ? 'is-active' : ''}" data-index="${i}">
-      <img src="${src}" alt="Listing photo ${i + 1}" onclick="openCarouselModal(this, ${i})">
+      <img src="${src}" alt="Listing photo ${i + 1}" loading="${i === 0 ? 'eager' : 'lazy'}" decoding="async" onclick="openCarouselModal(this, ${i})">
     </div>`).join('');
 
   const dots = photos.length > 1
@@ -452,7 +452,7 @@ function renderPhotoCarousel(photos) {
 
   const thumbs = photos.length > 1
     ? `<div class="carousel-thumbs">
-        ${photos.map((src, i) => `<img src="${src}" class="carousel-thumb ${i === 0 ? 'is-active' : ''}" alt="Thumb ${i + 1}" onclick="carouselGoTo(this,${i})">`).join('')}
+        ${photos.map((src, i) => `<img src="${src}" class="carousel-thumb ${i === 0 ? 'is-active' : ''}" alt="Thumb ${i + 1}" loading="lazy" decoding="async" onclick="carouselGoTo(this,${i})">`).join('')}
        </div>`
     : '';
 
@@ -468,13 +468,14 @@ function renderPhotoCarousel(photos) {
       <div class="carousel-track">${slides}</div>
       ${arrows}
       ${dots}
+      <button type="button" class="carousel-open-viewer" aria-label="Open fullscreen gallery" onclick="openCarouselModal(this, carouselCurrentIndex(carouselRoot(this)))">View Fullscreen</button>
     </div>
     ${thumbs}
     <div class="carousel-modal" aria-hidden="true" onclick="closeCarouselModal(event)">
       <button class="carousel-modal-close" type="button" aria-label="Close fullscreen gallery" onclick="closeCarouselModal(event)">×</button>
       <div class="carousel-modal-stage">
         ${photos.length > 1 ? `<button class="carousel-arrow carousel-arrow--prev carousel-modal-arrow" type="button" aria-label="Previous photo" onclick="carouselStep(this,-1)">&#8592;</button>` : ''}
-        <img class="carousel-modal-image" src="${photos[0]}" alt="Fullscreen listing photo">
+        <img class="carousel-modal-image" src="${photos[0]}" alt="Fullscreen listing photo" decoding="async">
         ${photos.length > 1 ? `<button class="carousel-arrow carousel-arrow--next carousel-modal-arrow" type="button" aria-label="Next photo" onclick="carouselStep(this,1)">&#8594;</button>` : ''}
       </div>
       <div class="carousel-modal-footer">
@@ -2072,6 +2073,246 @@ async function showDetail(id) {
   }
 }
 
+function closeActiveCarouselModal() {
+  const modal = document.querySelector('.carousel-modal.is-open');
+  if (!modal) return false;
+
+  modal.classList.remove('is-open');
+  modal.setAttribute('aria-hidden', 'true');
+  document.body.classList.remove('modal-open');
+  return true;
+}
+
+function getActiveCarouselRoot() {
+  const modal = document.querySelector('.carousel-modal.is-open');
+  return modal ? modal.closest('.detail-photos') : null;
+}
+
+function renderPhotoCarousel(photos) {
+  if (!photos || photos.length === 0) {
+    return '<div class="no-image detail-no-image">No photo available</div>';
+  }
+
+  const slides = photos.map((src, i) => `
+    <div class="carousel-slide ${i === 0 ? 'is-active' : ''}" data-index="${i}">
+      <img src="${src}" alt="Listing photo ${i + 1}" loading="${i === 0 ? 'eager' : 'lazy'}" decoding="async" onclick="openCarouselModal(this, ${i})">
+    </div>`).join('');
+
+  const dots = photos.length > 1
+    ? `<div class="carousel-dots">
+        ${photos.map((_, i) => `<button class="carousel-dot ${i === 0 ? 'is-active' : ''}" aria-label="Photo ${i + 1}" onclick="carouselGoTo(this,${i})"></button>`).join('')}
+       </div>`
+    : '';
+
+  const arrows = photos.length > 1
+    ? `<button class="carousel-arrow carousel-arrow--prev" aria-label="Previous photo" onclick="carouselStep(this,-1)">&#10094;</button>
+       <button class="carousel-arrow carousel-arrow--next" aria-label="Next photo" onclick="carouselStep(this,1)">&#10095;</button>`
+    : '';
+
+  const thumbs = photos.length > 1
+    ? `<div class="carousel-thumbs">
+        ${photos.map((src, i) => `<img src="${src}" class="carousel-thumb ${i === 0 ? 'is-active' : ''}" alt="Thumbnail ${i + 1}" loading="lazy" decoding="async" onclick="carouselGoTo(this,${i})">`).join('')}
+       </div>`
+    : '';
+
+  const modalDots = photos.length > 1
+    ? `<div class="carousel-modal-dots">
+        ${photos.map((_, i) => `<button class="carousel-modal-dot ${i === 0 ? 'is-active' : ''}" aria-label="Open photo ${i + 1}" onclick="carouselModalGoTo(this,${i})"></button>`).join('')}
+      </div>`
+    : '';
+
+  return `
+    <div class="carousel" data-current="0" tabindex="0" onkeydown="carouselKey(event, this)">
+      <div class="carousel-track">${slides}</div>
+      ${arrows}
+      ${dots}
+      <button type="button" class="carousel-open-viewer" aria-label="Open fullscreen gallery" onclick="openCarouselModal(this, carouselCurrentIndex(carouselRoot(this)))">View Fullscreen</button>
+    </div>
+    ${thumbs}
+    <div class="carousel-modal" aria-hidden="true" onclick="closeCarouselModal(event)">
+      <button class="carousel-modal-close" type="button" aria-label="Close fullscreen gallery" onclick="closeCarouselModal(event)">&times;</button>
+      <div class="carousel-modal-stage">
+        ${photos.length > 1 ? `<button class="carousel-arrow carousel-arrow--prev carousel-modal-arrow" type="button" aria-label="Previous photo" onclick="carouselStep(this,-1)">&#10094;</button>` : ''}
+        <img class="carousel-modal-image" src="${photos[0]}" alt="Fullscreen listing photo" decoding="async">
+        ${photos.length > 1 ? `<button class="carousel-arrow carousel-arrow--next carousel-modal-arrow" type="button" aria-label="Next photo" onclick="carouselStep(this,1)">&#10095;</button>` : ''}
+      </div>
+      <div class="carousel-modal-footer">
+        <div class="carousel-modal-counter">1 / ${photos.length}</div>
+        ${modalDots}
+      </div>
+    </div>`;
+}
+
+function renderListingCard(listing) {
+  const card = buildListingCardData(listing);
+  const locationLine = card.location || card.address || card.city;
+  const metaItems = [
+    card.rating ? `Rating ${card.rating.value}` : 'New listing',
+    card.distanceKm || ''
+  ].filter(Boolean);
+
+  return `
+    <article class="listing-card" id="listing-card-${card.id}" onclick="showDetail('${card.id}')">
+      <div class="card-img-wrap">
+        ${card.imageHtml}
+        ${card.badges.length ? `<div class="card-img-badges">${card.badges.join('')}</div>` : ''}
+      </div>
+      <div class="card-body">
+        <div class="card-copy">
+          <h3 class="card-title" title="${escapeHtml(card.title)}">${escapeHtml(card.title)}</h3>
+          <div class="price card-price-emphasis" title="${escapeHtml(card.price)}">${escapeHtml(card.price)}</div>
+          <p class="card-location" title="${escapeHtml(locationLine)}">${escapeHtml(locationLine)}</p>
+        </div>
+        ${metaItems.length ? `<div class="card-meta-stack"><div class="card-scan-row">${metaItems.map((item) => `<span class="card-scan-pill">${escapeHtml(item)}</span>`).join('')}</div></div>` : ''}
+        ${card.ownerActions}
+      </div>
+    </article>`;
+}
+
+async function showDetail(id) {
+  try {
+    const listing = await apiFetchJson(`/api/listings/${id}`);
+    selectedReviewRating = 0;
+    const user = getUser();
+    const detailTitle = getSafeListingTitle(listing.title);
+    const detailLocation = getSafeListingLocation([listing.address, listing.city], 'Location details unavailable');
+    const detailDescription = getSafeListingText(listing.description, {
+      fallback: 'More details about this stay will be shared directly by the owner.',
+      minLength: 16,
+      maxLength: 900
+    });
+    const detailAmenities = normalizeListingTags(listing.amenities);
+    const detailPrice = formatListingPriceDisplay(listing.price);
+    const detailRatingValue = Number(listing.averageRating);
+    const detailReviewCount = Math.max(0, Number(listing.reviewCount || 0));
+    const detailRating = Number.isFinite(detailRatingValue) && detailRatingValue > 0
+      ? `${detailRatingValue.toFixed(1)} rating from ${detailReviewCount} review${detailReviewCount === 1 ? '' : 's'}`
+      : 'New listing';
+    const enquiryName = canSendEnquiry() ? escapeHtml(user?.name || '') : '';
+    const enquiryEmail = canSendEnquiry() ? escapeHtml(user?.email || '') : '';
+
+    document.getElementById('detail-content').innerHTML = `
+      <section class="detail-shell">
+        <div class="detail-hero">
+          <div class="detail-photos">
+            ${renderPhotoCarousel(listing.photos)}
+          </div>
+        </div>
+
+        <div class="detail-content-grid">
+          <div class="detail-main-column">
+            <section class="detail-panel detail-summary">
+              <div class="detail-kicker">Premium stay overview</div>
+              <h1 class="detail-title">${escapeHtml(detailTitle)}</h1>
+              <div class="detail-price">${escapeHtml(detailPrice)}</div>
+              <p class="detail-location-line">${escapeHtml(detailLocation)}</p>
+              <div class="detail-scan-row">
+                <span class="detail-scan-pill">${escapeHtml(detailRating)}</span>
+                ${detailAmenities.slice(0, 3).map((amenity) => `<span class="detail-scan-pill">${escapeHtml(amenity)}</span>`).join('')}
+              </div>
+              <div class="detail-actions-row">
+                ${renderWhatsAppButton(listing)}
+                ${renderWishlistButton(listing, { detail: true })}
+                ${renderOwnerListingActions(listing, { detail: true })}
+              </div>
+            </section>
+
+            <section class="detail-panel detail-copy-panel">
+              <h2>Description</h2>
+              <p class="detail-description">${escapeHtml(detailDescription)}</p>
+            </section>
+
+            <div class="detail-aux-grid">
+              <div class="detail-panel detail-commute-panel">
+                <h2>Check Commute Time</h2>
+                <p class="detail-panel-copy">Enter your college or workplace to estimate travel distance.</p>
+                <div class="distance-form">
+                  <input
+                    type="text"
+                    id="distance-input"
+                    placeholder="e.g. Bengaluru University"
+                    class="distance-input"
+                  >
+                  <button
+                    id="distance-btn"
+                    onclick="calculateDistance('${listing._id}')"
+                    class="distance-button"
+                  >
+                    Calculate
+                  </button>
+                </div>
+                <div id="distance-result"></div>
+              </div>
+
+              ${renderMapSection(listing)}
+            </div>
+
+            <section class="enquiry-section detail-panel">
+              <div class="enquiry-section-header">
+                <div>
+                  <h2>Send Enquiry</h2>
+                  <p class="reviews-subtitle">Reach out to the owner without leaving the page.</p>
+                </div>
+              </div>
+              <div class="enquiry-form-card">
+                <div class="review-form-grid enquiry-form-grid-2">
+                  <div class="review-form-field">
+                    <label for="enquiry-name">Name</label>
+                    <input
+                      id="enquiry-name"
+                      class="review-input"
+                      type="text"
+                      value="${enquiryName}"
+                      placeholder="${canSendEnquiry() ? 'Your full name' : 'Login as a tenant to continue'}"
+                      ${canSendEnquiry() ? '' : 'disabled'}
+                    >
+                  </div>
+                  <div class="review-form-field">
+                    <label for="enquiry-email">Email</label>
+                    <input
+                      id="enquiry-email"
+                      class="review-input"
+                      type="email"
+                      value="${enquiryEmail}"
+                      placeholder="${canSendEnquiry() ? 'you@example.com' : 'Login required'}"
+                      ${canSendEnquiry() ? '' : 'disabled'}
+                    >
+                  </div>
+                </div>
+                <div class="review-form-field">
+                  <label for="enquiry-message">Message</label>
+                  <textarea
+                    id="enquiry-message"
+                    class="review-input review-textarea enquiry-textarea"
+                    placeholder="${canSendEnquiry() ? 'Hi, I would like to know if this listing is still available and when I can visit.' : 'Login as a tenant to send an enquiry'}"
+                    ${canSendEnquiry() ? '' : 'disabled'}
+                  ></textarea>
+                </div>
+                <button class="review-submit enquiry-submit" onclick="submitEnquiry('${listing._id}')" ${canSendEnquiry() ? '' : 'disabled'}>
+                  Send Enquiry
+                </button>
+                <p id="enquiry-feedback" class="review-message"></p>
+                ${canSendEnquiry() ? '' : '<p class="review-message">Only logged-in tenants can send enquiries.</p>'}
+              </div>
+            </section>
+
+            <section id="reviews-section" class="reviews-section detail-panel">
+              <div class="reviews-loading">Loading reviews...</div>
+            </section>
+          </div>
+        </div>
+      </section>
+      ${renderStickyListingCta(listing)}
+    `;
+
+    initializeDetailCarousels(document.getElementById('detail-content'));
+    loadReviews(id);
+    showPage('detail', { updateHistory: true });
+  } catch (err) {
+    alert(err.message || 'Unable to load the listing.');
+  }
+}
+
 async function continueAuth() {
   const errorField = document.getElementById('login-error');
   if (errorField) errorField.textContent = '';
@@ -2983,6 +3224,24 @@ document.addEventListener('DOMContentLoaded', () => {
   });
   document.getElementById('login-password')?.addEventListener('keydown', (event) => {
     if (event.key === 'Enter') continueAuth();
+  });
+
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') {
+      closeActiveCarouselModal();
+      return;
+    }
+
+    const activeRoot = getActiveCarouselRoot();
+    if (!activeRoot) return;
+
+    if (event.key === 'ArrowLeft') {
+      setCarouselIndex(activeRoot, carouselCurrentIndex(activeRoot) - 1);
+    }
+
+    if (event.key === 'ArrowRight') {
+      setCarouselIndex(activeRoot, carouselCurrentIndex(activeRoot) + 1);
+    }
   });
 
   resetAuthFlow();
