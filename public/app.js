@@ -644,6 +644,126 @@ function escapeHtml(value) {
     .replace(/'/g, '&#39;');
 }
 
+function cleanDisplayValue(value, options = {}) {
+  const {
+    fallback = '',
+    minLength = 2,
+    allowShort = false
+  } = options;
+
+  const normalized = String(value ?? '')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  if (!normalized) return fallback;
+
+  const lowered = normalized.toLowerCase();
+  const invalidValues = new Set([
+    'null',
+    'undefined',
+    'n/a',
+    'na',
+    'none',
+    'nil',
+    '--',
+    '-',
+    'ss',
+    'nn'
+  ]);
+
+  if (invalidValues.has(lowered)) return fallback;
+  if (!allowShort && normalized.length < minLength) return fallback;
+
+  return normalized;
+}
+
+function formatListingPrice(price) {
+  const safePrice = Number(price);
+  if (!Number.isFinite(safePrice) || safePrice <= 0) {
+    return 'Price on request';
+  }
+
+  return `₹${safePrice.toLocaleString('en-IN')}/month`;
+}
+
+function buildListingCardData(listing = {}) {
+  const city = cleanDisplayValue(listing.city, { fallback: 'Location unavailable', minLength: 3 });
+  const title = cleanDisplayValue(listing.title, { fallback: 'Untitled stay', minLength: 3 });
+  const address = cleanDisplayValue(listing.address, { fallback: 'Address will be shared on request', minLength: 4 });
+  const distanceKm = typeof listing.distanceKm === 'number' && Number.isFinite(listing.distanceKm)
+    ? `${listing.distanceKm.toFixed(1)} km away`
+    : '';
+  const price = formatListingPrice(listing.price);
+  const ownerPhone = cleanDisplayValue(listing.owner?.whatsapp || listing.owner?.phone, { fallback: '', allowShort: true });
+  const averageRating = Number(listing.averageRating);
+  const reviewCount = Math.max(0, Number(listing.reviewCount || 0));
+  const rating = Number.isFinite(averageRating) && averageRating > 0
+    ? {
+        value: averageRating.toFixed(1),
+        count: reviewCount,
+        stars: '★'.repeat(Math.round(averageRating)) + '☆'.repeat(5 - Math.round(averageRating))
+      }
+    : null;
+
+  const badges = [];
+  if (listing.noBrokerage) badges.push('<span class="img-badge badge-green">No Brokerage</span>');
+  if (listing.verified) badges.push('<span class="img-badge badge-teal">Verified</span>');
+  if (listing.is_featured) badges.push('<span class="img-badge badge-gold">Best Deal</span>');
+
+  const whatsappMessage = encodeURIComponent(`Hi, I'm interested in your stay "${title}" on Ledge Stay`);
+  const whatsappUrl = ownerPhone ? `https://wa.me/${ownerPhone}?text=${whatsappMessage}` : null;
+  const imageHtml = listing.photos?.[0]
+    ? `<img src="${listing.photos[0]}" alt="${escapeHtml(title)}">`
+    : '<div class="no-image card-image-fallback">No photo available</div>';
+
+  return {
+    id: listing._id,
+    city,
+    title,
+    address,
+    distanceKm,
+    price,
+    rating,
+    badges,
+    whatsappUrl,
+    imageHtml,
+    ownerActions: renderOwnerListingActions(listing)
+  };
+}
+
+function renderListingCard(listing) {
+  const card = buildListingCardData(listing);
+
+  return `
+    <article class="listing-card" id="listing-card-${card.id}" onclick="showDetail('${card.id}')">
+      <div class="card-img-wrap">
+        ${card.imageHtml}
+        ${card.badges.length ? `<div class="card-img-badges">${card.badges.join('')}</div>` : ''}
+      </div>
+      <div class="card-body">
+        <div class="card-copy">
+          <div class="card-city-label">${escapeHtml(card.city).toUpperCase()}</div>
+          <h3 class="card-title">${escapeHtml(card.title)}</h3>
+          <p class="meta card-address">${escapeHtml(card.address)}</p>
+        </div>
+        <div class="card-meta-stack">
+          ${card.distanceKm ? `<div class="card-distance">${card.distanceKm}</div>` : ''}
+          ${card.rating ? `<div class="card-rating"><span class="card-stars">${card.rating.stars}</span><span class="card-rating-val">${card.rating.value}</span><span class="card-rating-count">(${card.rating.count} review${card.rating.count === 1 ? '' : 's'})</span></div>` : '<div class="card-rating card-rating--empty">New listing</div>'}
+        </div>
+        <div class="card-footer">
+          <div class="price">${card.price}</div>
+          <div class="card-actions" onclick="event.stopPropagation()">
+            ${card.whatsappUrl
+              ? `<a class="btn-contact" href="${card.whatsappUrl}" target="_blank" rel="noopener">Contact Owner</a>`
+              : '<button class="btn-contact" disabled>Contact Owner</button>'}
+            <button class="btn-details" onclick="event.stopPropagation();showDetail('${card.id}')">View Details</button>
+          </div>
+        </div>
+        ${card.ownerActions}
+      </div>
+    </article>`;
+}
+
 async function loadAppConfig() {
   try {
     const data = await apiFetchJson('/api/config');
@@ -1299,6 +1419,53 @@ async function loadListings() {
 }
 
 async function loadOwnerDashboard() {
+  return loadOwnerDashboardImpl();
+}
+
+function renderListingsMarkup(listings) {
+  return listings.map((listing) => renderListingCard(listing)).join('');
+}
+
+async function loadListings() {
+  const query = nearbySearchState.active
+    ? buildNearbyListingsQuery(currentListingsPage)
+    : buildListingsQuery(currentListingsPage);
+  const endpoint = nearbySearchState.active ? '/api/listings/nearby' : '/api/listings';
+  const grid = document.getElementById('listings-grid');
+  let paginationEl = document.getElementById('listings-pagination');
+
+  if (!paginationEl) {
+    paginationEl = document.createElement('div');
+    paginationEl.id = 'listings-pagination';
+    grid.insertAdjacentElement('afterend', paginationEl);
+  }
+
+  grid.innerHTML = '<p style="padding:20px;color:#888">Loading...</p>';
+  paginationEl.innerHTML = '';
+  updateNearbyResultsBanner();
+
+  try {
+    const data = await apiFetchJson(`${endpoint}?${query.toString()}`);
+    const listings = Array.isArray(data) ? data : data.listings;
+    const totalPages = data.totalPages || 1;
+    const total = Array.isArray(data) ? listings.length : Number(data.total || listings.length);
+
+    if (!Array.isArray(listings) || listings.length === 0) {
+      updateNearbyResultsBanner(0, data.radiusKm);
+      grid.innerHTML = `<p style="padding:20px;color:#888">${nearbySearchState.active ? 'No nearby listings found for this location.' : 'No listings found.'}</p>`;
+      return;
+    }
+
+    grid.innerHTML = renderListingsMarkup(listings);
+    updateNearbyResultsBanner(total, data.radiusKm);
+    paginationEl.innerHTML = renderPagination(currentListingsPage, totalPages);
+  } catch (err) {
+    updateNearbyResultsBanner();
+    grid.innerHTML = `<p style="padding:20px;color:#c0392b">${err.message || 'Unable to load listings.'}</p>`;
+  }
+}
+
+async function loadOwnerDashboardImpl() {
   const user = getUser();
   const dashboardList = document.getElementById('dashboard-listings');
   if (!user || user.role !== 'owner' || !dashboardList) return;
