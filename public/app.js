@@ -607,7 +607,7 @@ function renderWhatsAppButton(listing) {
   const url = buildWhatsAppContactUrl(contact, message);
   if (!url) return '';
 
-  return `<a href="${url}" target="_blank" rel="noopener" class="btn btn-whatsapp" onclick="event.stopPropagation()">Contact owner</a>`;
+  return `<a href="${url}" target="_blank" rel="noopener" class="btn btn-whatsapp" onclick="event.stopPropagation()">Chat on whatsapp</a>`;
 }
 
 function canUseWishlist() {
@@ -776,8 +776,8 @@ function renderListingCard(listing) {
           <div class="price">${card.price}</div>
           <div class="card-actions" onclick="event.stopPropagation()">
             ${card.whatsappUrl
-              ? `<a class="btn-contact" href="${card.whatsappUrl}" target="_blank" rel="noopener">Contact Owner</a>`
-              : '<button class="btn-contact" disabled>Contact Owner</button>'}
+              ? `<a class="btn-contact" href="${card.whatsappUrl}" target="_blank" rel="noopener noreferrer">Chat on whatsapp</a>`
+              : '<button class="btn-contact" disabled>Chat on whatsapp</button>'}
             <button class="btn-details" onclick="event.stopPropagation();showDetail('${card.id}')">View Details</button>
           </div>
         </div>
@@ -1341,8 +1341,8 @@ function renderListingsMarkup(listings) {
           <div class="price">₹${Number(listing.price).toLocaleString('en-IN')}/month</div>
           <div class="card-actions" onclick="event.stopPropagation()">
             ${waUrl
-              ? `<a class="btn-contact" href="${waUrl}" target="_blank" rel="noopener">Contact Owner</a>`
-              : '<button class="btn-contact" disabled>Contact Owner</button>'}
+              ? `<a class="btn-contact" href="${waUrl}" target="_blank" rel="noopener">Chat on whatsapp</a>`
+              : '<button class="btn-contact" disabled>Chat on whatsapp</button>'}
             <button class="btn-details" onclick="event.stopPropagation();showDetail('${listing._id}')">View Details</button>
           </div>
           ${renderOwnerListingActions(listing)}
@@ -1423,8 +1423,8 @@ async function loadListings() {
             <div class="price">₹${Number(listing.price).toLocaleString('en-IN')}/month</div>
             <div class="card-actions" onclick="event.stopPropagation()">
               ${waUrl
-                ? `<a class="btn-contact" href="${waUrl}" target="_blank" rel="noopener">Contact Owner</a>`
-                : `<button class="btn-contact" disabled>Contact Owner</button>`}
+                ? `<a class="btn-contact" href="${waUrl}" target="_blank" rel="noopener">Chat on whatsapp</a>`
+                : `<button class="btn-contact" disabled>Chat on whatsapp</button>`}
               <button class="btn-details" onclick="event.stopPropagation();showDetail('${listing._id}')">View Details</button>
             </div>
             ${renderOwnerListingActions(listing)}
