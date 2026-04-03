@@ -582,22 +582,14 @@ function renderWhatsAppButton(listing) {
   const contact = normalizePhoneForWhatsApp(listing.contact || listing.owner?.phone || listing.owner?.mobile || '');
   if (!contact) return '';
 
-  const title = cleanDisplayValue(listing.title, {
-    fallback: 'this property',
-    minLength: 3,
-    maxLength: 50
-  });
-  const location = cleanDisplayValue(
-    [listing.address, listing.city].filter(Boolean).join(', '),
-    {
-      fallback: cleanDisplayValue(listing.city, {
-        fallback: 'the listed location',
-        minLength: 3,
-        maxLength: 60
-      }),
+  const title = getSafeListingTitle(listing.title, 'this property');
+  const location = getSafeListingLocation(
+    [listing.address, listing.city],
+    getSafeListingText(listing.city, {
+      fallback: 'the listed location',
       minLength: 3,
       maxLength: 60
-    }
+    })
   );
   const message = `Hi, I'm interested in your property: ${title}, located at ${location}. Please share details.`;
   const url = buildWhatsAppContactUrl(contact, message);
@@ -732,6 +724,39 @@ function normalizeListingTags(amenities) {
   return unique.slice(0, 4);
 }
 
+function formatListingPriceDisplay(price) {
+  const safePrice = Number(price);
+  if (!Number.isFinite(safePrice) || safePrice <= 0) {
+    return 'Price on request';
+  }
+
+  return `\u20B9${safePrice.toLocaleString('en-IN')}/month`;
+}
+
+function getSafeListingTitle(value, fallback = 'Untitled listing') {
+  return cleanDisplayValue(value, {
+    fallback,
+    minLength: 3,
+    maxLength: 50
+  });
+}
+
+function getSafeListingLocation(parts, fallback = 'Location details unavailable') {
+  const joined = Array.isArray(parts)
+    ? parts.filter(Boolean).join(', ')
+    : String(parts || '');
+
+  return cleanDisplayValue(joined, {
+    fallback,
+    minLength: 3,
+    maxLength: 60
+  });
+}
+
+function getSafeListingText(value, options = {}) {
+  return cleanDisplayValue(value, options);
+}
+
 function formatListingPriceSafe(price) {
   const safePrice = Number(price);
   if (!Number.isFinite(safePrice) || safePrice <= 0) {
@@ -751,36 +776,29 @@ function formatListingPrice(price) {
 }
 
 function buildListingCardData(listing = {}) {
-  const city = cleanDisplayValue(listing.city, {
+  const city = getSafeListingText(listing.city, {
     fallback: 'Location unavailable',
     minLength: 3,
     maxLength: 30
   });
-  const title = cleanDisplayValue(listing.title, {
-    fallback: 'Untitled listing',
-    minLength: 3,
-    maxLength: 50
-  });
-  const address = cleanDisplayValue(listing.address, {
+  const title = getSafeListingTitle(listing.title);
+  const address = getSafeListingText(listing.address, {
     fallback: 'Location details will be shared on request',
     minLength: 4,
     maxLength: 60
   });
   const tags = normalizeListingTags(listing.amenities);
-  const location = cleanDisplayValue(
-    [address !== 'Location details will be shared on request' ? address : '', city !== 'Location unavailable' ? city : '']
-      .filter(Boolean)
-      .join(', '),
-    {
-      fallback: city !== 'Location unavailable' ? city : 'Location details unavailable',
-      minLength: 3,
-      maxLength: 60
-    }
+  const location = getSafeListingLocation(
+    [
+      address !== 'Location details will be shared on request' ? address : '',
+      city !== 'Location unavailable' ? city : ''
+    ],
+    city !== 'Location unavailable' ? city : 'Location details unavailable'
   );
   const distanceKm = typeof listing.distanceKm === 'number' && Number.isFinite(listing.distanceKm)
     ? `${listing.distanceKm.toFixed(1)} km away`
     : '';
-  const price = formatListingPriceSafe(listing.price);
+  const price = formatListingPriceDisplay(listing.price);
   const ownerPhone = listing.contact || listing.owner?.whatsapp || listing.owner?.phone || listing.owner?.mobile || '';
   const averageRating = Number(listing.averageRating);
   const reviewCount = Math.max(0, Number(listing.reviewCount || 0));
@@ -847,7 +865,7 @@ function renderListingCard(listing) {
         </div>
         <div class="card-meta-stack">
           ${card.distanceKm ? `<div class="card-distance">${card.distanceKm}</div>` : ''}
-          ${card.rating ? `<div class="card-rating"><span class="card-stars">${card.rating.stars}</span><span class="card-rating-val">${card.rating.value}</span><span class="card-rating-count">(${card.rating.count} review${card.rating.count === 1 ? '' : 's'})</span></div>` : '<div class="card-rating card-rating--empty">New listing</div>'}
+          ${card.rating ? `<div class="card-rating" title="⭐ ${card.rating.value} (${card.rating.count})"><span class="card-rating-compact">⭐ ${card.rating.value} (${card.rating.count})</span></div>` : '<div class="card-rating card-rating--empty">New listing</div>'}
           <div class="listing-tag-row" aria-label="Amenities">${tagsMarkup}</div>
         </div>
         <div class="card-footer">
@@ -1646,11 +1664,8 @@ async function showDetail(id) {
     const listing = await apiFetchJson(`/api/listings/${id}`);
     selectedReviewRating = 0;
     const user = getUser();
-    const detailTitle = cleanDisplayValue(listing.title, { fallback: 'Untitled listing', minLength: 3, maxLength: 50 });
-    const detailLocation = cleanDisplayValue(
-      [listing.address, listing.city].filter(Boolean).join(', '),
-      { fallback: 'Location details unavailable', minLength: 3, maxLength: 60 }
-    );
+    const detailTitle = getSafeListingTitle(listing.title);
+    const detailLocation = getSafeListingLocation([listing.address, listing.city], 'Location details unavailable');
     const detailType = cleanDisplayValue(listing.type, { fallback: 'Not specified', minLength: 2, allowShort: true });
     const detailGender = cleanDisplayValue(listing.gender, { fallback: 'Not specified', minLength: 2, allowShort: true });
     const detailOwnerName = cleanDisplayValue(listing.owner?.name, { fallback: 'Owner details unavailable', minLength: 3, maxLength: 50 });
@@ -1666,7 +1681,7 @@ async function showDetail(id) {
     </div>
     <div class="detail-info">
       <h1>${escapeHtml(detailTitle)}</h1>
-      <div class="price">${escapeHtml(formatListingPriceSafe(listing.price))}</div>
+      <div class="price">${escapeHtml(formatListingPriceDisplay(listing.price))}</div>
       <p>${escapeHtml(detailLocation)}</p>
       <p>Type: ${escapeHtml(detailType.toUpperCase())} | Gender: ${escapeHtml(detailGender)}</p>
       <p>Owner: ${escapeHtml(detailOwnerName)} - ${escapeHtml(detailOwnerEmail)}</p>
