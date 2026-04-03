@@ -743,6 +743,49 @@ function renderWhatsAppButton(listing) {
   return `<a href="${url}" target="_blank" rel="noopener" class="btn btn-whatsapp" onclick="event.stopPropagation()">Chat on whatsapp</a>`;
 }
 
+function renderStickyListingCta(listing) {
+  const contact = normalizePhoneForWhatsApp(listing.contact || listing.owner?.phone || listing.owner?.mobile || '');
+  if (!contact) return '';
+
+  const title = getSafeListingTitle(listing.title, 'this property');
+  const location = getSafeListingLocation(
+    [listing.address, listing.city],
+    getSafeListingText(listing.city, {
+      fallback: 'the listed location',
+      minLength: 3,
+      maxLength: 60
+    })
+  );
+  const message = `Hi, I'm interested in your property: ${title}, located at ${location}. Please share details.`;
+  const url = buildWhatsAppContactUrl(contact, message);
+  if (!url) return '';
+
+  return `
+    <div class="sticky-listing-cta">
+      <div class="sticky-listing-cta-inner">
+        <a
+          href="${url}"
+          target="_blank"
+          rel="noopener"
+          class="sticky-whatsapp-button"
+        >
+          WhatsApp Now
+        </a>
+        <button type="button" class="sticky-secondary-button" onclick="scrollToDetailSummary()">
+          See Details
+        </button>
+      </div>
+    </div>
+  `;
+}
+
+function scrollToDetailSummary() {
+  const summary = document.querySelector('.detail-summary');
+  if (!summary) return;
+
+  summary.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
 function canUseWishlist() {
   const user = getUser();
   return Boolean(user && user.role === 'tenant');
@@ -1933,6 +1976,7 @@ async function showDetail(id) {
         <div class="reviews-loading">Loading reviews...</div>
       </section>
     </div>
+    ${renderStickyListingCta(listing)}
   `;
 
     initializeDetailCarousels(document.getElementById('detail-content'));
