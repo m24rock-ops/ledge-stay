@@ -582,10 +582,22 @@ function renderWhatsAppButton(listing) {
   const contact = normalizePhoneForWhatsApp(listing.contact || listing.owner?.phone || listing.owner?.mobile || '');
   if (!contact) return '';
 
-  const title = cleanDisplayValue(listing.title, { fallback: 'this property', minLength: 3 });
+  const title = cleanDisplayValue(listing.title, {
+    fallback: 'this property',
+    minLength: 3,
+    maxLength: 50
+  });
   const location = cleanDisplayValue(
     [listing.address, listing.city].filter(Boolean).join(', '),
-    { fallback: cleanDisplayValue(listing.city, { fallback: 'the listed location', minLength: 3 }), minLength: 3 }
+    {
+      fallback: cleanDisplayValue(listing.city, {
+        fallback: 'the listed location',
+        minLength: 3,
+        maxLength: 60
+      }),
+      minLength: 3,
+      maxLength: 60
+    }
   );
   const message = `Hi, I'm interested in your property: ${title}, located at ${location}. Please share details.`;
   const url = buildWhatsAppContactUrl(contact, message);
@@ -648,7 +660,8 @@ function cleanDisplayValue(value, options = {}) {
   const {
     fallback = '',
     minLength = 2,
-    allowShort = false
+    allowShort = false,
+    maxLength = 0
   } = options;
 
   const normalized = String(value ?? '')
@@ -673,6 +686,9 @@ function cleanDisplayValue(value, options = {}) {
 
   if (invalidValues.has(lowered)) return fallback;
   if (!allowShort && normalized.length < minLength) return fallback;
+  if (maxLength > 0 && normalized.length > maxLength) {
+    return `${normalized.slice(0, Math.max(0, maxLength - 3)).trimEnd()}...`;
+  }
 
   return normalized;
 }
@@ -716,6 +732,15 @@ function normalizeListingTags(amenities) {
   return unique.slice(0, 4);
 }
 
+function formatListingPriceSafe(price) {
+  const safePrice = Number(price);
+  if (!Number.isFinite(safePrice) || safePrice <= 0) {
+    return 'Price on request';
+  }
+
+  return `₹${safePrice.toLocaleString('en-IN')}/month`;
+}
+
 function formatListingPrice(price) {
   const safePrice = Number(price);
   if (!Number.isFinite(safePrice) || safePrice <= 0) {
@@ -726,20 +751,36 @@ function formatListingPrice(price) {
 }
 
 function buildListingCardData(listing = {}) {
-  const city = cleanDisplayValue(listing.city, { fallback: 'Location unavailable', minLength: 3 });
-  const title = cleanDisplayValue(listing.title, { fallback: 'Untitled stay', minLength: 3 });
-  const address = cleanDisplayValue(listing.address, { fallback: 'Address will be shared on request', minLength: 4 });
+  const city = cleanDisplayValue(listing.city, {
+    fallback: 'Location unavailable',
+    minLength: 3,
+    maxLength: 30
+  });
+  const title = cleanDisplayValue(listing.title, {
+    fallback: 'Untitled listing',
+    minLength: 3,
+    maxLength: 50
+  });
+  const address = cleanDisplayValue(listing.address, {
+    fallback: 'Location details will be shared on request',
+    minLength: 4,
+    maxLength: 60
+  });
   const tags = normalizeListingTags(listing.amenities);
   const location = cleanDisplayValue(
-    [address !== 'Address will be shared on request' ? address : '', city !== 'Location unavailable' ? city : '']
+    [address !== 'Location details will be shared on request' ? address : '', city !== 'Location unavailable' ? city : '']
       .filter(Boolean)
       .join(', '),
-    { fallback: city !== 'Location unavailable' ? city : 'the listed location', minLength: 3 }
+    {
+      fallback: city !== 'Location unavailable' ? city : 'Location details unavailable',
+      minLength: 3,
+      maxLength: 60
+    }
   );
   const distanceKm = typeof listing.distanceKm === 'number' && Number.isFinite(listing.distanceKm)
     ? `${listing.distanceKm.toFixed(1)} km away`
     : '';
-  const price = formatListingPrice(listing.price);
+  const price = formatListingPriceSafe(listing.price);
   const ownerPhone = listing.contact || listing.owner?.whatsapp || listing.owner?.phone || listing.owner?.mobile || '';
   const averageRating = Number(listing.averageRating);
   const reviewCount = Math.max(0, Number(listing.reviewCount || 0));
@@ -1564,8 +1605,8 @@ async function loadOwnerDashboardImpl() {
       <article class="dashboard-listing-card">
         <div class="dashboard-listing-main">
           <div class="dashboard-listing-copy">
-            <h3>${listing.title}</h3>
-            <p>${listing.address}, ${listing.city}</p>
+            <h3>${safeText(listing.title, { fallback: 'Untitled listing', minLength: 3, maxLength: 50 })}</h3>
+            <p>${safeText([listing.address, listing.city].filter(Boolean).join(', '), { fallback: 'Location details unavailable', minLength: 3, maxLength: 60 })}</p>
             ${listing.rejectionNote ? `<p class="dashboard-status-note">Rejection note: ${escapeHtml(listing.rejectionNote)}</p>` : ''}
           </div>
           <div class="dashboard-listing-metrics">
@@ -1600,6 +1641,17 @@ async function showDetail(id) {
     const listing = await apiFetchJson(`/api/listings/${id}`);
     selectedReviewRating = 0;
     const user = getUser();
+    const detailTitle = cleanDisplayValue(listing.title, { fallback: 'Untitled listing', minLength: 3, maxLength: 50 });
+    const detailLocation = cleanDisplayValue(
+      [listing.address, listing.city].filter(Boolean).join(', '),
+      { fallback: 'Location details unavailable', minLength: 3, maxLength: 60 }
+    );
+    const detailType = cleanDisplayValue(listing.type, { fallback: 'Not specified', minLength: 2, allowShort: true });
+    const detailGender = cleanDisplayValue(listing.gender, { fallback: 'Not specified', minLength: 2, allowShort: true });
+    const detailOwnerName = cleanDisplayValue(listing.owner?.name, { fallback: 'Owner details unavailable', minLength: 3, maxLength: 50 });
+    const detailOwnerEmail = cleanDisplayValue(listing.owner?.email, { fallback: 'Email unavailable', minLength: 5, allowShort: true, maxLength: 60 });
+    const detailAmenities = normalizeListingTags(listing.amenities);
+    const detailDescription = cleanDisplayValue(listing.description, { fallback: '', minLength: 3, allowShort: true, maxLength: 300 });
     const enquiryName = canSendEnquiry() ? escapeHtml(user?.name || '') : '';
     const enquiryEmail = canSendEnquiry() ? escapeHtml(user?.email || '') : '';
 
@@ -1608,15 +1660,15 @@ async function showDetail(id) {
       ${renderPhotoCarousel(listing.photos)}
     </div>
     <div class="detail-info">
-      <h1>${listing.title}</h1>
-      <div class="price">Rs ${Number(listing.price).toLocaleString()}/month</div>
-      <p>${listing.address}, ${listing.city}</p>
-      <p>Type: ${listing.type.toUpperCase()} | Gender: ${listing.gender}</p>
-      <p>Owner: ${listing.owner.name} - ${listing.owner.email}</p>
+      <h1>${escapeHtml(detailTitle)}</h1>
+      <div class="price">${escapeHtml(formatListingPriceSafe(listing.price))}</div>
+      <p>${escapeHtml(detailLocation)}</p>
+      <p>Type: ${escapeHtml(detailType.toUpperCase())} | Gender: ${escapeHtml(detailGender)}</p>
+      <p>Owner: ${escapeHtml(detailOwnerName)} - ${escapeHtml(detailOwnerEmail)}</p>
       ${renderWhatsAppButton(listing)}
       ${renderWishlistButton(listing, { detail: true })}
-      ${listing.amenities && listing.amenities.length > 0 ? `<p>Amenities: ${listing.amenities.join(', ')}</p>` : ''}
-      ${listing.description ? `<p>${listing.description}</p>` : ''}
+      ${detailAmenities.length > 0 ? `<p>Amenities: ${escapeHtml(detailAmenities.join(', '))}</p>` : ''}
+      ${detailDescription ? `<p>${escapeHtml(detailDescription)}</p>` : ''}
       ${renderOwnerListingActions(listing, { detail: true })}
       <button onclick="showPage('listings')" class="back-button">Back</button>
 
