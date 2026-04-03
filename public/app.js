@@ -454,7 +454,7 @@ function renderPhotoCarousel(photos) {
 
   const slides = photos.map((src, i) => `
     <div class="carousel-slide ${i === 0 ? 'is-active' : ''}" data-index="${i}">
-      <img src="${src}" alt="Listing photo ${i + 1}">
+      <img src="${src}" alt="Listing photo ${i + 1}" onclick="openCarouselModal(this, ${i})">
     </div>`).join('');
 
   const dots = photos.length > 1
@@ -474,6 +474,12 @@ function renderPhotoCarousel(photos) {
        </div>`
     : '';
 
+  const modalDots = photos.length > 1
+    ? `<div class="carousel-modal-dots">
+        ${photos.map((_, i) => `<button class="carousel-modal-dot ${i === 0 ? 'is-active' : ''}" aria-label="Open photo ${i + 1}" onclick="carouselModalGoTo(this,${i})"></button>`).join('')}
+      </div>`
+    : '';
+
   return `
     <div class="carousel" data-current="0" tabindex="0"
          onkeydown="carouselKey(event, this)">
@@ -481,37 +487,176 @@ function renderPhotoCarousel(photos) {
       ${arrows}
       ${dots}
     </div>
-    ${thumbs}`;
+    ${thumbs}
+    <div class="carousel-modal" aria-hidden="true" onclick="closeCarouselModal(event)">
+      <button class="carousel-modal-close" type="button" aria-label="Close fullscreen gallery" onclick="closeCarouselModal(event)">×</button>
+      <div class="carousel-modal-stage">
+        ${photos.length > 1 ? `<button class="carousel-arrow carousel-arrow--prev carousel-modal-arrow" type="button" aria-label="Previous photo" onclick="carouselStep(this,-1)">&#8592;</button>` : ''}
+        <img class="carousel-modal-image" src="${photos[0]}" alt="Fullscreen listing photo">
+        ${photos.length > 1 ? `<button class="carousel-arrow carousel-arrow--next carousel-modal-arrow" type="button" aria-label="Next photo" onclick="carouselStep(this,1)">&#8594;</button>` : ''}
+      </div>
+      <div class="carousel-modal-footer">
+        <div class="carousel-modal-counter">1 / ${photos.length}</div>
+        ${modalDots}
+      </div>
+    </div>`;
 }
 
 function carouselRoot(el) {
   return el.closest('.detail-photos');
 }
 
-function carouselGoTo(triggerEl, index) {
-  const root = carouselRoot(triggerEl);
+function getCarouselElements(root) {
+  if (!root) return null;
+
   const carousel = root.querySelector('.carousel');
+  if (!carousel) return null;
+
   const slides   = carousel.querySelectorAll('.carousel-slide');
   const dots     = root.querySelectorAll('.carousel-dot');
   const thumbs   = root.querySelectorAll('.carousel-thumb');
+  const modal    = root.querySelector('.carousel-modal');
+  const modalImage = root.querySelector('.carousel-modal-image');
+  const modalDots = root.querySelectorAll('.carousel-modal-dot');
+  const modalCounter = root.querySelector('.carousel-modal-counter');
   const total    = slides.length;
-  const next     = ((index % total) + total) % total;
 
-  carousel.dataset.current = next;
-  slides.forEach((s, i) => s.classList.toggle('is-active', i === next));
-  dots.forEach((d, i)    => d.classList.toggle('is-active', i === next));
-  thumbs.forEach((t, i)  => t.classList.toggle('is-active', i === next));
+  return {
+    root,
+    carousel,
+    slides,
+    dots,
+    thumbs,
+    modal,
+    modalImage,
+    modalDots,
+    modalCounter,
+    total
+  };
 }
 
-function carouselStep(arrowEl, dir) {
-  const carousel = arrowEl.closest('.carousel');
-  const current  = parseInt(carousel.dataset.current || '0', 10);
-  carouselGoTo(arrowEl, current + dir);
+function setCarouselIndex(root, index) {
+  const elements = getCarouselElements(root);
+  if (!elements || !elements.total) return;
+
+  const next = ((index % elements.total) + elements.total) % elements.total;
+
+  const activeSlideImage = elements.slides[next]?.querySelector('img');
+  const activeImageSrc = activeSlideImage?.getAttribute('src') || '';
+  const activeImageAlt = activeSlideImage?.getAttribute('alt') || 'Listing photo';
+
+  elements.carousel.dataset.current = next;
+  elements.slides.forEach((slide, i) => slide.classList.toggle('is-active', i === next));
+  elements.dots.forEach((dot, i) => dot.classList.toggle('is-active', i === next));
+  elements.thumbs.forEach((thumb, i) => thumb.classList.toggle('is-active', i === next));
+  elements.modalDots.forEach((dot, i) => dot.classList.toggle('is-active', i === next));
+
+  if (elements.modalImage && activeImageSrc) {
+    elements.modalImage.setAttribute('src', activeImageSrc);
+    elements.modalImage.setAttribute('alt', activeImageAlt);
+  }
+
+  if (elements.modalCounter) {
+    elements.modalCounter.textContent = `${next + 1} / ${elements.total}`;
+  }
+}
+
+function carouselGoTo(triggerEl, index) {
+  const root = carouselRoot(triggerEl);
+  setCarouselIndex(root, index);
+}
+
+function carouselModalGoTo(triggerEl, index) {
+  const root = carouselRoot(triggerEl);
+  setCarouselIndex(root, index);
+}
+
+function openCarouselModal(triggerEl, index) {
+  const root = carouselRoot(triggerEl);
+  const elements = getCarouselElements(root);
+  if (!elements?.modal) return;
+
+  setCarouselIndex(root, index);
+  elements.modal.classList.add('is-open');
+  elements.modal.setAttribute('aria-hidden', 'false');
+  document.body.classList.add('modal-open');
+}
+
+function closeCarouselModal(event) {
+  const target = event?.currentTarget || event?.target;
+  const modal = target?.closest ? target.closest('.carousel-modal') : null;
+  if (!modal) return;
+  if (event?.target === modal || event?.target?.closest('.carousel-modal-close')) {
+    modal.classList.remove('is-open');
+    modal.setAttribute('aria-hidden', 'true');
+    document.body.classList.remove('modal-open');
+  }
+}
+
+function carouselCurrentIndex(root) {
+  const elements = getCarouselElements(root);
+  if (!elements) return 0;
+  return parseInt(elements.carousel.dataset.current || '0', 10);
+}
+
+function carouselStep(triggerEl, dir) {
+  const root = carouselRoot(triggerEl);
+  const current = carouselCurrentIndex(root);
+  setCarouselIndex(root, current + dir);
 }
 
 function carouselKey(event, carouselEl) {
-  if (event.key === 'ArrowLeft')  carouselGoTo(carouselEl, parseInt(carouselEl.dataset.current || '0', 10) - 1);
-  if (event.key === 'ArrowRight') carouselGoTo(carouselEl, parseInt(carouselEl.dataset.current || '0', 10) + 1);
+  const root = carouselRoot(carouselEl);
+  if (!root) return;
+
+  if (event.key === 'ArrowLeft') setCarouselIndex(root, carouselCurrentIndex(root) - 1);
+  if (event.key === 'ArrowRight') setCarouselIndex(root, carouselCurrentIndex(root) + 1);
+  if (event.key === 'Enter') openCarouselModal(carouselEl, carouselCurrentIndex(root));
+}
+
+function bindCarouselSwipe(root) {
+  const elements = getCarouselElements(root);
+  if (!elements) return;
+
+  const swipeTargets = [elements.carousel, root.querySelector('.carousel-modal-stage')].filter(Boolean);
+
+  swipeTargets.forEach((target) => {
+    if (target.dataset.swipeBound === 'true') return;
+
+    let startX = 0;
+    let startY = 0;
+
+    target.addEventListener('touchstart', (event) => {
+      const touch = event.touches[0];
+      startX = touch.clientX;
+      startY = touch.clientY;
+    }, { passive: true });
+
+    target.addEventListener('touchend', (event) => {
+      const touch = event.changedTouches[0];
+      const deltaX = touch.clientX - startX;
+      const deltaY = touch.clientY - startY;
+
+      if (Math.abs(deltaX) < 40 || Math.abs(deltaX) < Math.abs(deltaY)) {
+        return;
+      }
+
+      if (deltaX < 0) {
+        setCarouselIndex(root, carouselCurrentIndex(root) + 1);
+      } else {
+        setCarouselIndex(root, carouselCurrentIndex(root) - 1);
+      }
+    }, { passive: true });
+
+    target.dataset.swipeBound = 'true';
+  });
+}
+
+function initializeDetailCarousels(scope = document) {
+  scope.querySelectorAll('.detail-photos').forEach((root) => {
+    setCarouselIndex(root, carouselCurrentIndex(root));
+    bindCarouselSwipe(root);
+  });
 }
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -1770,6 +1915,7 @@ async function showDetail(id) {
     </div>
   `;
 
+    initializeDetailCarousels(document.getElementById('detail-content'));
     loadReviews(id);
     showPage('detail', { updateHistory: true });
   } catch (err) {
