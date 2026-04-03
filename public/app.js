@@ -1811,12 +1811,12 @@ async function showDetail(id) {
     const user = getUser();
     const detailTitle = getSafeListingTitle(listing.title);
     const detailLocation = getSafeListingLocation([listing.address, listing.city], 'Location details unavailable');
-    const detailType = cleanDisplayValue(listing.type, { fallback: 'Not specified', minLength: 2, allowShort: true });
-    const detailGender = cleanDisplayValue(listing.gender, { fallback: 'Not specified', minLength: 2, allowShort: true });
-    const detailOwnerName = cleanDisplayValue(listing.owner?.name, { fallback: 'Owner details unavailable', minLength: 3, maxLength: 50 });
-    const detailOwnerEmail = cleanDisplayValue(listing.owner?.email, { fallback: 'Email unavailable', minLength: 5, allowShort: true, maxLength: 60 });
     const detailAmenities = normalizeListingTags(listing.amenities);
-    const detailDescription = cleanDisplayValue(listing.description, { fallback: '', minLength: 3, allowShort: true, maxLength: 300 });
+    const detailRatingValue = Number(listing.averageRating);
+    const detailReviewCount = Math.max(0, Number(listing.reviewCount || 0));
+    const detailRating = Number.isFinite(detailRatingValue) && detailRatingValue > 0
+      ? `⭐ ${detailRatingValue.toFixed(1)} (${detailReviewCount})`
+      : '⭐ New listing';
     const enquiryName = canSendEnquiry() ? escapeHtml(user?.name || '') : '';
     const enquiryEmail = canSendEnquiry() ? escapeHtml(user?.email || '') : '';
 
@@ -1825,15 +1825,35 @@ async function showDetail(id) {
       ${renderPhotoCarousel(listing.photos)}
     </div>
     <div class="detail-info">
-      <h1>${escapeHtml(detailTitle)}</h1>
-      <div class="price">${escapeHtml(formatListingPriceDisplay(listing.price))}</div>
-      <p>${escapeHtml(detailLocation)}</p>
-      <p>Type: ${escapeHtml(detailType.toUpperCase())} | Gender: ${escapeHtml(detailGender)}</p>
-      <p>Owner: ${escapeHtml(detailOwnerName)} - ${escapeHtml(detailOwnerEmail)}</p>
+      <div class="detail-summary">
+        <h1>${escapeHtml(detailTitle)}</h1>
+        <div class="detail-meta-list">
+          <div class="detail-meta-item" title="${escapeHtml(detailRating)}">
+            <span class="detail-meta-icon" aria-hidden="true">⭐</span>
+            <span class="detail-meta-text">${escapeHtml(detailRating.replace(/^⭐\s*/, ''))}</span>
+          </div>
+          <div class="detail-meta-item" title="${escapeHtml(detailLocation)}">
+            <span class="detail-meta-icon" aria-hidden="true">📍</span>
+            <span class="detail-meta-text">${escapeHtml(detailLocation)}</span>
+          </div>
+          <div class="detail-meta-item detail-meta-item-price" title="${escapeHtml(formatListingPriceDisplay(listing.price))}">
+            <span class="detail-meta-icon" aria-hidden="true">₹</span>
+            <span class="detail-meta-text">${escapeHtml(formatListingPriceDisplay(listing.price))}</span>
+          </div>
+        </div>
+        ${detailAmenities.length > 0 ? `
+          <div class="detail-amenities" aria-label="Amenities">
+            ${detailAmenities.map((amenity) => `
+              <span class="detail-amenity-pill" title="${escapeHtml(amenity)}">
+                <span class="detail-amenity-icon" aria-hidden="true">•</span>
+                <span class="detail-amenity-text">${escapeHtml(amenity)}</span>
+              </span>
+            `).join('')}
+          </div>
+        ` : ''}
+      </div>
       ${renderWhatsAppButton(listing)}
       ${renderWishlistButton(listing, { detail: true })}
-      ${detailAmenities.length > 0 ? `<p>Amenities: ${escapeHtml(detailAmenities.join(', '))}</p>` : ''}
-      ${detailDescription ? `<p>${escapeHtml(detailDescription)}</p>` : ''}
       ${renderOwnerListingActions(listing, { detail: true })}
       <button onclick="showPage('listings')" class="back-button">Back</button>
 

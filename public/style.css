@@ -719,6 +719,71 @@ button:hover { background: var(--primary-dark); transform: translateY(-1px); }
 .detail-info h1 { font-size: 28px; font-weight: 800; margin-bottom: 8px; }
 .detail-info .price { font-size: 32px; font-weight: 800; color: var(--primary); margin: 16px 0; }
 .detail-info p { margin-bottom: 12px; line-height: 1.6; overflow-wrap: anywhere; }
+.detail-summary { display: flex; flex-direction: column; gap: 16px; margin-bottom: 18px; }
+.detail-meta-list { display: flex; flex-direction: column; gap: 10px; }
+.detail-meta-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: #f7fbff;
+  border: 1px solid rgba(191, 219, 254, 0.85);
+}
+.detail-meta-item-price {
+  background: linear-gradient(135deg, #e8f4ff, #f4faff);
+}
+.detail-meta-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 999px;
+  background: rgba(99, 180, 255, 0.14);
+  color: #1f7de2;
+  font-size: 13px;
+  font-weight: 800;
+  flex-shrink: 0;
+}
+.detail-meta-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text);
+  font-size: 15px;
+  font-weight: 600;
+}
+.detail-amenities {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.detail-amenity-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 100%;
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: #f3f9ff;
+  border: 1px solid #d8eaff;
+}
+.detail-amenity-icon {
+  color: #1f7de2;
+  font-size: 12px;
+  font-weight: 800;
+}
+.detail-amenity-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #456684;
+  font-size: 13px;
+  font-weight: 600;
+}
 .detail-no-image { height: 300px; background: linear-gradient(135deg, #DBEAFE, #EFF6FF); display: flex; align-items: center; justify-content: center; font-size: 32px; border-radius: 16px; color: #93C5FD; }
 
 .contact-link { display: inline-block; margin-top: 8px; padding: 12px 24px; background: #25D366; color: white; border-radius: 10px; text-decoration: none; font-weight: 600; }
