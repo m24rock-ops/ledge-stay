@@ -32,49 +32,33 @@ const HOME_LOCATIONS = [
   {
     name: 'Koramangala',
     city: 'Bengaluru',
-    count: '120+ stays',
+    count: '20+ stays',
     blurb: 'A well-known area with many student rooms and PG options.',
     image: 'https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?w=900&q=80'
   },
   {
-    name: 'Hinjewadi',
-    city: 'Pune',
-    count: '90+ stays',
+    name: 'Rajaji Nagar',
+    city: 'Bengaluru',
+    count: '10+ stays',
     blurb: 'Good for budget-friendly stays near colleges and work hubs.',
     image: 'https://images.unsplash.com/photo-1484154218962-a197022b5858?w=900&q=80'
   },
   {
-    name: 'Navrangpura',
-    city: 'Ahmedabad',
-    count: '70+ stays',
+    name: 'Vijaynagara',
+    city: 'Bengaluru',
+    count: '20+ stays',
     blurb: 'A student-friendly area with rooms, PGs, and shared flats.',
     image: 'https://images.unsplash.com/photo-1494526585095-c41746248156?w=900&q=80'
   },
   {
-    name: 'Guindy',
-    city: 'Chennai',
-    count: '85+ stays',
+    name: 'Hebbal',
+    city: 'Bengaluru',
+    count: '15+ stays',
     blurb: 'Close to colleges, buses, and daily needs.',
     image: 'https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?w=900&q=80'
   }
 ];
-const HOME_REVIEWS = [
-  {
-    name: 'Aarav S.',
-    meta: 'Engineering student, Bengaluru',
-    quote: 'I found a PG near college quickly. The price was clear and the room looked like the photos.'
-  },
-  {
-    name: 'Nisha R.',
-    meta: 'MBA student, Pune',
-    quote: 'The site was easy to understand. I could compare places without opening too many pages.'
-  },
-  {
-    name: 'Rahul P.',
-    meta: 'Parent, Chennai',
-    quote: 'As a parent, I liked that the listings were simple to read and easy to compare.'
-  }
-];
+
 
 function normalizePageName(page) {
   const aliases = {
