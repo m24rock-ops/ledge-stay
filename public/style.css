@@ -1821,9 +1821,10 @@ button:hover { background: var(--primary-dark); transform: translateY(-1px); }
 }
 
 .card img,
+.card img,
 .card-img-wrap img {
   width: 100%;
-  height: 180px;
+  height: 120px;
   object-fit: cover;
   object-position: center;
   border-radius: 12px;
@@ -1907,12 +1908,12 @@ button:hover { background: var(--primary-dark); transform: translateY(-1px); }
 
 .card-title {
   display: -webkit-box;
-  height: 40px;
+  max-height: 38px;
   overflow: hidden;
   text-overflow: ellipsis;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 600;
   line-height: 1.3;
   word-break: break-word;
@@ -1924,7 +1925,7 @@ button:hover { background: var(--primary-dark); transform: translateY(-1px); }
   text-overflow: ellipsis;
   white-space: nowrap;
   color: #666;
-  font-size: 13px;
+  font-size: 12px;
   line-height: 1.4;
 }
 
@@ -2014,8 +2015,8 @@ button:hover { background: var(--primary-dark); transform: translateY(-1px); }
   border-radius: 14px;
   background: linear-gradient(135deg, #e8f4ff, #f4faff);
   color: #1673df;
-  font-size: 20px;
-  font-weight: 800;
+  font-size: 16px;
+  font-weight: 600;
   letter-spacing: -0.02em;
   box-shadow: inset 0 0 0 1px rgba(99, 180, 255, 0.18);
   overflow: hidden;
