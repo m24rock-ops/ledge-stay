@@ -282,6 +282,8 @@
       <input type="text" id="post-city" placeholder="City">
       <input type="text" id="post-address" placeholder="Full Address">
       <input type="text" id="post-contact" placeholder="Contact phone (e.g. 9876543210)">
+      <input type="hidden" id="post-lat" value="">
+      <input type="hidden" id="post-lng" value="">
       <input type="number" id="post-price" placeholder="Monthly Rent (Rs)">
       <select id="post-gender">
         <option value="any">Any Gender</option>
@@ -300,7 +302,7 @@
       </label>
       <input type="file" id="post-photos" multiple accept="image/jpeg,image/png,image/webp">
       <p style="font-size:13px;color:#64748b;margin:-8px 0 4px">Up to 10 photos · JPG, PNG or WebP · max 5 MB each</p>
-      <button id="post-submit-button" onclick="saveListing()">Post Listing</button>
+      <button type="button" id="post-submit-button" onclick="saveListing()">Post Listing</button>
       <p id="post-error" class="error"></p>
     </div>
   </div>

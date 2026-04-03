@@ -1820,52 +1820,93 @@ function logout() {
 }
 
 async function saveListing() {
+  console.log('[listing] saveListing called', { editingListingId });
   const user = getUser();
+  const errorField = document.getElementById('post-error');
+  const submitButton = document.getElementById('post-submit-button');
   if (!user) {
+    console.warn('[listing] save blocked: user not logged in');
     showPage('login');
     return;
   }
 
   if (user.role !== 'owner') {
-    document.getElementById('post-error').textContent = 'Only owners can post listings.';
+    console.warn('[listing] save blocked: non-owner user', user);
+    errorField.textContent = 'Only owners can post listings.';
+    return;
+  }
+
+  errorField.textContent = '';
+
+  const titleInput = document.getElementById('post-title');
+  const typeInput = document.getElementById('post-type');
+  const cityInput = document.getElementById('post-city');
+  const addressInput = document.getElementById('post-address');
+  const contactInput = document.getElementById('post-contact');
+  const latInput = document.getElementById('post-lat');
+  const lngInput = document.getElementById('post-lng');
+  const priceInput = document.getElementById('post-price');
+  const genderInput = document.getElementById('post-gender');
+  const descriptionInput = document.getElementById('post-description');
+  const availableInput = document.getElementById('post-available');
+  const featuredInput = document.getElementById('post-featured');
+  const amenitiesInput = document.getElementById('post-amenities');
+  const photosInput = document.getElementById('post-photos');
+
+  const title = titleInput?.value?.trim() || '';
+  const type = typeInput?.value || 'pg';
+  const city = cityInput?.value?.trim() || '';
+  const address = addressInput?.value?.trim() || '';
+  const contact = contactInput?.value?.trim() || '';
+  const lat = latInput?.value?.trim() || '';
+  const lng = lngInput?.value?.trim() || '';
+  const price = priceInput?.value?.trim() || '';
+  const gender = genderInput?.value || 'any';
+  const description = descriptionInput?.value?.trim() || '';
+  const available = Boolean(availableInput?.checked);
+  const isFeatured = Boolean(featuredInput?.checked);
+
+  if (!title || !city || !address || !price) {
+    errorField.textContent = 'Title, city, address, and monthly rent are required.';
+    console.warn('[listing] save blocked: missing required fields', { title, city, address, price });
     return;
   }
 
   const formData = new FormData();
-  formData.append('title', document.getElementById('post-title').value);
-  formData.append('type', document.getElementById('post-type').value);
-  formData.append('city', document.getElementById('post-city').value);
-  formData.append('address', document.getElementById('post-address').value);
-  formData.append('contact', document.getElementById('post-contact').value);
-  formData.append('lat', document.getElementById('post-lat').value);
-  formData.append('lng', document.getElementById('post-lng').value);
-  formData.append('price', document.getElementById('post-price').value);
-  formData.append('gender', document.getElementById('post-gender').value);
-  formData.append('description', document.getElementById('post-description').value);
-  formData.append('available', String(document.getElementById('post-available').checked));
-  formData.append('is_featured', String(document.getElementById('post-featured').checked));
+  formData.append('title', title);
+  formData.append('type', type);
+  formData.append('city', city);
+  formData.append('address', address);
+  formData.append('contact', contact);
+  formData.append('lat', lat);
+  formData.append('lng', lng);
+  formData.append('price', price);
+  formData.append('gender', gender);
+  formData.append('description', description);
+  formData.append('available', String(available));
+  formData.append('is_featured', String(isFeatured));
 
-  const amenities = document.getElementById('post-amenities').value
+  const amenities = (amenitiesInput?.value || '')
     .split(',')
     .map((item) => item.trim())
     .filter(Boolean);
   amenities.forEach((amenity) => formData.append('amenities', amenity));
 
-  const photos = document.getElementById('post-photos').files;
+  const photos = photosInput?.files || [];
   const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
   const MAX_SIZE = 5 * 1024 * 1024;
 
   if (photos.length > 10) {
-    document.getElementById('post-error').textContent = 'You can upload a maximum of 10 photos.';
+    errorField.textContent = 'You can upload a maximum of 10 photos.';
     return;
   }
   for (const photo of photos) {
     if (!ALLOWED_TYPES.includes(photo.type)) {
-      document.getElementById('post-error').textContent = `"${photo.name}" is not a supported type. Use JPG, PNG or WebP.`;
+      errorField.textContent = `"${photo.name}" is not a supported type. Use JPG, PNG or WebP.`;
       return;
     }
     if (photo.size > MAX_SIZE) {
-      document.getElementById('post-error').textContent = `"${photo.name}" exceeds the 5 MB limit.`;
+      errorField.textContent = `"${photo.name}" exceeds the 5 MB limit.`;
       return;
     }
     formData.append('photos', photo);
@@ -1876,6 +1917,18 @@ async function saveListing() {
   const method = isEditing ? 'PUT' : 'POST';
 
   try {
+    if (submitButton) submitButton.disabled = true;
+    console.log('[listing] submitting request', {
+      endpoint,
+      method,
+      title,
+      type,
+      city,
+      address,
+      hasToken: Boolean(getToken()),
+      photoCount: photos.length
+    });
+
     await apiFetchJson(endpoint, {
       method,
       headers: { Authorization: `Bearer ${getToken()}` },
@@ -1886,7 +1939,10 @@ async function saveListing() {
     resetListingForm();
     showPage('dashboard');
   } catch (err) {
-    document.getElementById('post-error').textContent = err.message || 'Unable to save listing.';
+    console.error('[listing] save failed', err);
+    errorField.textContent = err.message || 'Unable to save listing.';
+  } finally {
+    if (submitButton) submitButton.disabled = false;
   }
 }
 

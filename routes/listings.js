@@ -6,6 +6,20 @@ const { upload } = require('../middleware/cloudinary');
 const jwt = require('jsonwebtoken');
 const { syncLocationForListingChange } = require('../services/locationSearch');
 
+function uploadListingPhotos(req, res, next) {
+  upload.array('photos', 10)(req, res, (err) => {
+    if (!err) return next();
+
+    console.error('[listings] upload error', {
+      message: err.message,
+      code: err.code
+    });
+    return res.status(400).json({
+      message: err.message || 'Photo upload failed.'
+    });
+  });
+}
+
 function parseBoolean(value, fallback = false) {
   if (typeof value === 'boolean') return value;
   if (typeof value === 'string') return value === 'true';
@@ -45,6 +59,27 @@ function buildLocationFilter(location) {
       };
     })
   };
+}
+
+function normalizeAmenities(value) {
+  if (Array.isArray(value)) return value.map((item) => String(item).trim()).filter(Boolean);
+  if (value === undefined || value === null || value === '') return [];
+  return [String(value).trim()].filter(Boolean);
+}
+
+function validateListingPayload(payload) {
+  const title = String(payload.title || '').trim();
+  const type = String(payload.type || '').trim();
+  const city = String(payload.city || '').trim();
+  const address = String(payload.address || '').trim();
+  const price = Number(payload.price);
+
+  if (!title) return 'Title is required.';
+  if (!['pg', 'hostel', 'apartment', 'room'].includes(type)) return 'A valid listing type is required.';
+  if (!city) return 'City is required.';
+  if (!address) return 'Address is required.';
+  if (!Number.isFinite(price) || price <= 0) return 'A valid monthly rent is required.';
+  return null;
 }
 
 function getOptionalUser(req) {
@@ -249,15 +284,37 @@ router.get('/:id', async (req, res) => {
 });
 
 // Create listing (owners only)
-router.post('/', auth, upload.array('photos', 10), async (req, res) => {
+router.post('/', auth, uploadListingPhotos, async (req, res) => {
   try {
+    console.log('[listings] create request received', {
+      userId: req.user?.id,
+      role: req.user?.role,
+      bodyKeys: Object.keys(req.body || {}),
+      photoCount: req.files?.length || 0
+    });
+
     if (req.user.role !== 'owner') return res.status(403).json({ message: 'Only owners can post listings' });
+
+    const validationError = validateListingPayload(req.body);
+    if (validationError) {
+      return res.status(400).json({ message: validationError });
+    }
 
     const photos = req.files ? req.files.map(f => f.path) : [];
     const listing = await Listing.create({
       ...req.body,
       owner: req.user.id,
       photos,
+      title: String(req.body.title || '').trim(),
+      type: String(req.body.type || '').trim(),
+      city: String(req.body.city || '').trim(),
+      state: String(req.body.state || '').trim(),
+      address: String(req.body.address || '').trim(),
+      contact: String(req.body.contact || '').trim(),
+      description: String(req.body.description || '').trim(),
+      gender: String(req.body.gender || 'any').trim() || 'any',
+      price: Number(req.body.price),
+      amenities: normalizeAmenities(req.body.amenities),
       lat: parseCoordinate(req.body.lat),
       lng: parseCoordinate(req.body.lng),
       available: parseBoolean(req.body.available, true),
@@ -266,38 +323,72 @@ router.post('/', auth, upload.array('photos', 10), async (req, res) => {
       rejectionNote: ''
     });
     await syncLocationForListingChange(null, listing.toObject());
+    console.log('[listings] listing created successfully', { listingId: listing._id, ownerId: req.user.id });
     res.status(201).json(listing);
   } catch (err) {
-    res.status(500).json({ message: 'Server error', error: err.message });
+    console.error('[listings] create failed', err);
+    if (err.name === 'ValidationError') {
+      const message = Object.values(err.errors).map((entry) => entry.message).join(' ');
+      return res.status(400).json({ message });
+    }
+    res.status(500).json({ message: 'Unable to create listing.', error: err.message });
   }
 });
 
 async function updateListing(req, res) {
   try {
+    console.log('[listings] update request received', {
+      listingId: req.params.id,
+      userId: req.user?.id,
+      bodyKeys: Object.keys(req.body || {}),
+      photoCount: req.files?.length || 0
+    });
+
     const listing = await Listing.findById(req.params.id);
     if (!listing) return res.status(404).json({ message: 'Listing not found' });
     if (listing.owner.toString() !== req.user.id) return res.status(403).json({ message: 'Not authorized' });
     const previousListing = listing.toObject();
     const photos = req.files?.length ? req.files.map(f => f.path) : listing.photos;
 
+    const validationError = validateListingPayload({ ...listing.toObject(), ...req.body });
+    if (validationError) {
+      return res.status(400).json({ message: validationError });
+    }
+
     const updated = await Listing.findByIdAndUpdate(req.params.id, {
       ...req.body,
       photos,
+      title: String(req.body.title || listing.title || '').trim(),
+      type: String(req.body.type || listing.type || '').trim(),
+      city: String(req.body.city || listing.city || '').trim(),
+      state: String(req.body.state || listing.state || '').trim(),
+      address: String(req.body.address || listing.address || '').trim(),
+      contact: String(req.body.contact || listing.contact || '').trim(),
+      description: String(req.body.description || listing.description || '').trim(),
+      gender: String(req.body.gender || listing.gender || 'any').trim() || 'any',
+      price: Number(req.body.price || listing.price),
+      amenities: req.body.amenities !== undefined ? normalizeAmenities(req.body.amenities) : listing.amenities,
       lat: parseCoordinate(req.body.lat),
       lng: parseCoordinate(req.body.lng),
       available: parseBoolean(req.body.available, listing.available),
       is_featured: parseBoolean(req.body.is_featured, listing.is_featured)
     }, { new: true });
     await syncLocationForListingChange(previousListing, updated.toObject());
+    console.log('[listings] listing updated successfully', { listingId: updated._id });
     res.json(updated);
   } catch (err) {
-    res.status(500).json({ message: 'Server error', error: err.message });
+    console.error('[listings] update failed', err);
+    if (err.name === 'ValidationError') {
+      const message = Object.values(err.errors).map((entry) => entry.message).join(' ');
+      return res.status(400).json({ message });
+    }
+    res.status(500).json({ message: 'Unable to update listing.', error: err.message });
   }
 }
 
 // Update listing
-router.put('/:id', auth, upload.array('photos', 10), updateListing);
-router.patch('/:id', auth, upload.array('photos', 10), updateListing);
+router.put('/:id', auth, uploadListingPhotos, updateListing);
+router.patch('/:id', auth, uploadListingPhotos, updateListing);
 
 // Delete listing
 router.delete('/:id', auth, async (req, res) => {

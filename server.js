@@ -17,6 +17,7 @@ app.use(cors({
   credentials: true
 }));
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
 app.use('/uploads', express.static(path.join(__dirname, 'public/uploads')));
 
@@ -39,6 +40,23 @@ app.get('/api/config', (req, res) => {
 // Catch-all for ALL non-API routes (SPA entrypoint)
 app.get(/^\/(?!api).*/, (req, res) => {
   return res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+app.use((err, req, res, next) => {
+  console.error('[server] unhandled error', {
+    path: req.path,
+    method: req.method,
+    message: err.message,
+    stack: err.stack
+  });
+
+  if (res.headersSent) {
+    return next(err);
+  }
+
+  return res.status(err.status || 500).json({
+    message: err.message || 'Unexpected server error.'
+  });
 });
 
 // Connect to MongoDB
