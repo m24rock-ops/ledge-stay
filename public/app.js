@@ -802,7 +802,12 @@ function buildListingCardData(listing = {}) {
   const imageUrl = sanitizeAssetUrl(listing.photos?.[0] || '');
   const imageHtml = imageUrl
     ? `<img src="${imageUrl}" alt="${escapeHtml(title)}" loading="lazy">`
-    : '<div class="no-image card-image-fallback">No photo available</div>';
+    : `
+      <div class="no-image card-image-fallback" aria-label="No listing image available">
+        <span class="card-image-fallback-icon" aria-hidden="true">Home</span>
+        <span class="card-image-fallback-text">Image unavailable</span>
+      </div>
+    `;
 
   return {
     id: listing._id,
