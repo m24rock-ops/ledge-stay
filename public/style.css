@@ -1820,9 +1820,13 @@ button:hover { background: var(--primary-dark); transform: translateY(-1px); }
   border-radius: inherit;
 }
 
+.card img,
 .card-img-wrap img {
+  width: 100%;
+  height: 180px;
   object-fit: cover;
   object-position: center;
+  border-radius: 12px;
 }
 
 .card-img-wrap .no-image {
