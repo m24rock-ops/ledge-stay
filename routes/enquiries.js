@@ -44,7 +44,6 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ message: 'You cannot send an enquiry to your own listing' });
     }
 
-    // Prevent duplicate enquiries from the same tenant on the same listing
     const existing = await Enquiry.findOne({ listing: listing._id, tenant: req.user.id });
     if (existing) {
       return res.status(400).json({ message: 'You have already sent an enquiry for this listing' });
@@ -62,10 +61,11 @@ router.post('/', async (req, res) => {
     listing.enquiryCount = Number(listing.enquiryCount || 0) + 1;
     await listing.save();
 
-    // Send emails — failures are caught inside the service and never throw
     const owner = await User.findById(listing.owner).select('name email');
+    const emailJobs = [];
+
     if (owner) {
-      sendEnquiryNotificationToOwner({
+      emailJobs.push(sendEnquiryNotificationToOwner({
         ownerEmail: owner.email,
         ownerName: owner.name,
         tenantName: trimmedName,
@@ -73,14 +73,33 @@ router.post('/', async (req, res) => {
         message: trimmedMessage,
         listingTitle: listing.title,
         listingId: listing._id
-      });
+      }));
     }
 
-    sendEnquiryConfirmationToTenant({
+    emailJobs.push(sendEnquiryConfirmationToTenant({
       tenantEmail: trimmedEmail,
       tenantName: trimmedName,
       listingTitle: listing.title,
       listingId: listing._id
+    }));
+
+    const emailResults = await Promise.allSettled(emailJobs);
+    emailResults.forEach((result, index) => {
+      if (result.status === 'fulfilled' && !result.value.ok) {
+        console.warn('[enquiries] Email delivery issue', {
+          index,
+          issues: result.value.issues || [],
+          hint: result.value.hint || '',
+          error: result.value.error || ''
+        });
+      }
+
+      if (result.status === 'rejected') {
+        console.error('[enquiries] Unexpected email send failure', {
+          index,
+          message: result.reason?.message || String(result.reason)
+        });
+      }
     });
 
     res.status(201).json({

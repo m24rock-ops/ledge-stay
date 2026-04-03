@@ -3,6 +3,7 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const dotenv = require('dotenv');
 const path = require('path');
+const { getEmailConfig } = require('./services/email');
 
 dotenv.config();
 
@@ -63,6 +64,16 @@ app.use((err, req, res, next) => {
 mongoose.connect(process.env.MONGO_URI)
   .then(() => console.log('MongoDB connected'))
   .catch(err => console.log('DB Error:', err));
+
+const emailConfig = getEmailConfig();
+if (emailConfig.ready) {
+  console.log('[email] Resend configuration loaded', {
+    from: emailConfig.fromAddress,
+    baseUrl: emailConfig.baseUrl
+  });
+} else {
+  console.warn('[email] Resend configuration issues:', emailConfig.issues.join(' '));
+}
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
