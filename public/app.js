@@ -586,11 +586,27 @@ function normalizePhoneForWhatsApp(raw) {
   return null;
 }
 
+function buildWhatsAppContactUrl(phone, message) {
+  const normalizedPhone = normalizePhoneForWhatsApp(phone);
+  if (!normalizedPhone) return null;
+
+  const safeMessage = String(message || '').trim();
+  return `https://wa.me/${encodeURIComponent(normalizedPhone)}${safeMessage ? `?text=${encodeURIComponent(safeMessage)}` : ''}`;
+}
+
 function renderWhatsAppButton(listing) {
   const contact = normalizePhoneForWhatsApp(listing.contact || listing.owner?.phone || listing.owner?.mobile || '');
   if (!contact) return '';
 
-  const url = `https://wa.me/${encodeURIComponent(contact)}`;
+  const title = cleanDisplayValue(listing.title, { fallback: 'this property', minLength: 3 });
+  const location = cleanDisplayValue(
+    [listing.address, listing.city].filter(Boolean).join(', '),
+    { fallback: cleanDisplayValue(listing.city, { fallback: 'the listed location', minLength: 3 }), minLength: 3 }
+  );
+  const message = `Hi, I'm interested in your property: ${title}, located at ${location}. Please share details.`;
+  const url = buildWhatsAppContactUrl(contact, message);
+  if (!url) return '';
+
   return `<a href="${url}" target="_blank" rel="noopener" class="btn btn-whatsapp" onclick="event.stopPropagation()">Contact owner</a>`;
 }
 
@@ -690,11 +706,17 @@ function buildListingCardData(listing = {}) {
   const city = cleanDisplayValue(listing.city, { fallback: 'Location unavailable', minLength: 3 });
   const title = cleanDisplayValue(listing.title, { fallback: 'Untitled stay', minLength: 3 });
   const address = cleanDisplayValue(listing.address, { fallback: 'Address will be shared on request', minLength: 4 });
+  const location = cleanDisplayValue(
+    [address !== 'Address will be shared on request' ? address : '', city !== 'Location unavailable' ? city : '']
+      .filter(Boolean)
+      .join(', '),
+    { fallback: city !== 'Location unavailable' ? city : 'the listed location', minLength: 3 }
+  );
   const distanceKm = typeof listing.distanceKm === 'number' && Number.isFinite(listing.distanceKm)
     ? `${listing.distanceKm.toFixed(1)} km away`
     : '';
   const price = formatListingPrice(listing.price);
-  const ownerPhone = cleanDisplayValue(listing.owner?.whatsapp || listing.owner?.phone, { fallback: '', allowShort: true });
+  const ownerPhone = listing.contact || listing.owner?.whatsapp || listing.owner?.phone || listing.owner?.mobile || '';
   const averageRating = Number(listing.averageRating);
   const reviewCount = Math.max(0, Number(listing.reviewCount || 0));
   const rating = Number.isFinite(averageRating) && averageRating > 0
@@ -710,8 +732,8 @@ function buildListingCardData(listing = {}) {
   if (listing.verified) badges.push('<span class="img-badge badge-teal">Verified</span>');
   if (listing.is_featured) badges.push('<span class="img-badge badge-gold">Best Deal</span>');
 
-  const whatsappMessage = encodeURIComponent(`Hi, I'm interested in your stay "${title}" on Ledge Stay`);
-  const whatsappUrl = ownerPhone ? `https://wa.me/${ownerPhone}?text=${whatsappMessage}` : null;
+  const whatsappMessage = `Hi, I'm interested in your property: ${title}, located at ${location}. Please share details.`;
+  const whatsappUrl = buildWhatsAppContactUrl(ownerPhone, whatsappMessage);
   const imageHtml = listing.photos?.[0]
     ? `<img src="${listing.photos[0]}" alt="${escapeHtml(title)}">`
     : '<div class="no-image card-image-fallback">No photo available</div>';
