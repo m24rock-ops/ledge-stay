@@ -5,7 +5,6 @@ const ROUTE_PATHS = {
   detail: '/browse',
   wishlist: '/wishlist',
   login: '/login',
-  register: '/register',
   post: '/post',
   dashboard: '/dashboard',
   admin: '/admin',
@@ -27,6 +26,11 @@ let nearbySearchState = {
   lat: null,
   lng: null,
   radiusKm: 10
+};
+let authState = {
+  mode: 'phone',
+  phoneOtpSent: false,
+  emailNeedsRegistration: false
 };
 const HOME_LOCATIONS = [
   {
@@ -105,29 +109,7 @@ function showPage(page, options = {}) {
 
   // Reset auth UI whenever switching between auth pages.
   if (normalizedPage === 'login') {
-    const forgotSection = document.getElementById('forgot-password-section');
-    const forgotMessage = document.getElementById('forgot-password-message');
-    if (forgotSection) forgotSection.style.display = 'none';
-    if (forgotMessage) {
-      forgotMessage.style.display = 'none';
-      forgotMessage.textContent = '';
-    }
-
-    const loginError = document.getElementById('login-error');
-    if (loginError) loginError.textContent = '';
-
-    const loginButton = document.querySelector('#page-login button[onclick="login()"]');
-    if (loginButton) loginButton.style.display = '';
-  }
-
-  if (normalizedPage === 'register') {
-    const regError = document.getElementById('reg-error');
-    if (regError) regError.textContent = '';
-
-    ['reg-name-error', 'reg-email-error', 'reg-password-error', 'reg-role-error'].forEach((id) => {
-      const el = document.getElementById(id);
-      if (el) el.textContent = '';
-    });
+    resetAuthFlow({ preserveMode: true });
   }
 
   if (updateHistory) {
@@ -146,8 +128,8 @@ function ensurePageAccess(page) {
 
   if (page === 'dashboard' || page === 'post') {
     if (!user) {
-      document.getElementById('login-error').textContent = 'Please login as an owner to continue.';
       showPage('login', { updateHistory: true, replaceHistory: true });
+      document.getElementById('login-error').textContent = 'Please login as an owner to continue.';
       return false;
     }
 
@@ -160,8 +142,8 @@ function ensurePageAccess(page) {
 
   if (page === 'wishlist') {
     if (!user) {
-      document.getElementById('login-error').textContent = 'Please login as a tenant to continue.';
       showPage('login', { updateHistory: true, replaceHistory: true });
+      document.getElementById('login-error').textContent = 'Please login as a tenant to continue.';
       return false;
     }
 
@@ -174,8 +156,8 @@ function ensurePageAccess(page) {
 
   if (page === 'admin') {
     if (!user) {
-      document.getElementById('login-error').textContent = 'Please login as an admin to continue.';
       showPage('login', { updateHistory: true, replaceHistory: true });
+      document.getElementById('login-error').textContent = 'Please login as an admin to continue.';
       return false;
     }
 
@@ -558,6 +540,109 @@ function setCarouselIndex(root, index) {
 
   if (elements.modalCounter) {
     elements.modalCounter.textContent = `${next + 1} / ${elements.total}`;
+  }
+}
+
+function sanitizePhone(phone) {
+  return String(phone || '').replace(/[^\d+]/g, '');
+}
+
+function isPhoneIdentifier(value) {
+  return /^\+?\d{10,15}$/.test(sanitizePhone(value));
+}
+
+function setAuthButtonLabel() {
+  const button = document.getElementById('auth-submit-button');
+  if (!button) return;
+
+  if (authState.mode === 'phone') {
+    button.textContent = authState.phoneOtpSent ? 'Verify OTP' : 'Send OTP';
+    return;
+  }
+
+  button.textContent = authState.emailNeedsRegistration ? 'Create Account' : 'Continue';
+}
+
+function resetAuthFlow(options = {}) {
+  const { preserveMode = false } = options;
+
+  authState = {
+    mode: preserveMode ? authState.mode : 'phone',
+    phoneOtpSent: false,
+    emailNeedsRegistration: false
+  };
+
+  const loginError = document.getElementById('login-error');
+  if (loginError) loginError.textContent = '';
+
+  const forgotSection = document.getElementById('forgot-password-section');
+  const forgotMessage = document.getElementById('forgot-password-message');
+  if (forgotSection) forgotSection.style.display = 'none';
+  if (forgotMessage) {
+    forgotMessage.style.display = 'none';
+    forgotMessage.textContent = '';
+  }
+
+  const phoneOtpSection = document.getElementById('phone-otp-section');
+  const emailRegisterSection = document.getElementById('email-register-section');
+  if (phoneOtpSection) phoneOtpSection.style.display = 'none';
+  if (emailRegisterSection) emailRegisterSection.style.display = 'none';
+
+  ['login-phone', 'login-otp', 'phone-name', 'login-email', 'login-password', 'email-register-name', 'forgot-password-email'].forEach((id) => {
+    const input = document.getElementById(id);
+    if (input) input.value = '';
+  });
+
+  ['phone-role', 'email-register-role'].forEach((id) => {
+    const select = document.getElementById(id);
+    if (select) select.value = 'tenant';
+  });
+
+  setAuthMode(authState.mode, { silentReset: true });
+}
+
+function setAuthMode(mode, options = {}) {
+  const { silentReset = false } = options;
+  authState.mode = mode === 'email' ? 'email' : 'phone';
+
+  if (!silentReset) {
+    authState.phoneOtpSent = false;
+    authState.emailNeedsRegistration = false;
+  }
+
+  const phoneTab = document.getElementById('auth-tab-phone');
+  const emailTab = document.getElementById('auth-tab-email');
+  const phoneFields = document.getElementById('auth-phone-fields');
+  const emailFields = document.getElementById('auth-email-fields');
+  const phoneOtpSection = document.getElementById('phone-otp-section');
+  const emailRegisterSection = document.getElementById('email-register-section');
+  const forgotLink = document.getElementById('forgot-password-link');
+  const loginError = document.getElementById('login-error');
+
+  if (phoneTab) phoneTab.classList.toggle('is-active', authState.mode === 'phone');
+  if (emailTab) emailTab.classList.toggle('is-active', authState.mode === 'email');
+  if (phoneFields) phoneFields.style.display = authState.mode === 'phone' ? 'block' : 'none';
+  if (emailFields) emailFields.style.display = authState.mode === 'email' ? 'block' : 'none';
+  if (phoneOtpSection) phoneOtpSection.style.display = authState.mode === 'phone' && authState.phoneOtpSent ? 'block' : 'none';
+  if (emailRegisterSection) emailRegisterSection.style.display = authState.mode === 'email' && authState.emailNeedsRegistration ? 'block' : 'none';
+  if (forgotLink) forgotLink.style.display = authState.mode === 'email' && !authState.emailNeedsRegistration ? 'inline-block' : 'none';
+  if (loginError) loginError.textContent = '';
+
+  setAuthButtonLabel();
+}
+
+async function completeAuthSession(data) {
+  localStorage.setItem('token', data.token);
+  localStorage.setItem('user', JSON.stringify(data.user));
+  await loadWishlistState();
+  updateNav();
+
+  if (data.user.role === 'admin') {
+    showPage('admin');
+  } else if (data.user.role === 'owner') {
+    showPage('dashboard');
+  } else {
+    showPage('wishlist');
   }
 }
 
@@ -1987,116 +2072,135 @@ async function showDetail(id) {
   }
 }
 
-async function register() {
-  console.log('register called');
-  const name = document.getElementById('reg-name').value;
-  const email = document.getElementById('reg-email').value;
-  const password = document.getElementById('reg-password').value;
-  const role = document.getElementById('reg-role').value;
-  const errorField = document.getElementById('reg-error');
-  const nameErrorField = document.getElementById('reg-name-error');
-  const emailErrorField = document.getElementById('reg-email-error');
-  const passwordErrorField = document.getElementById('reg-password-error');
-  const roleErrorField = document.getElementById('reg-role-error');
-
-  errorField.textContent = '';
-  if (nameErrorField) nameErrorField.textContent = '';
-  if (emailErrorField) emailErrorField.textContent = '';
-  if (passwordErrorField) passwordErrorField.textContent = '';
-  if (roleErrorField) roleErrorField.textContent = '';
-
-  const trimmedName = String(name || '').trim();
-  const trimmedEmail = String(email || '').trim();
-  const emailLower = trimmedEmail.toLowerCase();
-  const passwordStr = String(password || '');
-
-  const isValidEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail);
-  const isValidName = /^[A-Za-z ]+$/.test(trimmedName) && trimmedName.replace(/\s/g, '').length >= 2;
-  const isValidPassword = passwordStr.length >= 8 && /\d/.test(passwordStr) && /[A-Za-z]/.test(passwordStr);
-  const isValidRole = ['tenant', 'owner'].includes(String(role || ''));
-
-  let hasErrors = false;
-  if (!trimmedName || !isValidName) {
-    if (nameErrorField) nameErrorField.textContent = 'Please enter a valid name';
-    hasErrors = true;
-  }
-
-  if (!trimmedEmail || !isValidEmail) {
-    if (emailErrorField) emailErrorField.textContent = 'Please enter a valid email address';
-    hasErrors = true;
-  }
-
-  if (!passwordStr || !isValidPassword) {
-    if (passwordErrorField) passwordErrorField.textContent = 'Password must be 8+ characters with letters and numbers';
-    hasErrors = true;
-  }
-
-  if (!isValidRole) {
-    if (roleErrorField) roleErrorField.textContent = 'Please select a valid account type';
-    hasErrors = true;
-  }
-
-  if (hasErrors) return;
+async function continueAuth() {
+  const errorField = document.getElementById('login-error');
+  if (errorField) errorField.textContent = '';
 
   try {
-    console.log('register request url:', '/api/auth/register');
-    const data = await apiFetchJson('/api/auth/register', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: trimmedName, email: emailLower, password, role: String(role) })
-    });
+    if (authState.mode === 'phone') {
+      if (authState.phoneOtpSent) {
+        await verifyPhoneOtp();
+      } else {
+        await startPhoneOtp();
+      }
+      return;
+    }
 
-    console.log('register response data:', data);
-    localStorage.setItem('token', data.token);
-    localStorage.setItem('user', JSON.stringify(data.user));
-    await loadWishlistState();
-    updateNav();
-    if (data.user.role === 'admin') {
-      showPage('admin');
-    } else if (data.user.role === 'owner') {
-      showPage('dashboard');
+    if (authState.emailNeedsRegistration) {
+      await registerEmailAccount();
     } else {
-      showPage('wishlist');
+      await continueEmailAuth();
     }
   } catch (err) {
-    console.error('register error:', err);
-    errorField.textContent = err.message || 'Unable to register right now.';
+    if (errorField) errorField.textContent = err.message || 'Unable to continue right now.';
   }
 }
 
-async function login() {
-  console.log('login called');
-  const email = document.getElementById('login-email').value;
-  const password = document.getElementById('login-password').value;
-  const errorField = document.getElementById('login-error');
-
-  errorField.textContent = '';
-
-  try {
-    console.log('login request url:', '/api/auth/login');
-    const trimmedEmail = String(email || '').trim();
-    const data = await apiFetchJson('/api/auth/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: trimmedEmail, password })
-    });
-
-    console.log('login response data:', data);
-    localStorage.setItem('token', data.token);
-    localStorage.setItem('user', JSON.stringify(data.user));
-    await loadWishlistState();
-    updateNav();
-    if (data.user.role === 'admin') {
-      showPage('admin');
-    } else if (data.user.role === 'owner') {
-      showPage('dashboard');
-    } else {
-      showPage('wishlist');
-    }
-  } catch (err) {
-    console.error('login error:', err);
-    errorField.textContent = err.message || 'Unable to login right now.';
+async function startPhoneOtp() {
+  const phone = sanitizePhone(document.getElementById('login-phone')?.value || '');
+  if (!isPhoneIdentifier(phone)) {
+    throw new Error('Please enter a valid phone number.');
   }
+
+  await apiFetchJson('/api/auth/continue', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ identifier: phone })
+  });
+
+  authState.phoneOtpSent = true;
+  setAuthMode('phone', { silentReset: true });
+
+  const errorField = document.getElementById('login-error');
+  if (errorField) errorField.textContent = 'OTP sent. Use the code from the console to continue.';
+}
+
+async function resendPhoneOtp() {
+  const errorField = document.getElementById('login-error');
+  if (errorField) errorField.textContent = '';
+  authState.phoneOtpSent = false;
+  setAuthMode('phone', { silentReset: true });
+  await startPhoneOtp();
+}
+
+async function verifyPhoneOtp() {
+  const phone = sanitizePhone(document.getElementById('login-phone')?.value || '');
+  const otp = String(document.getElementById('login-otp')?.value || '').trim();
+  const name = String(document.getElementById('phone-name')?.value || '').trim();
+  const role = String(document.getElementById('phone-role')?.value || 'tenant');
+
+  if (!isPhoneIdentifier(phone)) {
+    throw new Error('Please enter a valid phone number.');
+  }
+
+  if (!/^\d{6}$/.test(otp)) {
+    throw new Error('Please enter the 6-digit OTP.');
+  }
+
+  const data = await apiFetchJson('/api/auth/verify-otp', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ phone, otp, name, role })
+  });
+
+  await completeAuthSession(data);
+}
+
+async function continueEmailAuth() {
+  const email = String(document.getElementById('login-email')?.value || '').trim().toLowerCase();
+  const password = String(document.getElementById('login-password')?.value || '');
+
+  if (!email) {
+    throw new Error('Please enter your email address.');
+  }
+
+  if (!password) {
+    throw new Error('Please enter your password.');
+  }
+
+  const data = await apiFetchJson('/api/auth/continue', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ identifier: email, password })
+  });
+
+  if (data.type === 'new_user_email') {
+    authState.emailNeedsRegistration = true;
+    setAuthMode('email', { silentReset: true });
+
+    const errorField = document.getElementById('login-error');
+    if (errorField) errorField.textContent = 'This email is new. Add your name and account type to finish setup.';
+    return;
+  }
+
+  await completeAuthSession(data);
+}
+
+async function registerEmailAccount() {
+  const email = String(document.getElementById('login-email')?.value || '').trim().toLowerCase();
+  const password = String(document.getElementById('login-password')?.value || '');
+  const name = String(document.getElementById('email-register-name')?.value || '').trim();
+  const role = String(document.getElementById('email-register-role')?.value || 'tenant');
+
+  if (!email) {
+    throw new Error('Please enter your email address.');
+  }
+
+  if (!password) {
+    throw new Error('Please enter a password.');
+  }
+
+  if (!name) {
+    throw new Error('Please enter your full name.');
+  }
+
+  const data = await apiFetchJson('/api/auth/register-email', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, password, name, role })
+  });
+
+  await completeAuthSession(data);
 }
 
 function showForgotPassword(event) {
@@ -2104,7 +2208,6 @@ function showForgotPassword(event) {
   const section = document.getElementById('forgot-password-section');
   const message = document.getElementById('forgot-password-message');
   const loginError = document.getElementById('login-error');
-  const loginButton = document.querySelector('#page-login button[onclick="login()"]');
 
   if (loginError) loginError.textContent = '';
   if (message) {
@@ -2112,7 +2215,6 @@ function showForgotPassword(event) {
     message.textContent = '';
   }
   if (section) section.style.display = 'block';
-  if (loginButton) loginButton.style.display = '';
 }
 
 async function requestPasswordReset(event) {
@@ -2150,6 +2252,7 @@ function logout() {
   savedListingIds = new Set();
   editingListingId = null;
   resetListingForm();
+  resetAuthFlow();
   updateNav();
   closeMenu();
   showPage('home');
@@ -2746,7 +2849,7 @@ function bootFromPath() {
   }
 
   if (path === '/register') {
-    showPage('register', { updateHistory: false, replaceHistory: true });
+    showPage('login', { updateHistory: false, replaceHistory: true });
     return;
   }
 
@@ -2840,61 +2943,25 @@ document.addEventListener('DOMContentLoaded', () => {
 
   document.getElementById('filter-city')?.addEventListener('input', debounce(() => loadListings(), 400));
 
-  // Clear auth errors while user types.
   const loginError = document.getElementById('login-error');
-  const loginEmailInput = document.getElementById('login-email');
-  const loginPasswordInput = document.getElementById('login-password');
-
-  if (loginEmailInput) {
-    loginEmailInput.addEventListener('input', () => {
+  [
+    'login-phone',
+    'login-otp',
+    'phone-name',
+    'login-email',
+    'login-password',
+    'email-register-name'
+  ].forEach((id) => {
+    document.getElementById(id)?.addEventListener('input', () => {
       if (loginError) loginError.textContent = '';
     });
-  }
+  });
 
-  if (loginPasswordInput) {
-    loginPasswordInput.addEventListener('input', () => {
+  ['phone-role', 'email-register-role'].forEach((id) => {
+    document.getElementById(id)?.addEventListener('change', () => {
       if (loginError) loginError.textContent = '';
     });
-  }
-
-  const regError = document.getElementById('reg-error');
-  const regNameInput = document.getElementById('reg-name');
-  const regEmailInput = document.getElementById('reg-email');
-  const regPasswordInput = document.getElementById('reg-password');
-  const regRoleInput = document.getElementById('reg-role');
-
-  const regNameError = document.getElementById('reg-name-error');
-  const regEmailError = document.getElementById('reg-email-error');
-  const regPasswordError = document.getElementById('reg-password-error');
-  const regRoleError = document.getElementById('reg-role-error');
-
-  if (regNameInput) {
-    regNameInput.addEventListener('input', () => {
-      if (regError) regError.textContent = '';
-      if (regNameError) regNameError.textContent = '';
-    });
-  }
-
-  if (regEmailInput) {
-    regEmailInput.addEventListener('input', () => {
-      if (regError) regError.textContent = '';
-      if (regEmailError) regEmailError.textContent = '';
-    });
-  }
-
-  if (regPasswordInput) {
-    regPasswordInput.addEventListener('input', () => {
-      if (regError) regError.textContent = '';
-      if (regPasswordError) regPasswordError.textContent = '';
-    });
-  }
-
-  if (regRoleInput) {
-    regRoleInput.addEventListener('change', () => {
-      if (regError) regError.textContent = '';
-      if (regRoleError) regRoleError.textContent = '';
-    });
-  }
+  });
 
   const forgotEmailInput = document.getElementById('forgot-password-email');
   const forgotMessage = document.getElementById('forgot-password-message');
@@ -2904,6 +2971,21 @@ document.addEventListener('DOMContentLoaded', () => {
       forgotMessage.textContent = '';
     });
   }
+
+  document.getElementById('login-phone')?.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter') continueAuth();
+  });
+  document.getElementById('login-otp')?.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter') continueAuth();
+  });
+  document.getElementById('login-email')?.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter') continueAuth();
+  });
+  document.getElementById('login-password')?.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter') continueAuth();
+  });
+
+  resetAuthFlow();
 
   Promise.allSettled([loadAppConfig(), loadWishlistState()]).finally(() => {
     loadFeaturedListings();

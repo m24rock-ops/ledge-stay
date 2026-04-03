@@ -30,7 +30,6 @@
       <a href="/browse" data-page-link="browse">Browse</a>
       <span id="nav-auth">
         <a href="/login" data-page-link="login">Login</a>
-        <a href="/register" data-page-link="register">Register</a>
       </span>
       <span id="nav-user" style="display:none">
         <a href="/wishlist" id="nav-wishlist-link" data-page-link="wishlist">Saved Listings</a>
@@ -218,14 +217,45 @@
 
   <div id="page-login" class="page" style="display:none">
     <div class="form-box">
-      <h2>Login</h2>
-      <input type="email" id="login-email" placeholder="Email">
-      <input type="password" id="login-password" placeholder="Password">
-      <a href="#" onclick="showForgotPassword(event)" id="forgot-password-link" style="display:inline-block;margin-top:-4px;margin-bottom:12px;font-size:14px;color:#6B7280;text-decoration:none;">
-        Forgot password?
-      </a>
-      <button onclick="login()">Login</button>
-      <p>No account? <a href="#" onclick="showPage('register')">Register</a></p>
+      <h2>Welcome Back</h2>
+      <p class="auth-lead">Sign in or start your account from one place.</p>
+
+      <div class="auth-toggle" role="tablist" aria-label="Authentication method">
+        <button type="button" id="auth-tab-phone" class="auth-toggle-button is-active" onclick="setAuthMode('phone')">Phone</button>
+        <button type="button" id="auth-tab-email" class="auth-toggle-button" onclick="setAuthMode('email')">Email</button>
+      </div>
+
+      <div id="auth-phone-fields">
+        <input type="tel" id="login-phone" placeholder="Phone number" inputmode="tel" autocomplete="tel">
+        <div id="phone-otp-section" style="display:none;">
+          <input type="text" id="login-otp" placeholder="Enter 6-digit OTP" inputmode="numeric" maxlength="6" autocomplete="one-time-code">
+          <input type="text" id="phone-name" placeholder="Full name for new account">
+          <select id="phone-role">
+            <option value="tenant">I am looking for a place (Tenant)</option>
+            <option value="owner">I want to post a listing (Owner)</option>
+          </select>
+          <p class="auth-note">Name and role are only used if this phone number is new.</p>
+          <button type="button" class="auth-secondary-button" onclick="resendPhoneOtp()">Resend OTP</button>
+        </div>
+      </div>
+
+      <div id="auth-email-fields" style="display:none;">
+        <input type="email" id="login-email" placeholder="Email" autocomplete="email">
+        <input type="password" id="login-password" placeholder="Password" autocomplete="current-password">
+        <a href="#" onclick="showForgotPassword(event)" id="forgot-password-link" style="display:inline-block;margin-top:-4px;margin-bottom:12px;font-size:14px;color:#6B7280;text-decoration:none;">
+          Forgot password?
+        </a>
+        <div id="email-register-section" style="display:none;">
+          <input type="text" id="email-register-name" placeholder="Full name">
+          <select id="email-register-role">
+            <option value="tenant">I am looking for a place (Tenant)</option>
+            <option value="owner">I want to post a listing (Owner)</option>
+          </select>
+          <p class="auth-note">We did not find this email. Complete these details to create your account.</p>
+        </div>
+      </div>
+
+      <button id="auth-submit-button" onclick="continueAuth()">Send OTP</button>
       <p id="login-error" class="error"></p>
       <div id="forgot-password-section" style="display:none;">
         <input type="email" id="forgot-password-email" placeholder="Email">
@@ -246,26 +276,6 @@
       <p id="reset-password-error" class="error"></p>
       <button onclick="submitPasswordReset()">Reset Password</button>
       <p id="reset-password-message" style="display:none;margin-top:10px;font-size:14px"></p>
-    </div>
-  </div>
-
-  <div id="page-register" class="page" style="display:none">
-    <div class="form-box">
-      <h2>Register</h2>
-      <input type="text" id="reg-name" placeholder="Full Name">
-      <p id="reg-name-error" class="error" style="margin-top:-8px;"></p>
-      <input type="email" id="reg-email" placeholder="Email">
-      <p id="reg-email-error" class="error" style="margin-top:-8px;"></p>
-      <input type="password" id="reg-password" placeholder="Password">
-      <p id="reg-password-error" class="error" style="margin-top:-8px;"></p>
-      <select id="reg-role">
-        <option value="tenant">I am looking for a place (Tenant)</option>
-        <option value="owner">I want to post a listing (Owner)</option>
-      </select>
-      <p id="reg-role-error" class="error" style="margin-top:-8px;"></p>
-      <button onclick="register()">Register</button>
-      <p>Have an account? <a href="#" onclick="showPage('login')">Login</a></p>
-      <p id="reg-error" class="error"></p>
     </div>
   </div>
 

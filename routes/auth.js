@@ -1,141 +1,283 @@
+const crypto = require('crypto');
 const express = require('express');
-const router = express.Router();
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
+const { sendPasswordResetEmail } = require('../services/email');
+
+const router = express.Router();
+
+const OTP_EXPIRY_MS = 5 * 60 * 1000;
+const OTP_MAX_ATTEMPTS = 5;
+const otpStore = new Map();
 
 function escapeRegExp(str) {
   return String(str).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
-function isValidEmail(email) {
-  // Basic email check: must contain @ and .
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email || '').trim());
+function normalizeEmail(email) {
+  return String(email || '').trim().toLowerCase();
 }
 
-function isValidPassword(pw) {
-  const s = String(pw || '');
-  const hasMinLen = s.length >= 8;
-  const hasNumber = /\d/.test(s);
-  const hasLetter = /[A-Za-z]/.test(s);
-  return hasMinLen && hasNumber && hasLetter;
+function normalizePhone(phone) {
+  return String(phone || '').replace(/[^\d+]/g, '');
+}
+
+function isValidEmail(email) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizeEmail(email));
+}
+
+function isValidPhone(phone) {
+  return /^\+?\d{10,15}$/.test(normalizePhone(phone));
+}
+
+function isValidPassword(password) {
+  const value = String(password || '');
+  return value.length >= 8 && /\d/.test(value) && /[A-Za-z]/.test(value);
 }
 
 function isValidName(name) {
-  const s = String(name || '').trim();
-  return /^[A-Za-z ]+$/.test(s) && s.replace(/\s/g, '').length >= 2;
+  const value = String(name || '').trim();
+  return /^[A-Za-z ]+$/.test(value) && value.replace(/\s/g, '').length >= 2;
 }
 
-async function registerHandler(req, res) {
+function isValidRole(role) {
+  return ['tenant', 'owner'].includes(String(role || ''));
+}
+
+function pruneExpiredOtps() {
+  const now = Date.now();
+
+  for (const [phone, record] of otpStore.entries()) {
+    if (record.expiresAt <= now) {
+      otpStore.delete(phone);
+    }
+  }
+}
+
+function generateOtp() {
+  return String(Math.floor(100000 + Math.random() * 900000));
+}
+
+function signAuthToken(user) {
+  return jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET, { expiresIn: '7d' });
+}
+
+function buildAuthResponse(user) {
+  return {
+    token: signAuthToken(user),
+    user: {
+      id: user._id,
+      name: user.name,
+      email: user.email || null,
+      phone: user.phone || null,
+      role: user.role
+    }
+  };
+}
+
+async function findUserByEmail(email) {
+  const normalizedEmail = normalizeEmail(email);
+  return User.findOne({
+    email: { $regex: `^${escapeRegExp(normalizedEmail)}$`, $options: 'i' }
+  });
+}
+
+async function continueHandler(req, res) {
   try {
-    const { name, email, password, role } = req.body;
+    pruneExpiredOtps();
 
-    const trimmedName = String(name || '').trim();
-    const trimmedEmail = String(email || '').trim();
-    const normalizedEmail = trimmedEmail.toLowerCase();
+    const identifier = String(req.body.identifier || '').trim();
+    const password = String(req.body.password || '');
 
-    if (!trimmedName || !trimmedEmail || !password || !role) {
-      return res.status(400).json({ message: 'All fields are required' });
+    if (!identifier) {
+      return res.status(400).json({ message: 'Email or phone is required.' });
     }
 
-    if (!isValidName(trimmedName)) {
-      return res.status(400).json({ message: 'Please enter a valid name' });
+    if (isValidEmail(identifier)) {
+      if (!password) {
+        return res.status(400).json({ message: 'Password is required for email login.' });
+      }
+
+      const user = await findUserByEmail(identifier);
+      if (!user) {
+        return res.json({ type: 'new_user_email' });
+      }
+
+      if (!user.password) {
+        return res.status(400).json({ message: 'This account uses phone login. Continue with your phone number.' });
+      }
+
+      const isMatch = await bcrypt.compare(password, user.password);
+      if (!isMatch) {
+        return res.status(400).json({ message: 'Incorrect password.' });
+      }
+
+      return res.json(buildAuthResponse(user));
     }
 
-    if (!isValidEmail(trimmedEmail)) {
-      return res.status(400).json({ message: 'Please enter a valid email address' });
+    const phone = normalizePhone(identifier);
+    if (!isValidPhone(phone)) {
+      return res.status(400).json({ message: 'Please enter a valid email or phone number.' });
+    }
+
+    const otp = generateOtp();
+    otpStore.set(phone, {
+      otp,
+      expiresAt: Date.now() + OTP_EXPIRY_MS,
+      attempts: 0
+    });
+
+    console.log(`[auth] OTP for ${phone}: ${otp}`);
+
+    return res.json({
+      type: 'otp_sent',
+      expiresInSeconds: Math.floor(OTP_EXPIRY_MS / 1000)
+    });
+  } catch (err) {
+    return res.status(500).json({ message: 'Server error', error: err.message });
+  }
+}
+
+async function verifyOtpHandler(req, res) {
+  try {
+    pruneExpiredOtps();
+
+    const phone = normalizePhone(req.body.phone);
+    const otp = String(req.body.otp || '').trim();
+    const name = String(req.body.name || '').trim();
+    const role = String(req.body.role || 'tenant');
+
+    if (!isValidPhone(phone) || !/^\d{6}$/.test(otp)) {
+      return res.status(400).json({ message: 'Valid phone and OTP are required.' });
+    }
+
+    const record = otpStore.get(phone);
+    if (!record) {
+      return res.status(400).json({ message: 'OTP expired or not found. Please request a new one.' });
+    }
+
+    if (record.expiresAt <= Date.now()) {
+      otpStore.delete(phone);
+      return res.status(400).json({ message: 'OTP expired. Please request a new one.' });
+    }
+
+    if (record.attempts >= OTP_MAX_ATTEMPTS) {
+      otpStore.delete(phone);
+      return res.status(429).json({ message: 'Too many incorrect OTP attempts. Please request a new OTP.' });
+    }
+
+    if (record.otp !== otp) {
+      record.attempts += 1;
+      otpStore.set(phone, record);
+
+      const remainingAttempts = Math.max(OTP_MAX_ATTEMPTS - record.attempts, 0);
+      if (remainingAttempts === 0) {
+        otpStore.delete(phone);
+        return res.status(429).json({ message: 'Too many incorrect OTP attempts. Please request a new OTP.' });
+      }
+
+      return res.status(400).json({ message: `Incorrect OTP. ${remainingAttempts} attempt(s) remaining.` });
+    }
+
+    otpStore.delete(phone);
+
+    let user = await User.findOne({ phone });
+
+    if (!user) {
+      if (!isValidName(name)) {
+        return res.status(400).json({ message: 'Please enter your full name to finish account setup.' });
+      }
+
+      if (!isValidRole(role)) {
+        return res.status(400).json({ message: 'Please choose a valid account type.' });
+      }
+
+      user = await User.create({
+        name,
+        phone,
+        role
+      });
+    }
+
+    return res.json(buildAuthResponse(user));
+  } catch (err) {
+    return res.status(500).json({ message: 'Server error', error: err.message });
+  }
+}
+
+async function registerEmailHandler(req, res) {
+  try {
+    const name = String(req.body.name || '').trim();
+    const email = normalizeEmail(req.body.email);
+    const password = String(req.body.password || '');
+    const role = String(req.body.role || '');
+
+    if (!name || !email || !password || !role) {
+      return res.status(400).json({ message: 'Name, email, password, and role are required.' });
+    }
+
+    if (!isValidName(name)) {
+      return res.status(400).json({ message: 'Please enter a valid name.' });
+    }
+
+    if (!isValidEmail(email)) {
+      return res.status(400).json({ message: 'Please enter a valid email address.' });
     }
 
     if (!isValidPassword(password)) {
-      return res.status(400).json({ message: 'Password must be 8+ characters with letters and numbers' });
+      return res.status(400).json({ message: 'Password must be 8+ characters with letters and numbers.' });
     }
 
-    if (!['tenant', 'owner'].includes(String(role || ''))) {
-      return res.status(400).json({ message: 'Please select a valid account type' });
+    if (!isValidRole(role)) {
+      return res.status(400).json({ message: 'Please select a valid account type.' });
     }
 
-    const safeRole = role;
+    const existingUser = await findUserByEmail(email);
+    if (existingUser) {
+      return res.status(400).json({ message: 'An account with this email already exists.' });
+    }
 
-    // Case-insensitive email lookup for existing users
-    const existing = await User.findOne({
-      email: { $regex: `^${escapeRegExp(normalizedEmail)}$`, $options: 'i' }
-    });
-    if (existing) return res.status(400).json({ message: 'Email already exists' });
-
-    const hashed = await bcrypt.hash(password, 10);
+    const hashedPassword = await bcrypt.hash(password, 10);
     const user = await User.create({
-      name: trimmedName,
-      email: normalizedEmail,
-      password: hashed,
-      role: safeRole
+      name,
+      email,
+      password: hashedPassword,
+      role
     });
 
-    const token = jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET, { expiresIn: '7d' });
-
-    res.json({
-      token,
-      user: { id: user._id, name: user.name, email: user.email, role: user.role }
-    });
+    return res.json(buildAuthResponse(user));
   } catch (err) {
-    res.status(500).json({ message: 'Server error', error: err.message });
+    return res.status(500).json({ message: 'Server error', error: err.message });
   }
 }
 
-async function loginHandler(req, res) {
-  try {
-    const { email, password } = req.body;
+router.post('/continue', continueHandler);
+router.post('/verify-otp', verifyOtpHandler);
+router.post('/register-email', registerEmailHandler);
 
-    const trimmedEmail = String(email || '').trim();
-    const normalizedEmail = trimmedEmail.toLowerCase();
+// Backward-compatible aliases for any older clients still hitting split endpoints.
+router.post('/login', (req, res) => {
+  req.body.identifier = req.body.email;
+  return continueHandler(req, res);
+});
 
-    if (!trimmedEmail || !password) {
-      return res.status(400).json({ message: 'Email and password are required' });
-    }
+router.post('/register', registerEmailHandler);
 
-    const user = await User.findOne({
-      email: { $regex: `^${escapeRegExp(normalizedEmail)}$`, $options: 'i' }
-    });
-    if (!user) return res.status(400).json({ message: 'Email not found' });
-
-    const match = await bcrypt.compare(password, user.password);
-    if (!match) return res.status(400).json({ message: 'Incorrect password' });
-
-    const token = jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET, { expiresIn: '7d' });
-
-    res.json({
-      token,
-      user: { id: user._id, name: user.name, email: user.email, role: user.role }
-    });
-  } catch (err) {
-    res.status(500).json({ message: 'Server error', error: err.message });
-  }
-}
-
-const crypto = require('crypto');
-const { sendPasswordResetEmail } = require('../services/email');
-
-router.route('/register')
-  .post(registerHandler)
-  .all((req, res) => res.status(405).json({ message: 'Method not allowed' }));
-
-router.route('/login')
-  .post(loginHandler)
-  .all((req, res) => res.status(405).json({ message: 'Method not allowed' }));
-
-// Request password reset — sends email with token
 router.post('/forgot-password', async (req, res) => {
   try {
-    const email = String(req.body.email || '').trim().toLowerCase();
+    const email = normalizeEmail(req.body.email);
     if (!email) return res.status(400).json({ message: 'Email is required' });
 
-    const user = await User.findOne({ email: { $regex: `^${escapeRegExp(email)}$`, $options: 'i' } });
+    const user = await findUserByEmail(email);
 
-    // Always return success so we don't reveal whether the email exists
-    if (!user) return res.json({ message: 'If that email is registered, a reset link has been sent.' });
+    if (!user || !user.email) {
+      return res.json({ message: 'If that email is registered, a reset link has been sent.' });
+    }
 
     const token = crypto.randomBytes(32).toString('hex');
     user.resetToken = token;
-    user.resetTokenExpiry = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+    user.resetTokenExpiry = new Date(Date.now() + 60 * 60 * 1000);
     await user.save();
 
     const baseUrl = process.env.APP_BASE_URL || 'https://ledge-stay.up.railway.app';
@@ -157,13 +299,12 @@ router.post('/forgot-password', async (req, res) => {
       });
     }
 
-    res.json({ message: 'If that email is registered, a reset link has been sent.' });
+    return res.json({ message: 'If that email is registered, a reset link has been sent.' });
   } catch (err) {
-    res.status(500).json({ message: 'Server error', error: err.message });
+    return res.status(500).json({ message: 'Server error', error: err.message });
   }
 });
 
-// Actually reset the password using the token
 router.post('/reset-password', async (req, res) => {
   try {
     const { token, password } = req.body;
@@ -185,9 +326,9 @@ router.post('/reset-password', async (req, res) => {
     user.resetTokenExpiry = null;
     await user.save();
 
-    res.json({ message: 'Password reset successfully. You can now log in.' });
+    return res.json({ message: 'Password reset successfully. You can now log in.' });
   } catch (err) {
-    res.status(500).json({ message: 'Server error', error: err.message });
+    return res.status(500).json({ message: 'Server error', error: err.message });
   }
 });
 
