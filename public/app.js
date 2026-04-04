@@ -34,28 +34,28 @@ let authState = {
 };
 const HOME_LOCATIONS = [
   {
-    name: 'Koramangala',
+    name: 'Koramangala 📍',
     city: 'Bengaluru',
     count: '20+ stays',
     blurb: 'A well-known area with many student rooms and PG options.',
     image: 'https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?w=900&q=80'
   },
   {
-    name: 'Rajaji Nagar',
+    name: 'Rajaji Nagar 📍',
     city: 'Bengaluru',
     count: '10+ stays',
     blurb: 'Good for budget-friendly stays near colleges and work hubs.',
     image: 'https://images.unsplash.com/photo-1484154218962-a197022b5858?w=900&q=80'
   },
   {
-    name: 'Vijaynagara',
+    name: 'Vijaynagara 📍',
     city: 'Bengaluru',
     count: '20+ stays',
     blurb: 'A student-friendly area with rooms, PGs, and shared flats.',
     image: 'https://images.unsplash.com/photo-1494526585095-c41746248156?w=900&q=80'
   },
   {
-    name: 'Hebbal',
+    name: 'Hebbal 📍',
     city: 'Bengaluru',
     count: '15+ stays',
     blurb: 'Close to colleges, buses, and daily needs.',
