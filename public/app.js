@@ -192,7 +192,7 @@ function updateNav() {
   navAuth.style.display = user ? 'none' : 'inline-flex';
   navUser.style.display = user ? 'inline-flex' : 'none';
 
-  if (wishlistLink) wishlistLink.style.display = user && user.role === 'tenant' ? 'inline-flex' : 'none';
+  if (wishlistLink) wishlistLink.style.display = user ? 'inline-flex' : 'none';
   if (dashboardLink) dashboardLink.style.display = user && user.role === 'owner' ? 'inline-flex' : 'none';
   if (postLink) postLink.style.display = user && user.role === 'owner' ? 'inline-flex' : 'none';
   if (adminLink) adminLink.style.display = user && user.role === 'admin' ? 'inline-flex' : 'none';
@@ -1634,6 +1634,7 @@ async function loadFeaturedListings() {
         </div>
       </article>
     `).join('');
+    applyWishlistStateToButtons();
   } catch (err) {
     featuredGrid.innerHTML = '<div class="featured-empty">Unable to load featured listings right now.</div>';
   }
@@ -1821,6 +1822,7 @@ function renderListingsMarkup(listings) {
       <div class="listing-card" id="listing-card-${listing._id}" onclick="showDetail('${listing._id}')">
         <div class="card-img-wrap">
           ${imgHtml}
+          ${renderWishlistHeart(listing._id, { source: 'listing' })}
           <div class="card-img-badges">${badges.join('')}</div>
         </div>
         <div class="card-body">
@@ -1903,6 +1905,7 @@ async function loadListings() {
         <div class="listing-card" id="listing-card-${listing._id}" onclick="showDetail('${listing._id}')">
           <div class="card-img-wrap">
             ${imgHtml}
+            ${renderWishlistHeart(listing._id, { source: 'listing' })}
             <div class="card-img-badges">${badges.join('')}</div>
           </div>
           <div class="card-body">
@@ -1923,6 +1926,7 @@ async function loadListings() {
         </div>`;
     }).join('');
 
+    applyWishlistStateToButtons();
     updateNearbyResultsBanner(total, data.radiusKm);
     paginationEl.innerHTML = renderPagination(currentListingsPage, totalPages);
   } catch (err) {
@@ -1970,6 +1974,7 @@ async function loadListings() {
     }
 
     grid.innerHTML = renderListingsMarkup(listings);
+    applyWishlistStateToButtons();
     updateNearbyResultsBanner(total, data.radiusKm);
     paginationEl.innerHTML = renderPagination(currentListingsPage, totalPages);
   } catch (err) {

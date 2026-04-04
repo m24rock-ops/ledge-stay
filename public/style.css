@@ -307,6 +307,11 @@ nav, .site-nav {
 
 .featured-card:hover { transform: translateY(-3px); box-shadow: var(--shadow-md); }
 
+.featured-image-wrap {
+  position: relative;
+  overflow: hidden;
+}
+
 .featured-image-wrap img,
 .featured-image-wrap .no-image {
   width: 100%;
