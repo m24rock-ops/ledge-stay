@@ -1,63 +1,88 @@
 const express = require('express');
 const router = express.Router();
 const auth = require('../middleware/auth');
-const User = require('../models/User');
 const Listing = require('../models/Listing');
+const Wishlist = require('../models/Wishlist');
+const User = require('../models/User');
 
 router.use(auth);
 
-router.use((req, res, next) => {
-  if (req.user.role !== 'tenant') {
-    return res.status(403).json({ message: 'Only tenants can use saved listings' });
-  }
-  next();
-});
-
 router.get('/', async (req, res) => {
   try {
-    const user = await User.findById(req.user.id).populate({
-      path: 'wishlist',
-      populate: { path: 'owner', select: 'name email' },
-      options: { sort: { createdAt: -1 } }
-    });
+    let entries = await Wishlist.find({ userId: req.user.id })
+      .sort({ createdAt: -1 })
+      .populate({
+        path: 'listingId',
+        populate: { path: 'owner', select: 'name email phone' }
+      });
 
-    if (!user) return res.status(404).json({ message: 'User not found' });
+    if (entries.length === 0) {
+      const user = await User.findById(req.user.id).select('wishlist');
+      if (user?.wishlist?.length) {
+        const seedEntries = user.wishlist.map((listingId) => ({
+          userId: req.user.id,
+          listingId
+        }));
+        try {
+          await Wishlist.insertMany(seedEntries, { ordered: false });
+        } catch (err) {
+          if (err.code !== 11000) {
+            console.warn('[wishlist] seed failed', err);
+          }
+        }
 
+        entries = await Wishlist.find({ userId: req.user.id })
+          .sort({ createdAt: -1 })
+          .populate({
+            path: 'listingId',
+            populate: { path: 'owner', select: 'name email phone' }
+          });
+      }
+    }
+
+    const listings = entries.map((entry) => entry.listingId).filter(Boolean);
     res.json({
-      wishlist: user.wishlist || [],
-      listingIds: (user.wishlist || []).map((listing) => String(listing._id))
+      wishlist: listings,
+      listingIds: listings.map((listing) => String(listing._id))
     });
   } catch (err) {
     res.status(500).json({ message: 'Server error', error: err.message });
   }
 });
 
-router.post('/:listingId', async (req, res) => {
+router.post('/', async (req, res) => {
   try {
-    const listing = await Listing.findById(req.params.listingId);
+    const listingId = String(req.body.listingId || '').trim();
+    if (!listingId) return res.status(400).json({ message: 'listingId is required' });
+
+    const listing = await Listing.findById(listingId);
     if (!listing) return res.status(404).json({ message: 'Listing not found' });
 
-    const user = await User.findById(req.user.id);
-    if (!user) return res.status(404).json({ message: 'User not found' });
-
-    const listingId = String(req.params.listingId);
-    const existingIndex = user.wishlist.findIndex((id) => String(id) === listingId);
-
-    let saved;
-    if (existingIndex >= 0) {
-      user.wishlist.splice(existingIndex, 1);
-      saved = false;
-    } else {
-      user.wishlist.push(req.params.listingId);
-      saved = true;
-    }
-
-    await user.save();
+    await Wishlist.findOneAndUpdate(
+      { userId: req.user.id, listingId },
+      { $setOnInsert: { userId: req.user.id, listingId } },
+      { upsert: true, new: true }
+    );
 
     res.json({
-      saved,
-      listingId,
-      wishlistCount: user.wishlist.length
+      saved: true,
+      listingId
+    });
+  } catch (err) {
+    res.status(500).json({ message: 'Server error', error: err.message });
+  }
+});
+
+router.delete('/:listingId', async (req, res) => {
+  try {
+    const listingId = String(req.params.listingId || '').trim();
+    if (!listingId) return res.status(400).json({ message: 'listingId is required' });
+
+    await Wishlist.deleteOne({ userId: req.user.id, listingId });
+
+    res.json({
+      saved: false,
+      listingId
     });
   } catch (err) {
     res.status(500).json({ message: 'Server error', error: err.message });

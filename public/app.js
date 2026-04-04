@@ -18,6 +18,7 @@ window.addEventListener('unhandledrejection', (event) => {
 let selectedReviewRating = 0;
 let editingListingId = null;
 let savedListingIds = new Set();
+const WISHLIST_STORAGE_KEY = 'wishlist_listing_ids';
 let appConfig = {
   mapsEmbedApiKey: ''
 };
@@ -873,8 +874,12 @@ function scrollToDetailSummary() {
 }
 
 function canUseWishlist() {
+  return true;
+}
+
+function canSyncWishlist() {
   const user = getUser();
-  return Boolean(user && user.role === 'tenant');
+  return Boolean(user && getToken());
 }
 
 function canSendEnquiry() {
@@ -886,21 +891,84 @@ function isListingSaved(listingId) {
   return savedListingIds.has(String(listingId));
 }
 
+function getStoredWishlistIds() {
+  try {
+    const raw = localStorage.getItem(WISHLIST_STORAGE_KEY);
+    if (!raw) return new Set();
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return new Set();
+    return new Set(parsed.map((id) => String(id)));
+  } catch (err) {
+    console.warn('wishlist storage read failed:', err);
+    return new Set();
+  }
+}
+
+function persistWishlistIds(ids = savedListingIds) {
+  try {
+    localStorage.setItem(WISHLIST_STORAGE_KEY, JSON.stringify([...ids]));
+  } catch (err) {
+    console.warn('wishlist storage write failed:', err);
+  }
+}
+
+function applyWishlistStateToButtons() {
+  document.querySelectorAll('[data-wishlist-id]').forEach((button) => {
+    const listingId = button.getAttribute('data-wishlist-id');
+    const saved = savedListingIds.has(String(listingId));
+    button.classList.toggle('is-saved', saved);
+    button.setAttribute('aria-pressed', saved ? 'true' : 'false');
+    button.setAttribute('aria-label', saved ? 'Remove from wishlist' : 'Save to wishlist');
+  });
+}
+
+function updateWishlistButtons(listingId, saved) {
+  document.querySelectorAll(`[data-wishlist-id="${listingId}"]`).forEach((button) => {
+    button.classList.toggle('is-saved', saved);
+    button.setAttribute('aria-pressed', saved ? 'true' : 'false');
+    button.setAttribute('aria-label', saved ? 'Remove from wishlist' : 'Save to wishlist');
+  });
+}
+
+function renderWishlistHeartIcon() {
+  return `
+    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+      <path d="M12 20.8l-1.45-1.32C5.4 14.36 2 11.28 2 7.5 2 5 4 3 6.5 3c1.86 0 3.35.93 4.12 2.29C11.15 3.93 12.64 3 14.5 3 17 3 19 5 19 7.5c0 3.78-3.4 6.86-8.55 11.98L12 20.8z"></path>
+    </svg>
+  `;
+}
+
+function renderWishlistHeart(listingId, options = {}) {
+  if (!canUseWishlist()) return '';
+
+  const saved = isListingSaved(listingId);
+  const variant = options.variant === 'inline' ? 'inline' : 'card';
+  const className = `wishlist-heart wishlist-heart--${variant} ${saved ? 'is-saved' : ''}`;
+  const source = options.source || 'listing';
+
+  return `
+    <button
+      class="${className}"
+      data-wishlist-id="${listingId}"
+      aria-pressed="${saved ? 'true' : 'false'}"
+      aria-label="${saved ? 'Remove from wishlist' : 'Save to wishlist'}"
+      onclick="event.stopPropagation(); toggleWishlist('${listingId}', { source: '${source}' })"
+      type="button"
+    >
+      ${renderWishlistHeartIcon()}
+    </button>
+  `;
+}
+
 function renderWishlistButton(listing, options = {}) {
   if (!canUseWishlist()) return '';
 
   const { detail = false } = options;
-  const saved = isListingSaved(listing._id);
   const wrapperClass = detail ? 'wishlist-actions detail-wishlist-actions' : 'wishlist-actions';
 
   return `
     <div class="${wrapperClass}" onclick="event.stopPropagation()">
-      <button
-        class="wishlist-button ${saved ? 'is-saved' : ''}"
-        onclick="toggleWishlist('${listing._id}', { source: '${detail ? 'detail' : 'listing'}' })"
-      >
-        ${saved ? 'Saved' : 'Save'}
-      </button>
+      ${renderWishlistHeart(listing._id, { source: detail ? 'detail' : 'listing', variant: 'inline' })}
     </div>
   `;
 }
@@ -1129,6 +1197,7 @@ function renderListingCard(listing) {
     <article class="listing-card" id="listing-card-${card.id}" onclick="showDetail('${card.id}')">
       <div class="card-img-wrap">
         ${card.imageHtml}
+        ${renderWishlistHeart(card.id, { source: 'listing' })}
         ${card.badges.length ? `<div class="card-img-badges">${card.badges.join('')}</div>` : ''}
       </div>
       <div class="card-body">
@@ -1250,20 +1319,49 @@ async function loadWishlistState() {
     return;
   }
 
+  const localIds = getStoredWishlistIds();
+  savedListingIds = new Set(localIds);
+
+  if (!canSyncWishlist()) {
+    applyWishlistStateToButtons();
+    return;
+  }
+
   try {
     const data = await apiFetchJson('/api/wishlist', {
       headers: { Authorization: `Bearer ${getToken()}` }
     });
-    savedListingIds = new Set((data.listingIds || []).map((id) => String(id)));
+    const remoteIds = new Set((data.listingIds || []).map((id) => String(id)));
+    const merged = new Set([...remoteIds, ...localIds]);
+    savedListingIds = merged;
+    persistWishlistIds(merged);
+
+    const toAdd = [...merged].filter((id) => !remoteIds.has(id));
+    if (toAdd.length > 0) {
+      await Promise.allSettled(toAdd.map((id) => apiFetchJson('/api/wishlist', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${getToken()}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ listingId: id })
+      })));
+    }
   } catch (err) {
     console.error('wishlist load error:', err);
-    savedListingIds = new Set();
+  } finally {
+    applyWishlistStateToButtons();
   }
 }
 
 async function loadWishlistPage() {
   const wishlistGrid = document.getElementById('wishlist-grid');
   if (!wishlistGrid || !canUseWishlist()) return;
+
+  if (!canSyncWishlist()) {
+    wishlistGrid.innerHTML = '<div class="featured-empty">Please login to see your saved listings.</div>';
+    return;
+  }
 
   wishlistGrid.innerHTML = '<div class="featured-empty">Loading your saved listings...</div>';
 
@@ -1273,16 +1371,18 @@ async function loadWishlistPage() {
     });
 
     savedListingIds = new Set((data.listingIds || []).map((id) => String(id)));
+    persistWishlistIds(savedListingIds);
     const listings = Array.isArray(data.wishlist) ? data.wishlist : [];
 
     if (listings.length === 0) {
-      wishlistGrid.innerHTML = '<div class="featured-empty">No saved listings yet. Tap Save on any listing to add it here.</div>';
+      wishlistGrid.innerHTML = '<div class="featured-empty">No saved listings yet. Tap the heart on any listing to add it here.</div>';
       return;
     }
 
     wishlistGrid.innerHTML = listings.map((listing) => `
       <article class="featured-card" id="wishlist-card-${listing._id}">
         <div class="featured-image-wrap">
+          ${renderWishlistHeart(listing._id, { source: 'wishlist' })}
           ${renderListingImage(listing, listing.title)}
         </div>
         <div class="featured-card-body">
@@ -1296,7 +1396,6 @@ async function loadWishlistPage() {
               <button class="featured-view-button" onclick="showDetail('${listing._id}')">View</button>
             </div>
           </div>
-          ${renderWishlistButton(listing)}
         </div>
       </article>
     `).join('');
@@ -1308,37 +1407,59 @@ async function loadWishlistPage() {
 async function toggleWishlist(listingId, options = {}) {
   if (!canUseWishlist()) return;
 
+  const normalizedId = String(listingId);
+  const wasSaved = savedListingIds.has(normalizedId);
+  const nextSaved = !wasSaved;
+
+  if (nextSaved) {
+    savedListingIds.add(normalizedId);
+  } else {
+    savedListingIds.delete(normalizedId);
+  }
+
+  persistWishlistIds(savedListingIds);
+  updateWishlistButtons(normalizedId, nextSaved);
+
+  if (options.source === 'wishlist' || window.location.pathname === '/wishlist') {
+    const wishlistCard = document.getElementById(`wishlist-card-${normalizedId}`);
+    if (wishlistCard && !nextSaved) {
+      wishlistCard.remove();
+    }
+
+    const wishlistGrid = document.getElementById('wishlist-grid');
+    if (wishlistGrid && !wishlistGrid.querySelector('.featured-card')) {
+      wishlistGrid.innerHTML = '<div class="featured-empty">No saved listings yet. Tap the heart on any listing to add it here.</div>';
+    }
+  }
+
+  if (!canSyncWishlist()) {
+    return;
+  }
+
   try {
-    const data = await apiFetchJson(`/api/wishlist/${listingId}`, {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${getToken()}` }
-    });
-
-    if (data.saved) {
-      savedListingIds.add(String(listingId));
+    if (nextSaved) {
+      await apiFetchJson('/api/wishlist', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${getToken()}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ listingId: normalizedId })
+      });
     } else {
-      savedListingIds.delete(String(listingId));
-    }
-
-    if (options.source === 'wishlist' || window.location.pathname === '/wishlist') {
-      const wishlistCard = document.getElementById(`wishlist-card-${listingId}`);
-      if (wishlistCard && !data.saved) {
-        wishlistCard.remove();
-      }
-
-      const wishlistGrid = document.getElementById('wishlist-grid');
-      if (wishlistGrid && !wishlistGrid.querySelector('.featured-card')) {
-        wishlistGrid.innerHTML = '<div class="featured-empty">No saved listings yet. Tap Save on any listing to add it here.</div>';
-      }
-    }
-
-    if (document.getElementById('page-wishlist')?.style.display === 'block') {
-      loadWishlistPage();
-    } else {
-      loadFeaturedListings();
-      if (document.getElementById('page-listings')?.style.display === 'block') loadListings();
+      await apiFetchJson(`/api/wishlist/${normalizedId}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${getToken()}` }
+      });
     }
   } catch (err) {
+    if (nextSaved) {
+      savedListingIds.delete(normalizedId);
+    } else {
+      savedListingIds.add(normalizedId);
+    }
+    persistWishlistIds(savedListingIds);
+    updateWishlistButtons(normalizedId, !nextSaved);
     alert(err.message || 'Unable to update your saved listings.');
   }
 }
@@ -1487,6 +1608,7 @@ async function loadFeaturedListings() {
           <div class="featured-card-badge-row">
             <span class="featured-card-badge">Verified</span>
           </div>
+          ${renderWishlistHeart(listing._id, { source: 'featured' })}
           ${renderListingImage(listing, listing.title)}
         </div>
         <div class="featured-card-body">
@@ -1508,7 +1630,6 @@ async function loadFeaturedListings() {
               <button class="featured-view-button" onclick="showDetail('${listing._id}')">See Details</button>
             </div>
           </div>
-          ${renderWishlistButton(listing)}
           ${renderOwnerListingActions(listing)}
         </div>
       </article>
@@ -2320,7 +2441,8 @@ async function requestPasswordReset(event) {
 function logout() {
   localStorage.removeItem('token');
   localStorage.removeItem('user');
-  savedListingIds = new Set();
+  savedListingIds = getStoredWishlistIds();
+  applyWishlistStateToButtons();
   editingListingId = null;
   resetListingForm();
   resetAuthFlow();
