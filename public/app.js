@@ -932,8 +932,8 @@ function updateWishlistButtons(listingId, saved) {
 
 function renderWishlistHeartIcon() {
   return `
-    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-      <path d="M12 20.8l-1.45-1.32C5.4 14.36 2 11.28 2 7.5 2 5 4 3 6.5 3c1.86 0 3.35.93 4.12 2.29C11.15 3.93 12.64 3 14.5 3 17 3 19 5 19 7.5c0 3.78-3.4 6.86-8.55 11.98L12 20.8z"></path>
+    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="#f472b6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M12 20.8l-1.45-1.32C5.4 14.36 2 11.28 2 7.5 2 5 4 3 6.5 3c1.86 0 3.35.93 4.12 2.29C11.15 3.93 12.64 3 14.5 3 17 3 19 5 19 7.5c0 3.78-3.4 6.86-8.55 11.98L12 20.8z" fill="none" stroke="inherit"></path>
     </svg>
   `;
 }
