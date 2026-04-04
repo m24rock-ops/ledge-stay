@@ -311,7 +311,10 @@ nav, .site-nav {
   position: relative;
   overflow: hidden;
 }
+<<<<<<< HEAD
 
+=======
+>>>>>>> 626c03b (fixing wishlistlist)
 .featured-image-wrap img,
 .featured-image-wrap .no-image {
   width: 100%;
