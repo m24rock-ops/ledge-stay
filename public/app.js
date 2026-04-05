@@ -34,6 +34,8 @@ let authState = {
   phoneOtpSent: false,
   emailNeedsRegistration: false
 };
+const HOME_REVIEWS = document.getElementById('home-reviews');
+const HOME_REVIEW_ITEMS = Array.isArray(window.HOME_REVIEW_ITEMS) ? window.HOME_REVIEW_ITEMS : [];
 const HOME_LOCATIONS = [
   {
     name: 'Koramangala 📍',
@@ -1737,10 +1739,14 @@ function renderPopularLocations() {
 }
 
 function renderHomeReviews() {
-  const grid = document.getElementById('home-reviews-grid');
-  if (!grid) return;
+  if (!HOME_REVIEWS) return;
 
-  grid.innerHTML = HOME_REVIEWS.map((review) => `
+  if (!HOME_REVIEW_ITEMS.length) {
+    HOME_REVIEWS.innerHTML = '<p class="home-reviews-placeholder">Be the first to share your experience!</p>';
+    return;
+  }
+
+  HOME_REVIEWS.innerHTML = HOME_REVIEW_ITEMS.map((review) => `
     <article class="home-review-card">
       <div class="home-review-stars">★★★★★</div>
       <p class="home-review-quote">"${escapeHtml(review.quote)}"</p>

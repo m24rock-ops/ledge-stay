@@ -2014,6 +2014,15 @@ body.modal-open {
   color: var(--muted);
 }
 
+.home-reviews-placeholder {
+  grid-column: 1 / -1;
+  margin: 0;
+  padding: 24px 0;
+  text-align: center;
+  color: #6b7280;
+  font-size: 1rem;
+}
+
 @media (max-width: 1024px) {
   .hero {
     grid-template-columns: 1fr;
@@ -2977,38 +2986,51 @@ body,
 }
 
 @media (max-width: 768px) {
-  .hero-section,
   .hero {
-    flex-direction: column !important;
-    padding: 24px 16px !important;
-  }
-
-  .hero-image-container,
-  .hero-visual {
-    display: none !important;
+    padding: 24px 16px;
   }
 
   .hero-content {
-    width: 100% !important;
+    width: 100%;
   }
 
-  .hero-title,
-  .hero h1 {
-    font-size: 2rem !important;
+  .hero h1,
+  .hero-title {
+    font-size: 2rem;
   }
 
   .hero-search-bar {
-    grid-template-columns: 1fr !important;
-    flex-direction: column !important;
-    gap: 12px !important;
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .hero-search-field {
+    width: 100%;
+  }
+
+  .hero-search-field + .hero-search-field {
+    border-top: 1px solid rgba(217, 232, 245, 0.95);
+    border-left: none;
   }
 
   .hero-search-bar input,
+  .hero-search-button,
   .hero-search-bar button {
     width: 100% !important;
   }
 
-  .locations-grid,
+  .hero-search-button {
+    margin-left: 0;
+  }
+
+  .hero-visual,
+  .hero-image-container,
+  .hero-visual-card-primary,
+  .hero-live-badge,
+  .hero-img {
+    display: none !important;
+  }
+
   .location-grid {
     grid-template-columns: 1fr 1fr !important;
     gap: 12px !important;
@@ -3018,14 +3040,12 @@ body,
     min-height: 180px !important;
   }
 
-  .features-grid,
-  .featured-grid {
+  .hero-stats {
     grid-template-columns: 1fr !important;
     gap: 10px !important;
   }
 
-  .feature-card,
-  .featured-card {
+  .hero-stat-card {
     padding: 16px !important;
     border-left: 3px solid #3b82f6 !important;
   }
