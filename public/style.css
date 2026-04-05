@@ -2794,7 +2794,7 @@ body,
 }
 
 .featured-grid {
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
 }
 
 .listings-grid {
@@ -2834,6 +2834,10 @@ body,
   background: #E5E7EB;
 }
 
+.featured-image-wrap {
+  min-height: 188px;
+}
+
 .featured-image-wrap img,
 .card-img-wrap img {
   width: 100%;
@@ -2848,6 +2852,11 @@ body,
   gap: 8px;
 }
 
+.featured-card-body {
+  padding: 14px;
+  gap: 6px;
+}
+
 .featured-card-body h3,
 .card-body h3,
 .card-title {
@@ -2857,6 +2866,11 @@ body,
   line-height: 1.35;
   letter-spacing: -0.01em;
   color: var(--premium-text);
+}
+
+.featured-card-body h3 {
+  font-size: 16px;
+  line-height: 1.3;
 }
 
 .featured-location,
@@ -2878,6 +2892,21 @@ body,
   line-height: 1.1;
   color: var(--premium-text);
   letter-spacing: -0.02em;
+}
+
+.featured-price {
+  font-size: 20px;
+}
+
+.featured-address,
+.featured-location,
+.featured-rating-pill,
+.featured-amenities span {
+  font-size: 12px;
+}
+
+.featured-card-footer {
+  margin-top: 6px;
 }
 
 .featured-card-footer,
