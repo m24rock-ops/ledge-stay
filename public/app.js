@@ -913,21 +913,31 @@ function persistWishlistIds(ids = savedListingIds) {
 }
 
 function applyWishlistStateToButtons() {
-  document.querySelectorAll('[data-wishlist-id]').forEach((button) => {
+  const buttons = document.querySelectorAll('[data-wishlist-id]');
+  console.log('[wishlist] applyState: found', buttons.length, 'buttons, savedIds:', [...savedListingIds]);
+  
+  buttons.forEach((button) => {
     const listingId = button.getAttribute('data-wishlist-id');
     const saved = savedListingIds.has(String(listingId));
     const stroke = saved ? '#ec4899' : '#f472b6';
     const fill = saved ? '#ec4899' : 'none';
+    
     button.classList.toggle('is-saved', saved);
     button.setAttribute('aria-pressed', saved ? 'true' : 'false');
     button.setAttribute('aria-label', saved ? 'Remove from wishlist' : 'Save to wishlist');
+    
     const svg = button.querySelector('svg');
     if (svg) {
       svg.setAttribute('fill', fill);
       svg.setAttribute('stroke', stroke);
       const path = svg.querySelector('path');
-      if (path) { path.setAttribute('fill', fill); path.setAttribute('stroke', stroke); }
+      if (path) { 
+        path.setAttribute('fill', fill); 
+        path.setAttribute('stroke', stroke); 
+      }
     }
+    
+    console.log('[wishlist] button state:', { listingId, saved, hasClass: button.classList.contains('is-saved') });
   });
 }
 
@@ -946,6 +956,22 @@ function updateWishlistButtons(listingId, saved) {
       if (path) { path.setAttribute('fill', fill); path.setAttribute('stroke', stroke); }
     }
   });
+}
+
+function initWishlistEventDelegation() {
+  document.addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-wishlist-id]');
+    if (!btn) return;
+    
+    e.preventDefault();
+    e.stopPropagation();
+    
+    const listingId = btn.getAttribute('data-wishlist-id');
+    if (!listingId) return;
+    
+    console.log('[wishlist] button clicked for listing:', listingId);
+    toggleWishlist(listingId, { source: 'card' });
+  }, true);
 }
 
 function renderWishlistHeartIcon(saved) {
@@ -1335,14 +1361,17 @@ async function apiFetchJson(path, options = {}) {
 
 async function loadWishlistState() {
   if (!canUseWishlist()) {
+    console.log('[wishlist] init: not available');
     savedListingIds = new Set();
     return;
   }
 
   const localIds = getStoredWishlistIds();
   savedListingIds = new Set(localIds);
+  console.log('[wishlist] init: loaded from localStorage', [...savedListingIds]);
 
   if (!canSyncWishlist()) {
+    console.log('[wishlist] init: no sync (not logged in)');
     applyWishlistStateToButtons();
     return;
   }
@@ -1355,9 +1384,11 @@ async function loadWishlistState() {
     const merged = new Set([...remoteIds, ...localIds]);
     savedListingIds = merged;
     persistWishlistIds(merged);
+    console.log('[wishlist] init: merged with backend', [...merged]);
 
     const toAdd = [...merged].filter((id) => !remoteIds.has(id));
     if (toAdd.length > 0) {
+      console.log('[wishlist] init: syncing local items to backend', toAdd);
       await Promise.allSettled(toAdd.map((id) => apiFetchJson('/api/wishlist', {
         method: 'POST',
         headers: {
@@ -1368,7 +1399,7 @@ async function loadWishlistState() {
       })));
     }
   } catch (err) {
-    console.error('wishlist load error:', err);
+    console.error('[wishlist] init: backend sync failed', err);
   } finally {
     applyWishlistStateToButtons();
   }
@@ -1425,11 +1456,21 @@ async function loadWishlistPage() {
 }
 
 async function toggleWishlist(listingId, options = {}) {
-  if (!canUseWishlist()) return;
+  if (!canUseWishlist()) {
+    console.warn('[wishlist] wishlist not available');
+    return;
+  }
 
-  const normalizedId = String(listingId);
+  const normalizedId = String(listingId).trim();
+  if (!normalizedId) {
+    console.error('[wishlist] invalid listing ID:', listingId);
+    return;
+  }
+
   const wasSaved = savedListingIds.has(normalizedId);
   const nextSaved = !wasSaved;
+
+  console.log('[wishlist] toggle', { normalizedId, wasSaved, nextSaved, savedListingIds: [...savedListingIds] });
 
   if (nextSaved) {
     savedListingIds.add(normalizedId);
@@ -1439,6 +1480,7 @@ async function toggleWishlist(listingId, options = {}) {
 
   persistWishlistIds(savedListingIds);
   updateWishlistButtons(normalizedId, nextSaved);
+  console.log('[wishlist] state updated', { normalizedId, nextSaved });
 
   if (options.source === 'wishlist' || window.location.pathname === '/wishlist') {
     const wishlistCard = document.getElementById(`wishlist-card-${normalizedId}`);
@@ -1453,6 +1495,7 @@ async function toggleWishlist(listingId, options = {}) {
   }
 
   if (!canSyncWishlist()) {
+    console.log('[wishlist] sync disabled (not logged in)');
     return;
   }
 
@@ -1466,13 +1509,16 @@ async function toggleWishlist(listingId, options = {}) {
         },
         body: JSON.stringify({ listingId: normalizedId })
       });
+      console.log('[wishlist] added to backend:', normalizedId);
     } else {
       await apiFetchJson(`/api/wishlist/${normalizedId}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${getToken()}` }
       });
+      console.log('[wishlist] removed from backend:', normalizedId);
     }
   } catch (err) {
+    console.error('[wishlist] backend sync failed:', err);
     if (nextSaved) {
       savedListingIds.delete(normalizedId);
     } else {
@@ -3222,6 +3268,8 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   resetAuthFlow();
+  
+  initWishlistEventDelegation();
 
   Promise.allSettled([loadAppConfig(), loadWishlistState()]).finally(() => {
     loadFeaturedListings();
