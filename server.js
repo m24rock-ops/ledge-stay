@@ -39,30 +39,46 @@ app.get('/api/config', (req, res) => {
 });
 
 app.get('/sitemap.xml', (req, res) => {
-  res.header('Content-Type', 'application/xml');
-  res.send(`<?xml version="1.0" encoding="UTF-8"?>
+  const lastModifiedDate = new Date().toISOString().split('T')[0];
+  const sitemapEntries = [
+    {
+      loc: 'https://ledgestay.in/',
+      priority: '1.0',
+      changefreq: 'daily'
+    },
+    {
+      loc: 'https://ledgestay.in/listings',
+      priority: '0.9',
+      changefreq: 'daily'
+    },
+    {
+      loc: 'https://ledgestay.in/search',
+      priority: '0.8',
+      changefreq: 'monthly'
+    },
+    {
+      loc: 'https://ledgestay.in/about',
+      priority: '0.7',
+      changefreq: 'monthly'
+    },
+    {
+      loc: 'https://ledgestay.in/contact',
+      priority: '0.7',
+      changefreq: 'monthly'
+    }
+  ];
+  const sitemapXml = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url>
-    <loc>https://ledgestay.in/</loc>
-    <priority>1.0</priority>
-  </url>
-  <url>
-    <loc>https://ledgestay.in/listings</loc>
-    <priority>0.9</priority>
-  </url>
-  <url>
-    <loc>https://ledgestay.in/search</loc>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>https://ledgestay.in/about</loc>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://ledgestay.in/contact</loc>
-    <priority>0.7</priority>
-  </url>
-</urlset>`);
+${sitemapEntries.map((entry) => `  <url>
+    <loc>${entry.loc}</loc>
+    <lastmod>${lastModifiedDate}</lastmod>
+    <changefreq>${entry.changefreq}</changefreq>
+    <priority>${entry.priority}</priority>
+  </url>`).join('\n')}
+</urlset>`;
+
+  res.header('Content-Type', 'application/xml');
+  res.send(sitemapXml);
 });
 
 // Catch-all for ALL non-API routes (SPA entrypoint)

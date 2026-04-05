@@ -753,7 +753,7 @@ function initializeDetailCarousels(scope = document) {
 
 function renderListingImage(listing, altText) {
   if (listing.photos && listing.photos.length > 0) {
-    return `<img src="${listing.photos[0]}" alt="${altText}">`;
+    return `<img src="${listing.photos[0]}" alt="${altText}" loading="lazy" decoding="async">`;
   }
 
   return '<div class="no-image">Home</div>';
@@ -1725,7 +1725,7 @@ function renderPopularLocations() {
 
   grid.innerHTML = HOME_LOCATIONS.map((location) => `
     <article class="location-card" onclick="applyPopularLocation('${escapeHtml(location.city)}')">
-      <img src="${location.image}" alt="${escapeHtml(location.name)}, ${escapeHtml(location.city)}">
+      <img src="${location.image}" alt="PG rooms in ${escapeHtml(location.name.replace(' 📍', ''))} Bengaluru" loading="lazy" decoding="async">
       <div class="location-card-overlay"></div>
       <div class="location-card-copy">
         <p>${escapeHtml(location.city)}</p>
