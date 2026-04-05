@@ -916,24 +916,44 @@ function applyWishlistStateToButtons() {
   document.querySelectorAll('[data-wishlist-id]').forEach((button) => {
     const listingId = button.getAttribute('data-wishlist-id');
     const saved = savedListingIds.has(String(listingId));
+    const stroke = saved ? '#ec4899' : '#f472b6';
+    const fill = saved ? '#ec4899' : 'none';
     button.classList.toggle('is-saved', saved);
     button.setAttribute('aria-pressed', saved ? 'true' : 'false');
     button.setAttribute('aria-label', saved ? 'Remove from wishlist' : 'Save to wishlist');
+    const svg = button.querySelector('svg');
+    if (svg) {
+      svg.setAttribute('fill', fill);
+      svg.setAttribute('stroke', stroke);
+      const path = svg.querySelector('path');
+      if (path) { path.setAttribute('fill', fill); path.setAttribute('stroke', stroke); }
+    }
   });
 }
 
 function updateWishlistButtons(listingId, saved) {
+  const stroke = saved ? '#ec4899' : '#f472b6';
+  const fill = saved ? '#ec4899' : 'none';
   document.querySelectorAll(`[data-wishlist-id="${listingId}"]`).forEach((button) => {
     button.classList.toggle('is-saved', saved);
     button.setAttribute('aria-pressed', saved ? 'true' : 'false');
     button.setAttribute('aria-label', saved ? 'Remove from wishlist' : 'Save to wishlist');
+    const svg = button.querySelector('svg');
+    if (svg) {
+      svg.setAttribute('fill', fill);
+      svg.setAttribute('stroke', stroke);
+      const path = svg.querySelector('path');
+      if (path) { path.setAttribute('fill', fill); path.setAttribute('stroke', stroke); }
+    }
   });
 }
 
-function renderWishlistHeartIcon() {
+function renderWishlistHeartIcon(saved) {
+  const stroke = saved ? '#ec4899' : '#f472b6';
+  const fill = saved ? '#ec4899' : 'none';
   return `
-    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="#f472b6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M12 20.8l-1.45-1.32C5.4 14.36 2 11.28 2 7.5 2 5 4 3 6.5 3c1.86 0 3.35.93 4.12 2.29C11.15 3.93 12.64 3 14.5 3 17 3 19 5 19 7.5c0 3.78-3.4 6.86-8.55 11.98L12 20.8z" fill="none" stroke="inherit"></path>
+    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" style="width:18px;height:18px;display:block;transition:fill 0.18s,stroke 0.18s;" fill="${fill}" stroke="${stroke}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M12 20.8l-1.45-1.32C5.4 14.36 2 11.28 2 7.5 2 5 4 3 6.5 3c1.86 0 3.35.93 4.12 2.29C11.15 3.93 12.64 3 14.5 3 17 3 19 5 19 7.5c0 3.78-3.4 6.86-8.55 11.98L12 20.8z" fill="${fill}" stroke="${stroke}"></path>
     </svg>
   `;
 }
@@ -955,7 +975,7 @@ function renderWishlistHeart(listingId, options = {}) {
       onclick="event.stopPropagation(); toggleWishlist('${listingId}', { source: '${source}' })"
       type="button"
     >
-      ${renderWishlistHeartIcon()}
+      ${renderWishlistHeartIcon(saved)}
     </button>
   `;
 }
