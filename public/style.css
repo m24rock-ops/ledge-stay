@@ -579,7 +579,8 @@ button:hover { background: var(--primary-dark); transform: translateY(-1px); }
   -webkit-appearance: none;
 }
 
-.wishlist-heart svg {
+.wishlist-heart svg,
+.wishlist-btn svg {
   width: 18px;
   height: 18px;
   fill: none;
@@ -590,19 +591,24 @@ button:hover { background: var(--primary-dark); transform: translateY(-1px); }
   transition: fill 0.18s ease, stroke 0.18s ease;
 }
 
-.wishlist-heart svg path {
+.wishlist-heart svg path,
+.wishlist-btn svg path {
   fill: none;
   stroke: #f472b6;
   transition: fill 0.18s ease, stroke 0.18s ease;
 }
 
 .wishlist-heart svg,
-.wishlist-heart svg path {
+.wishlist-heart svg path,
+.wishlist-btn svg,
+.wishlist-btn svg path {
   pointer-events: none;
 }
 
 .wishlist-heart.is-saved svg,
-.wishlist-heart.is-saved svg path {
+.wishlist-heart.is-saved svg path,
+.wishlist-btn.is-saved svg,
+.wishlist-btn.is-saved svg path {
   fill: #ec4899;
   stroke: #ec4899;
 }
