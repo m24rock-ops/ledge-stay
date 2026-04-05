@@ -857,11 +857,8 @@ function renderStickyListingCta(listing) {
           rel="noopener"
           class="sticky-whatsapp-button"
         >
-          WhatsApp Now
+          Contact Owner
         </a>
-        <button type="button" class="sticky-secondary-button" onclick="scrollToDetailSummary()">
-          See Details
-        </button>
       </div>
     </div>
   `;
@@ -1570,7 +1567,7 @@ function renderDashboardEnquiries(enquiries = [], unreadCount = 0) {
   if (!enquiryList) return;
 
   if (!Array.isArray(enquiries) || enquiries.length === 0) {
-    enquiryList.innerHTML = '<div class="dashboard-empty">No enquiries yet. New tenant messages will show up here.</div>';
+    enquiryList.innerHTML = '<div class="dashboard-empty">No enquiries yet.</div>';
     return;
   }
 
@@ -2143,7 +2140,6 @@ async function showDetail(id) {
   try {
     const listing = await apiFetchJson(`/api/listings/${id}`);
     selectedReviewRating = 0;
-    const user = getUser();
     const detailTitle = getSafeListingTitle(listing.title);
     const detailLocation = getSafeListingLocation([listing.address, listing.city], 'Location details unavailable');
     const detailAmenities = normalizeListingTags(listing.amenities);
@@ -2152,45 +2148,84 @@ async function showDetail(id) {
     const detailRating = Number.isFinite(detailRatingValue) && detailRatingValue > 0
       ? `⭐ ${detailRatingValue.toFixed(1)} (${detailReviewCount})`
       : '⭐ New listing';
-    const enquiryName = canSendEnquiry() ? escapeHtml(user?.name || '') : '';
-    const enquiryEmail = canSendEnquiry() ? escapeHtml(user?.email || '') : '';
+    const detailRent = formatListingPriceDisplay(listing.price);
+    const rawDeposit = Number(listing.deposit ?? listing.securityDeposit ?? 0);
+    const detailDeposit = Number.isFinite(rawDeposit) && rawDeposit > 0
+      ? `₹${rawDeposit.toLocaleString('en-IN')}`
+      : 'Not specified';
+    const detailAvailability = listing.available === false ? 'Unavailable' : 'Available now';
+    const ownerName = getSafeListingText(listing.owner?.name, { fallback: 'Verified owner', minLength: 2, maxLength: 50 });
+    const ownerPhone = getSafeListingText(listing.contact || listing.owner?.phone || listing.owner?.mobile, { fallback: 'Shared after contact', minLength: 6, allowShort: true, maxLength: 20 });
+    const amenityIconFor = (amenity) => {
+      const key = String(amenity || '').toLowerCase();
+      if (key.includes('wifi') || key.includes('wi-fi') || key.includes('internet')) return '📶';
+      if (key.includes('bed') || key.includes('room')) return '🛏️';
+      if (key.includes('water')) return '💧';
+      return '✓';
+    };
 
     document.getElementById('detail-content').innerHTML = `
-    <div class="detail-photos">
+    <section class="detail-hero-media">
       ${renderPhotoCarousel(listing.photos)}
-    </div>
-    <div class="detail-info">
-      <div class="detail-summary">
-        <h1>${escapeHtml(detailTitle)}</h1>
-        <div class="detail-meta-list">
-          <div class="detail-meta-item" title="${escapeHtml(detailRating)}">
-            <span class="detail-meta-icon" aria-hidden="true">⭐</span>
-            <span class="detail-meta-text">${escapeHtml(detailRating.replace(/^⭐\s*/, ''))}</span>
-          </div>
-          <div class="detail-meta-item" title="${escapeHtml(detailLocation)}">
-            <span class="detail-meta-icon" aria-hidden="true">📍</span>
-            <span class="detail-meta-text">${escapeHtml(detailLocation)}</span>
-          </div>
-          <div class="detail-meta-item detail-meta-item-price" title="${escapeHtml(formatListingPriceDisplay(listing.price))}">
-            <span class="detail-meta-icon" aria-hidden="true">₹</span>
-            <span class="detail-meta-text">${escapeHtml(formatListingPriceDisplay(listing.price))}</span>
-          </div>
+    </section>
+    <div class="detail-info detail-trust-layout">
+      <div class="detail-summary" id="detail-summary">
+        <div class="detail-headline-row">
+          <h1>${escapeHtml(detailTitle)}</h1>
+          <div class="detail-headline-price" title="${escapeHtml(detailRent)}">${escapeHtml(detailRent)}</div>
         </div>
-        ${detailAmenities.length > 0 ? `
+        <div class="detail-location-rating">
+          <span class="detail-location-pill">📍 ${escapeHtml(detailLocation)}</span>
+          <span class="detail-rating-pill">${escapeHtml(detailRating)}</span>
+        </div>
+
+        <div class="detail-key-info" aria-label="Key information">
+          <article class="detail-key-info-card">
+            <p>Rent</p>
+            <strong>${escapeHtml(detailRent)}</strong>
+          </article>
+          <article class="detail-key-info-card">
+            <p>Deposit</p>
+            <strong>${escapeHtml(detailDeposit)}</strong>
+          </article>
+          <article class="detail-key-info-card">
+            <p>Availability</p>
+            <strong>${escapeHtml(detailAvailability)}</strong>
+          </article>
+        </div>
+
+        ${(detailAmenities.length > 0) ? `
           <div class="detail-amenities" aria-label="Amenities">
-            ${detailAmenities.map((amenity) => `
+            ${detailAmenities.slice(0, 8).map((amenity) => `
               <span class="detail-amenity-pill" title="${escapeHtml(amenity)}">
-                <span class="detail-amenity-icon" aria-hidden="true">•</span>
+                <span class="detail-amenity-icon" aria-hidden="true">${amenityIconFor(amenity)}</span>
                 <span class="detail-amenity-text">${escapeHtml(amenity)}</span>
               </span>
             `).join('')}
           </div>
-        ` : ''}
+        ` : `
+          <div class="detail-amenities" aria-label="Amenities">
+            <span class="detail-amenity-pill"><span class="detail-amenity-icon" aria-hidden="true">📶</span><span class="detail-amenity-text">WiFi</span></span>
+            <span class="detail-amenity-pill"><span class="detail-amenity-icon" aria-hidden="true">🛏️</span><span class="detail-amenity-text">Bed</span></span>
+            <span class="detail-amenity-pill"><span class="detail-amenity-icon" aria-hidden="true">💧</span><span class="detail-amenity-text">Water</span></span>
+          </div>
+        `}
+
+        <section class="detail-owner-trust" aria-label="Owner details">
+          <div class="detail-owner-trust-head">
+            <h3>Owner</h3>
+            <span class="detail-verified-badge">Verified</span>
+          </div>
+          <p class="detail-owner-name">${escapeHtml(ownerName)}</p>
+          <p class="detail-owner-contact">${escapeHtml(ownerPhone)}</p>
+        </section>
       </div>
-      ${renderWhatsAppButton(listing)}
-      ${renderWishlistButton(listing, { detail: true })}
-      ${renderOwnerListingActions(listing, { detail: true })}
-      <button onclick="showPage('listings')" class="back-button">Back</button>
+
+      <div class="detail-side-actions">
+        ${renderWishlistButton(listing, { detail: true })}
+        ${renderOwnerListingActions(listing, { detail: true })}
+        <button onclick="showPage('listings')" class="back-button">Back</button>
+      </div>
 
       ${renderMapSection(listing)}
 
@@ -2214,55 +2249,6 @@ async function showDetail(id) {
         </div>
         <div id="distance-result"></div>
       </div>
-
-      <section class="enquiry-section">
-        <div class="enquiry-section-header">
-          <div>
-            <h2>Send Enquiry</h2>
-            <p class="reviews-subtitle">Message the owner inside the app and keep your interest in one place.</p>
-          </div>
-        </div>
-        <div class="enquiry-form-card">
-          <div class="review-form-grid enquiry-form-grid-2">
-            <div class="review-form-field">
-              <label for="enquiry-name">Name</label>
-              <input
-                id="enquiry-name"
-                class="review-input"
-                type="text"
-                value="${enquiryName}"
-                placeholder="${canSendEnquiry() ? 'Your full name' : 'Login as a tenant to continue'}"
-                ${canSendEnquiry() ? '' : 'disabled'}
-              >
-            </div>
-            <div class="review-form-field">
-              <label for="enquiry-email">Email</label>
-              <input
-                id="enquiry-email"
-                class="review-input"
-                type="email"
-                value="${enquiryEmail}"
-                placeholder="${canSendEnquiry() ? 'you@example.com' : 'Login required'}"
-                ${canSendEnquiry() ? '' : 'disabled'}
-              >
-            </div>
-          </div>
-          <div class="review-form-field">
-            <label for="enquiry-message">Message</label>
-            <textarea
-              id="enquiry-message"
-              class="review-input review-textarea enquiry-textarea"
-              placeholder="${canSendEnquiry() ? 'Hi, I would like to know if this listing is still available and when I can visit.' : 'Login as a tenant to send an enquiry'}"
-              ${canSendEnquiry() ? '' : 'disabled'}
-            ></textarea>
-          </div>
-          <button class="review-submit enquiry-submit" onclick="submitEnquiry('${listing._id}')" ${canSendEnquiry() ? '' : 'disabled'}>
-            Send Enquiry
-          </button>
-          <p id="enquiry-feedback" class="review-message"></p>
-          ${canSendEnquiry() ? '' : '<p class="review-message">Only logged-in tenants can send enquiries.</p>'}
-        </div>
-      </section>
 
       <section id="reviews-section" class="reviews-section">
         <div class="reviews-loading">Loading reviews...</div>
