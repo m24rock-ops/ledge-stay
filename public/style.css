@@ -2975,3 +2975,58 @@ body,
     height: 34px;
   }
 }
+
+@media (max-width: 768px) {
+  .hero-section,
+  .hero {
+    flex-direction: column !important;
+    padding: 24px 16px !important;
+  }
+
+  .hero-image-container,
+  .hero-visual {
+    display: none !important;
+  }
+
+  .hero-content {
+    width: 100% !important;
+  }
+
+  .hero-title,
+  .hero h1 {
+    font-size: 2rem !important;
+  }
+
+  .hero-search-bar {
+    grid-template-columns: 1fr !important;
+    flex-direction: column !important;
+    gap: 12px !important;
+  }
+
+  .hero-search-bar input,
+  .hero-search-bar button {
+    width: 100% !important;
+  }
+
+  .locations-grid,
+  .location-grid {
+    grid-template-columns: 1fr 1fr !important;
+    gap: 12px !important;
+  }
+
+  .location-card {
+    min-height: 180px !important;
+  }
+
+  .features-grid,
+  .featured-grid {
+    grid-template-columns: 1fr !important;
+    gap: 10px !important;
+  }
+
+  .feature-card,
+  .featured-card {
+    padding: 16px !important;
+    border-left: 3px solid #3b82f6 !important;
+  }
+}
