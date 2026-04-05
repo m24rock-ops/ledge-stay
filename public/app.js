@@ -986,7 +986,7 @@ function initWishlistEventDelegation() {
       || btn.getAttribute('data-id')
       || btn.closest('[data-id]')?.getAttribute('data-id');
     if (!listingId) {
-      console.debug('[wishlist] click ignored: missing data-id');
+      console.error('Missing data-id');
       return;
     }
 
@@ -1450,7 +1450,7 @@ async function loadWishlistPage() {
     }
 
     wishlistGrid.innerHTML = listings.map((listing) => `
-      <article class="featured-card" id="wishlist-card-${listing._id}">
+      <article class="featured-card" id="wishlist-card-${listing._id}" data-id="${listing._id}">
         <div class="featured-image-wrap">
           ${renderWishlistHeart(listing._id, { source: 'wishlist' })}
           ${renderListingImage(listing, listing.title)}
@@ -1683,7 +1683,7 @@ async function loadFeaturedListings() {
     }
 
     featuredGrid.innerHTML = listings.map((listing) => `
-      <article class="featured-card">
+      <article class="featured-card" data-id="${listing._id}">
         <div class="featured-image-wrap">
           <div class="featured-card-badge-row">
             <span class="featured-card-badge">Verified</span>

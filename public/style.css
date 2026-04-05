@@ -615,6 +615,10 @@ button:hover { background: var(--primary-dark); transform: translateY(-1px); }
   stroke: #ec4899;
 }
 
+.wishlist-btn.active {
+  color: #ec4899;
+}
+
 .wishlist-heart:hover {
   transform: translateY(-1px);
   box-shadow: 0 12px 20px rgba(15, 23, 42, 0.16);
