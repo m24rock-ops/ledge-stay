@@ -47,12 +47,16 @@ app.get('/sitemap.xml', (req, res) => {
     <priority>1.0</priority>
   </url>
   <url>
-    <loc>https://ledgestay.in/about</loc>
+    <loc>https://ledgestay.in/listings</loc>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://ledgestay.in/search</loc>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://ledgestay.in/listings</loc>
-    <priority>0.8</priority>
+    <loc>https://ledgestay.in/about</loc>
+    <priority>0.7</priority>
   </url>
   <url>
     <loc>https://ledgestay.in/contact</loc>
