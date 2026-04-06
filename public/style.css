@@ -2141,8 +2141,10 @@ body.modal-open {
 
 /* Hero refresh: compact premium layout */
 .hero-shell {
-  padding: 24px 16px 8px;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.75) 0%, rgba(234, 245, 255, 0.5) 100%);
+  padding: 18px 16px 8px;
+  background:
+    radial-gradient(90% 120% at 50% 0%, rgba(99, 180, 255, 0.2) 0%, rgba(99, 180, 255, 0.04) 55%, rgba(99, 180, 255, 0) 100%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.75) 0%, rgba(234, 245, 255, 0.55) 100%);
 }
 
 .hero {
@@ -2150,11 +2152,11 @@ body.modal-open {
   margin: 0 auto;
   display: flex;
   justify-content: center;
-  padding: 30px 22px 28px;
-  border-radius: 28px;
-  border: 1px solid rgba(217, 232, 245, 0.9);
-  background: rgba(255, 255, 255, 0.84);
-  box-shadow: 0 20px 45px rgba(49, 140, 246, 0.12);
+  padding: 24px 18px 20px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
 }
 
 .hero-content {
@@ -2164,7 +2166,7 @@ body.modal-open {
 }
 
 .hero-tag {
-  margin-bottom: 14px;
+  margin-bottom: 12px;
   padding: 7px 14px;
   font-size: 11px;
   letter-spacing: 0.09em;
@@ -2175,7 +2177,7 @@ body.modal-open {
 
 .hero h1 {
   max-width: 16ch;
-  margin: 0 auto 10px;
+  margin: 0 auto 8px;
   font-size: clamp(2.05rem, 3.9vw, 3.1rem);
   letter-spacing: -0.04em;
   line-height: 1.1;
@@ -2183,7 +2185,7 @@ body.modal-open {
 
 .hero-sub {
   max-width: 62ch;
-  margin: 0 auto 16px;
+  margin: 0 auto 14px;
   font-size: 15px;
   line-height: 1.65;
 }
@@ -2196,9 +2198,9 @@ body.modal-open {
   gap: 8px;
   padding: 8px;
   border-radius: 999px;
-  border: 1px solid rgba(217, 232, 245, 0.95);
+  border: 1px solid rgba(206, 225, 244, 0.95);
   background: rgba(255, 255, 255, 0.96);
-  box-shadow: 0 12px 30px rgba(49, 140, 246, 0.12);
+  box-shadow: 0 10px 26px rgba(49, 140, 246, 0.14);
 }
 
 .hero-search-input-wrap {
@@ -2232,13 +2234,20 @@ body.modal-open {
   font-weight: 700;
   color: #fff;
   background: linear-gradient(135deg, #63b4ff, #318cf6);
-  box-shadow: 0 10px 20px rgba(49, 140, 246, 0.25);
+  box-shadow: 0 10px 24px rgba(49, 140, 246, 0.28);
+  transition: transform 0.2s ease, filter 0.2s ease, box-shadow 0.2s ease;
+}
+
+.hero-search-button:hover {
+  transform: scale(1.03);
+  filter: brightness(1.04);
+  box-shadow: 0 14px 30px rgba(49, 140, 246, 0.34);
 }
 
 .hero-stats {
   justify-content: center;
   gap: 10px;
-  margin: 14px 0 0;
+  margin: 12px 0 0;
 }
 
 .hero-pill {
@@ -2252,6 +2261,12 @@ body.modal-open {
   color: var(--text);
   border: 1px solid rgba(217, 232, 245, 0.92);
   background: rgba(255, 255, 255, 0.86);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.hero-pill:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 18px rgba(49, 140, 246, 0.14);
 }
 
 .hero-pill svg {
@@ -2269,13 +2284,12 @@ body.modal-open {
 
 @media (max-width: 768px) {
   .hero-shell {
-    padding: 14px 12px 2px;
+    padding: 12px 12px 2px;
   }
 
   .hero {
     display: flex;
-    padding: 20px 14px 18px;
-    border-radius: 20px;
+    padding: 16px 10px 14px;
   }
 
   .hero h1 {
