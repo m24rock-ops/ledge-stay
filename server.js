@@ -120,6 +120,9 @@ if (emailConfig.ready) {
   console.warn('[email] Resend configuration issues:', emailConfig.issues.join(' '));
 }
 
+console.log('VERIFY SID:', process.env.TWILIO_VERIFY_SID);
+console.log('ACCOUNT SID:', process.env.TWILIO_ACCOUNT_SID);
+
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 
