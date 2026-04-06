@@ -314,31 +314,10 @@ async function sendPasswordResetEmail(emailOrParams, resetLink, displayName = 't
   return response;
 }
 
-async function sendPasswordResetOtpEmail(toEmail, otp) {
-  const config = getEmailConfig();
-  console.log('[email] sendPasswordResetOtpEmail called', {
-    to: toEmail,
-    from: config.fromAddress,
-    configReady: config.ready
-  });
-
-  const response = await sendEmail({
-    to: toEmail,
-    subject: 'Your OTP Code',
-    html: `<h2>Your OTP is: ${otp}</h2><p>Valid for 5 minutes</p>`,
-    text: `Your OTP is: ${otp}. Valid for 5 minutes.`,
-    throwOnConfigError: true
-  });
-
-  console.log('[email] sendPasswordResetOtpEmail response:', response);
-  return response;
-}
-
 module.exports = {
   getEmailConfig,
   sendEmail,
   sendEnquiryNotificationToOwner,
   sendEnquiryConfirmationToTenant,
-  sendPasswordResetEmail,
-  sendPasswordResetOtpEmail
+  sendPasswordResetEmail
 };

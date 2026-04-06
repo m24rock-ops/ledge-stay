@@ -7,8 +7,6 @@ const userSchema = new mongoose.Schema({
   password: { type: String, default: null },
   role: { type: String, enum: ['tenant', 'owner', 'admin'], default: 'tenant' },
   wishlist: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Listing' }],
-  otp: { type: String, default: null },
-  otpExpiry: { type: Date, default: null },
   resetToken: { type: String, default: null },
   resetTokenExpiry: { type: Date, default: null }
 }, { timestamps: true });
