@@ -252,14 +252,10 @@ nav, .site-nav {
 
 .hero-stats {
   display: flex;
-  gap: 24px;
-  font-size: 13px;
-  color: var(--muted);
+  gap: 8px;
   margin-bottom: 24px;
   flex-wrap: wrap;
 }
-
-.hero-stats strong { color: var(--text); font-weight: 700; }
 
 .hero-cta {
   display: inline-flex;
@@ -1191,7 +1187,6 @@ button:hover { background: var(--primary-dark); transform: translateY(-1px); }
   .hero-search-bar input { width: 100%; background: #fff; border-radius: 8px; }
   .hero-search-bar button { width: 100% !important; }
   .hero-cta { width: 100%; justify-content: center; }
-  .hero-stats { gap: 16px; }
 
   .trust-bar { padding: 32px 20px; gap: 28px; }
 
@@ -1760,33 +1755,25 @@ body.modal-open {
   color: #c2410c;
 }
 
-.hero-stats {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 16px;
-  max-width: 720px;
-  margin-bottom: 0;
-}
-
-.hero-stat-card {
-  padding: 20px;
-  border-radius: 20px;
-  background: rgba(255, 255, 255, 0.72);
+.hero-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.75);
   border: 1px solid rgba(217, 232, 245, 0.9);
-  box-shadow: var(--shadow-sm);
-}
-
-.hero-stat-card strong {
-  display: block;
-  margin-bottom: 10px;
+  font-size: 13px;
+  font-weight: 600;
   color: var(--text);
-  font-size: 17px;
+  white-space: nowrap;
 }
 
-.hero-stat-card span {
-  color: var(--muted);
-  line-height: 1.6;
-  font-size: 14px;
+.hero-pill::before {
+  content: '✓';
+  color: #3b82f6;
+  font-weight: 700;
+  font-size: 12px;
 }
 
 .hero-visual {
@@ -2108,7 +2095,6 @@ body.modal-open {
     max-width: none;
   }
 
-  .hero-stats,
   .location-grid,
   .home-reviews-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -2162,7 +2148,6 @@ body.modal-open {
     margin-left: 0;
   }
 
-  .hero-stats,
   .home-reviews-grid {
     grid-template-columns: 1fr;
   }
@@ -3136,15 +3121,7 @@ body,
     scroll-snap-align: start;
   }
 
-  .hero-stats {
-    grid-template-columns: 1fr !important;
-    gap: 10px !important;
-  }
 
-  .hero-stat-card {
-    padding: 16px !important;
-    border-left: 3px solid #3b82f6 !important;
-  }
 }
 
 .featured-card--hero {
