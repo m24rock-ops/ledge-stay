@@ -2,14 +2,14 @@ const crypto = require('crypto');
 const express = require('express');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const twilio = require('twilio');
 const User = require('../models/User');
 const { sendPasswordResetEmail } = require('../services/email');
 
 const router = express.Router();
 
 const OTP_EXPIRY_MS = 5 * 60 * 1000;
-const OTP_MAX_ATTEMPTS = 5;
-const otpStore = new Map();
+const client = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
 
 function escapeRegExp(str) {
   return String(str).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -45,31 +45,19 @@ function isValidRole(role) {
   return ['tenant', 'owner'].includes(String(role || ''));
 }
 
-function pruneExpiredOtps() {
-  const now = Date.now();
-
-  for (const [phone, record] of otpStore.entries()) {
-    if (record.expiresAt <= now) {
-      otpStore.delete(phone);
-    }
-  }
-}
-
-function generateOtp() {
-  return String(Math.floor(100000 + Math.random() * 900000));
-}
-
-function issuePhoneOtp(phone) {
+async function issuePhoneOtp(phone) {
   console.log('Sending OTP to:', phone);
 
-  const otp = generateOtp();
-  otpStore.set(phone, {
-    otp,
-    expiresAt: Date.now() + OTP_EXPIRY_MS,
-    attempts: 0
-  });
+  const sanitizedPhone = String(phone || '').replace(/^\+/, '');
 
-  console.log(`[auth] OTP for ${phone}: ${otp}`);
+  await client.verify.v2
+    .services(process.env.TWILIO_VERIFY_SID)
+    .verifications.create({
+      to: `+91${sanitizedPhone}`,
+      channel: 'sms'
+    });
+
+  console.log('OTP sent via Twilio');
 }
 
 function signAuthToken(user) {
@@ -98,8 +86,6 @@ async function findUserByEmail(email) {
 
 async function continueHandler(req, res) {
   try {
-    pruneExpiredOtps();
-
     const identifier = String(req.body.identifier || '').trim();
     const password = String(req.body.password || '');
 
@@ -134,7 +120,7 @@ async function continueHandler(req, res) {
       return res.status(400).json({ message: 'Please enter a valid email or phone number.' });
     }
 
-    issuePhoneOtp(phone);
+    await issuePhoneOtp(phone);
 
     return res.json({
       type: 'otp_sent',
@@ -147,8 +133,6 @@ async function continueHandler(req, res) {
 
 async function verifyOtpHandler(req, res) {
   try {
-    pruneExpiredOtps();
-
     const phone = normalizePhone(req.body.phone);
     const otp = String(req.body.otp || '').trim();
     const name = String(req.body.name || '').trim();
@@ -158,35 +142,17 @@ async function verifyOtpHandler(req, res) {
       return res.status(400).json({ message: 'Valid phone and OTP are required.' });
     }
 
-    const record = otpStore.get(phone);
-    if (!record) {
-      return res.status(400).json({ message: 'OTP expired or not found. Please request a new one.' });
+    const sanitizedPhone = String(phone || '').replace(/^\+/, '');
+    const verificationCheck = await client.verify.v2
+      .services(process.env.TWILIO_VERIFY_SID)
+      .verificationChecks.create({
+        to: `+91${sanitizedPhone}`,
+        code: otp
+      });
+
+    if (verificationCheck.status !== 'approved') {
+      return res.status(400).json({ message: 'Incorrect or expired OTP. Please request a new OTP.' });
     }
-
-    if (record.expiresAt <= Date.now()) {
-      otpStore.delete(phone);
-      return res.status(400).json({ message: 'OTP expired. Please request a new one.' });
-    }
-
-    if (record.attempts >= OTP_MAX_ATTEMPTS) {
-      otpStore.delete(phone);
-      return res.status(429).json({ message: 'Too many incorrect OTP attempts. Please request a new OTP.' });
-    }
-
-    if (record.otp !== otp) {
-      record.attempts += 1;
-      otpStore.set(phone, record);
-
-      const remainingAttempts = Math.max(OTP_MAX_ATTEMPTS - record.attempts, 0);
-      if (remainingAttempts === 0) {
-        otpStore.delete(phone);
-        return res.status(429).json({ message: 'Too many incorrect OTP attempts. Please request a new OTP.' });
-      }
-
-      return res.status(400).json({ message: `Incorrect OTP. ${remainingAttempts} attempt(s) remaining.` });
-    }
-
-    otpStore.delete(phone);
 
     let user = await User.findOne({ phone });
 
@@ -259,16 +225,14 @@ async function registerEmailHandler(req, res) {
 }
 
 router.post('/continue', continueHandler);
-router.post('/send-otp', (req, res) => {
+router.post('/send-otp', async (req, res) => {
   try {
-    pruneExpiredOtps();
-
     const phone = normalizePhone(req.body.phone);
     if (!isValidPhone(phone)) {
       return res.status(400).json({ message: 'Please enter a valid phone number.' });
     }
 
-    issuePhoneOtp(phone);
+    await issuePhoneOtp(phone);
 
     return res.json({
       type: 'otp_sent',
