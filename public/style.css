@@ -2139,6 +2139,185 @@ body.modal-open {
   font-size: 1rem;
 }
 
+/* Hero refresh: compact premium layout */
+.hero-shell {
+  padding: 24px 16px 8px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.75) 0%, rgba(234, 245, 255, 0.5) 100%);
+}
+
+.hero {
+  max-width: 860px;
+  margin: 0 auto;
+  display: flex;
+  justify-content: center;
+  padding: 30px 22px 28px;
+  border-radius: 28px;
+  border: 1px solid rgba(217, 232, 245, 0.9);
+  background: rgba(255, 255, 255, 0.84);
+  box-shadow: 0 20px 45px rgba(49, 140, 246, 0.12);
+}
+
+.hero-content {
+  width: 100%;
+  max-width: 700px;
+  text-align: center;
+}
+
+.hero-tag {
+  margin-bottom: 14px;
+  padding: 7px 14px;
+  font-size: 11px;
+  letter-spacing: 0.09em;
+  color: #1f7de2;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(99, 180, 255, 0.28);
+}
+
+.hero h1 {
+  max-width: 16ch;
+  margin: 0 auto 10px;
+  font-size: clamp(2.05rem, 3.9vw, 3.1rem);
+  letter-spacing: -0.04em;
+  line-height: 1.1;
+}
+
+.hero-sub {
+  max-width: 62ch;
+  margin: 0 auto 16px;
+  font-size: 15px;
+  line-height: 1.65;
+}
+
+.hero-search-bar {
+  max-width: 620px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(217, 232, 245, 0.95);
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 12px 30px rgba(49, 140, 246, 0.12);
+}
+
+.hero-search-input-wrap {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+}
+
+.hero-search-bar input {
+  width: 100%;
+  min-height: 44px;
+  margin: 0;
+  padding: 0 14px;
+  border: 0;
+  background: transparent;
+  font-size: 15px;
+}
+
+.hero-search-bar input::placeholder {
+  color: #8ba2b9;
+}
+
+.hero-search-button {
+  min-width: 118px;
+  min-height: 44px;
+  margin: 0;
+  padding: 0 20px;
+  border-radius: 999px;
+  border: 0;
+  font-size: 14px;
+  font-weight: 700;
+  color: #fff;
+  background: linear-gradient(135deg, #63b4ff, #318cf6);
+  box-shadow: 0 10px 20px rgba(49, 140, 246, 0.25);
+}
+
+.hero-stats {
+  justify-content: center;
+  gap: 10px;
+  margin: 14px 0 0;
+}
+
+.hero-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+  border: 1px solid rgba(217, 232, 245, 0.92);
+  background: rgba(255, 255, 255, 0.86);
+}
+
+.hero-pill svg {
+  width: 13px;
+  height: 13px;
+  stroke: #318cf6;
+  stroke-width: 2.2;
+  fill: none;
+  flex-shrink: 0;
+}
+
+.hero-pill::before {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .hero-shell {
+    padding: 14px 12px 2px;
+  }
+
+  .hero {
+    display: flex;
+    padding: 20px 14px 18px;
+    border-radius: 20px;
+  }
+
+  .hero h1 {
+    max-width: 18ch;
+    font-size: clamp(1.6rem, 8vw, 2.15rem);
+    margin-bottom: 8px;
+  }
+
+  .hero-sub {
+    font-size: 14px;
+    margin-bottom: 12px;
+  }
+
+  .hero-search-bar {
+    flex-direction: row;
+    padding: 6px;
+    gap: 6px;
+  }
+
+  .hero-search-bar input {
+    min-height: 40px;
+    font-size: 14px;
+    padding: 0 10px;
+  }
+
+  .hero-search-button {
+    min-width: 94px;
+    min-height: 40px;
+    font-size: 13px;
+    padding: 0 14px;
+  }
+
+  .hero-stats {
+    gap: 8px;
+  }
+
+  .hero-pill {
+    font-size: 11px;
+    padding: 6px 10px;
+  }
+}
+
 @media (max-width: 1024px) {
   .hero {
     grid-template-columns: 1fr;

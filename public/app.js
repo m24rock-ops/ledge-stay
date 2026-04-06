@@ -243,9 +243,12 @@ function closeMenu() {
 
 function heroSearch() {
   const city = document.getElementById('hero-search').value.trim();
-  const budget = document.getElementById('hero-budget').value;
+  if (!city) {
+    return;
+  }
+
   syncLocationInputs(city);
-  document.getElementById('filter-max').value = budget;
+  document.getElementById('filter-max').value = '';
   nearbySearchState.active = false;
   updateNearbyResultsBanner();
   showPage('listings');
