@@ -71,13 +71,11 @@
           <span class="hero-tag">Easy home search for students and families</span>
           <h1>Find a safe and comfortable place near your college.</h1>
           <p class="hero-sub">Search verified PGs, rooms, and apartments with clear pricing and trusted details.</p>
-          <div class="hero-search-bar">
-            <div class="hero-search-input-wrap">
-              <input type="text" id="hero-search" placeholder="Enter college, area or city" autocomplete="off" aria-autocomplete="list" aria-controls="hero-search-suggestions" aria-expanded="false">
-              <div class="location-autocomplete" id="hero-search-suggestions"></div>
-            </div>
-            <button class="hero-search-button" onclick="heroSearch()">Search</button>
+          <div class="search-bar">
+            <input type="text" id="hero-search" placeholder="Enter college, area or city" autocomplete="off" aria-autocomplete="list" aria-controls="hero-search-suggestions" aria-expanded="false">
+            <button type="button" onclick="heroSearch()">Search</button>
           </div>
+          <div class="location-autocomplete" id="hero-search-suggestions"></div>
           <div class="hero-stats">
             <span class="hero-pill">
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 7 10 17l-5-5"/></svg>

@@ -2203,6 +2203,19 @@ body.modal-open {
   box-shadow: 0 10px 26px rgba(49, 140, 246, 0.14);
 }
 
+.search-bar {
+  max-width: 620px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(206, 225, 244, 0.95);
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 10px 26px rgba(49, 140, 246, 0.14);
+}
+
 .hero-search-input-wrap {
   position: relative;
   flex: 1;
@@ -2210,6 +2223,16 @@ body.modal-open {
 }
 
 .hero-search-bar input {
+  width: 100%;
+  min-height: 44px;
+  margin: 0;
+  padding: 0 14px;
+  border: 0;
+  background: transparent;
+  font-size: 15px;
+}
+
+.search-bar input {
   width: 100%;
   min-height: 44px;
   margin: 0;
@@ -2236,6 +2259,27 @@ body.modal-open {
   background: linear-gradient(135deg, #63b4ff, #318cf6);
   box-shadow: 0 10px 24px rgba(49, 140, 246, 0.28);
   transition: transform 0.2s ease, filter 0.2s ease, box-shadow 0.2s ease;
+}
+
+.search-bar button {
+  min-width: 118px;
+  min-height: 44px;
+  margin: 0;
+  padding: 0 20px;
+  border-radius: 999px;
+  border: 0;
+  font-size: 14px;
+  font-weight: 700;
+  color: #fff;
+  background: linear-gradient(135deg, #63b4ff, #318cf6);
+  box-shadow: 0 10px 24px rgba(49, 140, 246, 0.28);
+  transition: transform 0.2s ease, filter 0.2s ease, box-shadow 0.2s ease;
+}
+
+.search-bar button:hover {
+  transform: scale(1.03);
+  filter: brightness(1.04);
+  box-shadow: 0 14px 30px rgba(49, 140, 246, 0.34);
 }
 
 .hero-search-button:hover {
@@ -2309,13 +2353,32 @@ body.modal-open {
     gap: 6px;
   }
 
+  .search-bar {
+    flex-direction: row;
+    padding: 6px;
+    gap: 6px;
+  }
+
   .hero-search-bar input {
     min-height: 40px;
     font-size: 14px;
     padding: 0 10px;
   }
 
+  .search-bar input {
+    min-height: 40px;
+    font-size: 14px;
+    padding: 0 10px;
+  }
+
   .hero-search-button {
+    min-width: 94px;
+    min-height: 40px;
+    font-size: 13px;
+    padding: 0 14px;
+  }
+
+  .search-bar button {
     min-width: 94px;
     min-height: 40px;
     font-size: 13px;
