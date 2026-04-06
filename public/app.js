@@ -3488,6 +3488,33 @@ document.addEventListener('DOMContentLoaded', () => {
     if (loginError) loginError.textContent = '';
   });
 
+  const passwordToggle = document.querySelector('.password-field span');
+  if (passwordToggle) {
+    passwordToggle.onclick = function () {
+      const input = document.querySelector('.password-field input');
+      if (!input) return;
+      input.type = input.type === 'password' ? 'text' : 'password';
+    };
+  }
+
+  const tabButtons = document.querySelectorAll('.tabs button');
+  tabButtons.forEach((btn) => {
+    btn.onclick = () => {
+      const activeTab = document.querySelector('.tabs .active');
+      if (activeTab) activeTab.classList.remove('active');
+      btn.classList.add('active');
+    };
+  });
+
+  const roleButtons = document.querySelectorAll('.role-toggle button');
+  roleButtons.forEach((btn) => {
+    btn.onclick = () => {
+      const activeRole = document.querySelector('.role-toggle .active');
+      if (activeRole) activeRole.classList.remove('active');
+      btn.classList.add('active');
+    };
+  });
+
   document.addEventListener('keydown', (event) => {
     if (event.key === 'Escape') {
       closeActiveCarouselModal();
