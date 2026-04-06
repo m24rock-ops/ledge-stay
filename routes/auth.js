@@ -3,7 +3,7 @@ const express = require('express');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
-const { sendPasswordResetEmail } = require('../services/email');
+const { sendPasswordResetOtpEmail } = require('../services/email');
 
 const router = express.Router();
 
@@ -279,16 +279,19 @@ router.post('/forgot-password', async (req, res) => {
       return res.json({ message: 'If that email is registered, a reset link has been sent.' });
     }
 
+    const otp = Math.floor(100000 + Math.random() * 900000);
+    user.otp = String(otp);
+    user.otpExpiry = new Date(Date.now() + 5 * 60 * 1000);
+
     const token = crypto.randomBytes(32).toString('hex');
     console.log('[auth] forgot-password: token generated for user', String(user._id));
     user.resetToken = token;
     user.resetTokenExpiry = new Date(Date.now() + 15 * 60 * 1000);
     await user.save();
 
-    const baseUrl = process.env.APP_BASE_URL || 'https://ledge-stay.up.railway.app';
-    const resetUrl = `${baseUrl}/reset-password?token=${token}`;
+    console.log('[auth] forgot-password: otp generated for user', String(user._id), '| otp:', otp);
 
-    const emailResult = await sendPasswordResetEmail(user.email, resetUrl);
+    const emailResult = await sendPasswordResetOtpEmail(user.email, String(otp));
 
     console.log('STEP 2: EMAIL RESPONSE', emailResult);
 
@@ -305,9 +308,39 @@ router.post('/forgot-password', async (req, res) => {
       });
     }
 
-    return res.json({ message: 'If that email is registered, a reset link has been sent.' });
+    return res.json({ message: 'If that email is registered, an OTP has been sent.' });
   } catch (err) {
     console.error('[auth] forgot-password error:', err.message);
+    return res.status(500).json({ message: 'Server error', error: err.message });
+  }
+});
+
+router.post('/verify-reset-otp', async (req, res) => {
+  try {
+    const email = normalizeEmail(req.body.email);
+    const enteredOtp = String(req.body.otp || '').trim();
+
+    if (!email || !enteredOtp) {
+      return res.status(400).json({ message: 'Email and OTP are required.' });
+    }
+
+    const user = await findUserByEmail(email);
+    if (!user) {
+      return res.status(400).json({ message: 'Invalid or expired OTP' });
+    }
+
+    if (user.otp !== enteredOtp || Date.now() > new Date(user.otpExpiry).getTime()) {
+      throw new Error('Invalid or expired OTP');
+    }
+
+    return res.json({
+      message: 'OTP verified successfully.',
+      token: user.resetToken
+    });
+  } catch (err) {
+    if (err.message === 'Invalid or expired OTP') {
+      return res.status(400).json({ message: err.message });
+    }
     return res.status(500).json({ message: 'Server error', error: err.message });
   }
 });
