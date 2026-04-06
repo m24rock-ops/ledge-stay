@@ -2204,16 +2204,14 @@ body.modal-open {
 }
 
 .search-bar {
-  max-width: 620px;
-  margin: 0 auto;
   display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px;
-  border-radius: 999px;
-  border: 1px solid rgba(206, 225, 244, 0.95);
-  background: rgba(255, 255, 255, 0.96);
-  box-shadow: 0 10px 26px rgba(49, 140, 246, 0.14);
+  width: 100%;
+  max-width: 500px;
+  margin: 0 auto;
+  background: white;
+  border-radius: 30px;
+  overflow: hidden;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.08);
 }
 
 .hero-search-input-wrap {
@@ -2233,13 +2231,12 @@ body.modal-open {
 }
 
 .search-bar input {
-  width: 100%;
-  min-height: 44px;
-  margin: 0;
-  padding: 0 14px;
+  flex: 1;
   border: 0;
-  background: transparent;
-  font-size: 15px;
+  padding: 14px;
+  font-size: 14px;
+  outline: none;
+  min-width: 0;
 }
 
 .hero-search-bar input::placeholder {
@@ -2262,17 +2259,13 @@ body.modal-open {
 }
 
 .search-bar button {
-  min-width: 118px;
-  min-height: 44px;
-  margin: 0;
-  padding: 0 20px;
-  border-radius: 999px;
+  padding: 0 18px;
   border: 0;
-  font-size: 14px;
-  font-weight: 700;
+  background: linear-gradient(135deg, #3b82f6, #60a5fa);
   color: #fff;
-  background: linear-gradient(135deg, #63b4ff, #318cf6);
-  box-shadow: 0 10px 24px rgba(49, 140, 246, 0.28);
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
   transition: transform 0.2s ease, filter 0.2s ease, box-shadow 0.2s ease;
 }
 
