@@ -194,6 +194,7 @@ function updateNav() {
 
   navAuth.style.display = user ? 'none' : 'inline-flex';
   navUser.style.display = user ? 'inline-flex' : 'none';
+  if (!user) closeProfileMenu();
 
   if (wishlistLink) wishlistLink.style.display = user ? 'inline-flex' : 'none';
   if (dashboardLink) dashboardLink.style.display = user && user.role === 'owner' ? 'inline-flex' : 'none';
@@ -218,24 +219,27 @@ function attachNavbarListeners() {
   });
 }
 
-function toggleMenu() {
-  const navLinks = document.getElementById('nav-links');
-  const toggleButton = document.querySelector('.menu-toggle');
-  if (!navLinks || !toggleButton) return;
-
-  const isOpen = navLinks.classList.toggle('open');
-  toggleButton.classList.toggle('open', isOpen);
-  toggleButton.setAttribute('aria-expanded', String(isOpen));
+function toggleProfileMenu() {
+  const dropdown = document.getElementById('nav-profile-dropdown');
+  const btn = document.getElementById('nav-profile-btn');
+  if (!dropdown) return;
+  const isOpen = dropdown.classList.toggle('open');
+  if (btn) btn.setAttribute('aria-expanded', String(isOpen));
 }
 
-function closeMenu() {
-  const navLinks = document.getElementById('nav-links');
-  const toggleButton = document.querySelector('.menu-toggle');
-  if (!navLinks || !toggleButton) return;
+function closeProfileMenu() {
+  const dropdown = document.getElementById('nav-profile-dropdown');
+  const btn = document.getElementById('nav-profile-btn');
+  if (!dropdown) return;
+  dropdown.classList.remove('open');
+  if (btn) btn.setAttribute('aria-expanded', 'false');
+}
 
-  navLinks.classList.remove('open');
-  toggleButton.classList.remove('open');
-  toggleButton.setAttribute('aria-expanded', 'false');
+// no-op kept for compatibility (hamburger removed)
+function toggleMenu() {}
+
+function closeMenu() {
+  closeProfileMenu();
 }
 
 function heroSearch() {
@@ -3217,6 +3221,12 @@ document.addEventListener('DOMContentLoaded', () => {
   renderHomeReviews();
   setupLocationAutocomplete('hero-search', 'hero-search-suggestions');
   setupLocationAutocomplete('filter-city', 'filter-city-suggestions');
+
+  // Close profile dropdown when clicking outside of it
+  document.addEventListener('click', (e) => {
+    const wrap = document.getElementById('nav-user');
+    if (wrap && !wrap.contains(e.target)) closeProfileMenu();
+  });
 
   document.getElementById('filter-city')?.addEventListener('input', debounce(() => loadListings(), 400));
 

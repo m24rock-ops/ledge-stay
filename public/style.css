@@ -21,7 +21,9 @@ body { font-family: 'Inter', 'Segoe UI', sans-serif; background: radial-gradient
 
 /* ── NAV ── */
 nav, .site-nav {
-  background: #fff;
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   padding: 16px 48px;
   display: flex;
   justify-content: space-between;
@@ -90,6 +92,83 @@ nav, .site-nav {
 }
 
 .nav-links a:hover { color: var(--primary); background: var(--primary-light); }
+
+/* ── PROFILE DROPDOWN ── */
+.nav-profile-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  margin-left: 4px;
+}
+
+.nav-profile-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1.5px solid var(--border);
+  background: var(--primary-light);
+  color: var(--primary-dark);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+  outline: none;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.nav-profile-btn svg {
+  width: 18px;
+  height: 18px;
+  pointer-events: none;
+}
+
+.nav-profile-btn:hover,
+.nav-profile-btn:focus-visible {
+  background: var(--primary);
+  color: #fff;
+  border-color: var(--primary);
+}
+
+.nav-profile-dropdown {
+  display: none;
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  min-width: 180px;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(22,50,79,0.13);
+  z-index: 200;
+  padding: 6px;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.nav-profile-dropdown.open { display: flex; }
+
+.nav-profile-dropdown a {
+  display: block;
+  padding: 10px 14px;
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 500;
+  text-decoration: none;
+  border-radius: 8px;
+  margin-left: 0;
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  white-space: nowrap;
+  transition: background 0.15s, color 0.15s;
+}
+
+.nav-profile-dropdown a:hover {
+  background: var(--primary-light);
+  color: var(--primary-dark);
+}
 
 /* ── HERO ── */
 .hero {
@@ -523,7 +602,7 @@ button:hover { background: var(--primary-dark); transform: translateY(-1px); }
 .card-rating-val { font-size: 13px; font-weight: 700; color: var(--text); }
 .card-rating-count { font-size: 12px; color: var(--muted); }
 .card-footer { margin-top: auto; display: flex; flex-direction: column; gap: 12px; }
-.card-body .price { font-size: 20px; font-weight: 800; color: var(--primary); margin-top: 0; line-height: 1.1; }
+.card-body .price { font-size: 20px; font-weight: 800; color: var(--primary); margin-top: 0; line-height: 1.1; white-space: nowrap; }
 .card-actions { display: flex; gap: 8px; margin-top: 0; }
 .btn-contact { flex: 1; background: var(--primary); color: #fff; border: none; border-radius: 10px; font-size: 13px; font-weight: 600; padding: 10px 8px; cursor: pointer; text-align: center; text-decoration: none; display: flex; align-items: center; justify-content: center; transition: background 0.15s; }
 .btn-contact:hover { background: var(--primary-dark); }
@@ -577,6 +656,17 @@ button:hover { background: var(--primary-dark); transform: translateY(-1px); }
   transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease, border-color 0.18s ease;
   appearance: none;
   -webkit-appearance: none;
+  -webkit-tap-highlight-color: transparent;
+  outline: none;
+}
+
+.wishlist-heart:focus,
+.wishlist-heart:active,
+.wishlist-btn:focus,
+.wishlist-btn:active {
+  outline: none;
+  box-shadow: none;
+  background: rgba(255, 255, 255, 0.9);
 }
 
 .wishlist-heart svg,
@@ -1071,28 +1161,12 @@ button:hover { background: var(--primary-dark); transform: translateY(-1px); }
 
 /* ── RESPONSIVE 768px ── */
 @media (max-width: 768px) {
-  nav, .site-nav { padding: 14px 20px; flex-wrap: wrap; gap: 10px; }
+  nav, .site-nav { padding: 12px 16px; }
 
-  .menu-toggle { display: inline-flex; margin-left: auto; }
-
-  .nav-links {
-    display: none;
-    width: 100%;
-    flex-direction: column;
-    align-items: stretch;
-    gap: 0;
-    padding-top: 8px;
-  }
-
-  .nav-links.open { display: flex; }
-
-  .nav-links a, .nav-links span {
-    margin-left: 0;
-    width: 100%;
-  }
-
-  .nav-links span { flex-direction: column; align-items: stretch; }
-  .nav-links a { padding: 12px 4px; border-top: 1px solid #f1f1f1; border-radius: 0; }
+  .nav-links { gap: 2px; flex-wrap: nowrap; }
+  .nav-links > a { padding: 6px 10px; font-size: 13px; margin-left: 0; }
+  .nav-links > span#nav-auth > a { padding: 6px 10px; font-size: 13px; margin-left: 0; }
+  .nav-profile-btn { margin-left: 2px; }
 
   .hero {
     grid-template-columns: 1fr;
@@ -2089,10 +2163,24 @@ body.modal-open {
   }
 
   .hero-stats,
-  .featured-grid,
-  .location-grid,
   .home-reviews-grid {
     grid-template-columns: 1fr;
+  }
+
+  .featured-grid {
+    display: flex !important;
+    overflow-x: auto !important;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+    gap: 14px !important;
+    padding-bottom: 8px;
+  }
+
+  .featured-grid .listing-card,
+  .featured-grid .featured-card {
+    flex-shrink: 0 !important;
+    width: 260px !important;
+    scroll-snap-align: start;
   }
 
   .hero-visual {
@@ -3032,12 +3120,20 @@ body,
   }
 
   .location-grid {
-    grid-template-columns: 1fr 1fr !important;
-    gap: 12px !important;
+    display: flex !important;
+    flex-direction: row !important;
+    overflow-x: auto !important;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+    gap: 14px !important;
+    padding-bottom: 8px;
   }
 
   .location-card {
-    min-height: 180px !important;
+    flex-shrink: 0 !important;
+    width: 200px !important;
+    min-height: 220px !important;
+    scroll-snap-align: start;
   }
 
   .hero-stats {
@@ -3821,5 +3917,18 @@ button.wishlist:active {
 
   #listings-grid::-webkit-scrollbar {
     display: none;
+  }
+}
+
+/* ── SCROLL RAIL HIDING ── */
+.location-grid::-webkit-scrollbar,
+.featured-grid::-webkit-scrollbar {
+  display: none;
+}
+
+/* ── LOCATION CARD h3 MOBILE ── */
+@media (max-width: 900px) {
+  .location-card-copy h3 {
+    font-size: 22px;
   }
 }
