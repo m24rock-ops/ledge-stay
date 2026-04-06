@@ -1682,7 +1682,7 @@ async function loadFeaturedListings() {
     }
 
     featuredGrid.innerHTML = listings.map((listing) => `
-      <article class="featured-card" data-id="${listing._id}">
+      <article class="featured-card featured-card--hero" data-id="${listing._id}">
         <div class="featured-image-wrap">
           <div class="featured-card-badge-row">
             <span class="featured-card-badge">Verified</span>
@@ -1695,21 +1695,14 @@ async function loadFeaturedListings() {
             <p class="featured-location">${listing.city}</p>
             <span class="featured-rating-pill">Easy view</span>
           </div>
-          <h3>${listing.title}</h3>
-          <p class="featured-address">${listing.address}</p>
-          <div class="featured-amenities">
-            <span>Wi-Fi</span>
-            <span>Laundry</span>
-            <span>Near campus</span>
-          </div>
+          <h3 class="featured-title">${listing.title}</h3>
+          <p class="featured-address featured-description">${listing.address}</p>
           <div class="featured-card-footer">
             <div class="featured-price">Rs ${Number(listing.price).toLocaleString()}/month</div>
             <div class="featured-card-actions">
-              ${renderWhatsAppButton(listing)}
               <button class="featured-view-button" onclick="showDetail('${listing._id}')">See Details</button>
             </div>
           </div>
-          ${renderOwnerListingActions(listing)}
         </div>
       </article>
     `).join('');
