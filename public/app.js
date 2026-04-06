@@ -1304,6 +1304,7 @@ function renderListingCard(listing) {
             <div class="price" title="${escapeHtml(card.price)}">${escapeHtml(card.price)}</div>
           </div>
           <div class="card-actions" onclick="event.stopPropagation()">
+            ${card.whatsappUrl ? `<a href="${card.whatsappUrl}" target="_blank" rel="noopener" class="btn-whatsapp btn-whatsapp--card" onclick="event.stopPropagation()">WhatsApp</a>` : ''}
             <button class="btn-details" onclick="event.stopPropagation();showDetail('${card.id}')">See details</button>
           </div>
         </div>
@@ -1718,6 +1719,7 @@ async function loadFeaturedListings() {
           <div class="featured-card-footer">
             <div class="featured-price">Rs ${Number(listing.price).toLocaleString()}/month</div>
             <div class="featured-card-actions">
+              ${renderWhatsAppButton(listing)}
               <button class="featured-view-button" onclick="showDetail('${listing._id}')">See Details</button>
             </div>
           </div>

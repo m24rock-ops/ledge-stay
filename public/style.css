@@ -434,7 +434,8 @@ nav, .site-nav {
 .featured-view-button:hover { background: var(--primary-dark); }
 
 .btn-whatsapp {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
   background: #25d366;
   color: #fff;
   padding: 8px 12px;
@@ -443,10 +444,19 @@ nav, .site-nav {
   font-weight: 600;
   text-decoration: none;
   border: 1px solid rgba(0,0,0,0.04);
+  white-space: nowrap;
 }
 
 .btn-whatsapp:hover {
   filter: brightness(0.95);
+}
+
+/* WhatsApp button sized to match the listing card's btn-details */
+.btn-whatsapp--card {
+  min-height: 36px;
+  padding: 0 14px;
+  border-radius: 10px;
+  font-size: 12px;
 }
 
 .featured-empty {
@@ -3217,6 +3227,15 @@ body,
 
 .featured-card--hero .featured-card-actions {
   flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.featured-card--hero .btn-whatsapp {
+  padding: 8px 10px;
+  font-size: 12px;
+  border-radius: 8px;
 }
 
 .featured-card--hero .featured-view-button {
