@@ -234,48 +234,26 @@
       <h2>Welcome Back</h2>
       <p class="auth-lead">Sign in to your account</p>
 
-      <div class="auth-toggle" role="tablist" aria-label="Authentication method">
-        <button type="button" id="auth-tab-phone" class="auth-toggle-button is-active" onclick="setAuthMode('phone')">Phone</button>
-        <button type="button" id="auth-tab-email" class="auth-toggle-button" onclick="setAuthMode('email')">Email</button>
-      </div>
-
-      <div id="auth-phone-fields">
-        <input type="tel" id="login-phone" placeholder="Phone number" inputmode="tel" autocomplete="tel">
-        <div id="phone-otp-section" style="display:none;">
-          <input type="text" id="login-otp" placeholder="Enter 6-digit OTP" inputmode="numeric" maxlength="6" autocomplete="one-time-code">
-          <input type="text" id="phone-name" placeholder="Full name for new account">
-          <select id="phone-role">
-            <option value="tenant">I am looking for a place (Tenant)</option>
-            <option value="owner">I want to post a listing (Owner)</option>
-          </select>
-          <p class="auth-note">Name and role are only used if this phone number is new.</p>
-          <button type="button" class="auth-secondary-button" onclick="resendPhoneOtp()">Resend OTP</button>
-        </div>
-      </div>
-
-      <div id="auth-email-fields" style="display:none;">
-        <div class="auth-toggle auth-toggle--inner" role="tablist" aria-label="Email authentication">
-          <button type="button" id="email-tab-login" class="auth-toggle-button is-active" onclick="setEmailMode('login')">Login</button>
-          <button type="button" id="email-tab-signup" class="auth-toggle-button" onclick="setEmailMode('signup')">Sign Up</button>
-        </div>
-
+      <div id="auth-email-fields">
         <div id="email-login-section">
           <input type="email" id="login-email" placeholder="Email" autocomplete="email">
           <input type="password" id="login-password" placeholder="Password" autocomplete="current-password">
+          <a href="#" onclick="showForgotPassword(event)" id="forgot-password-link" style="display:inline-block;margin-top:-4px;margin-bottom:12px;font-size:14px;color:#6B7280;text-decoration:none;">
+            Forgot password?
+          </a>
+          <button id="auth-submit-button" onclick="continueAuth()">Continue</button>
+          <p class="auth-switch-copy">Don't have an account? <a href="#" onclick="showSignup(event)">Sign up</a></p>
         </div>
 
         <div id="email-signup-section" style="display:none;">
-          <input type="text" id="signup-name" placeholder="Name" autocomplete="name">
+          <input type="text" id="signup-name" placeholder="Full Name" autocomplete="name">
           <input type="email" id="signup-email" placeholder="Email" autocomplete="email">
           <input type="password" id="signup-password" placeholder="Password" autocomplete="new-password">
+          <button id="signup-submit-button" onclick="continueAuth()">Create Account</button>
+          <p class="auth-switch-copy">Already have an account? <a href="#" onclick="showLogin(event)">Login</a></p>
         </div>
-
-        <a href="#" onclick="showForgotPassword(event)" id="forgot-password-link" style="display:inline-block;margin-top:-4px;margin-bottom:12px;font-size:14px;color:#6B7280;text-decoration:none;">
-          Forgot password?
-        </a>
       </div>
 
-      <button id="auth-submit-button" onclick="continueAuth()">Send OTP</button>
       <p id="login-error" class="error"></p>
       <div id="forgot-password-section" style="display:none;">
         <input type="email" id="reset-email" placeholder="Email" autocomplete="email">

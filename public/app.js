@@ -30,8 +30,7 @@ let nearbySearchState = {
   radiusKm: 10
 };
 let authState = {
-  mode: 'phone',
-  phoneOtpSent: false,
+  mode: 'email',
   emailMode: 'login'
 };
 const HOME_REVIEWS = document.getElementById('home-reviews');
@@ -548,33 +547,17 @@ function setCarouselIndex(root, index) {
   }
 }
 
-function sanitizePhone(phone) {
-  return String(phone || '').replace(/[^\d+]/g, '');
-}
-
-function isPhoneIdentifier(value) {
-  return /^\+?\d{10,15}$/.test(sanitizePhone(value));
-}
-
 function setAuthButtonLabel() {
-  const button = document.getElementById('auth-submit-button');
-  if (!button) return;
-
-  if (authState.mode === 'phone') {
-    button.textContent = authState.phoneOtpSent ? 'Verify OTP' : 'Send OTP';
-    return;
-  }
-
-  button.textContent = authState.emailMode === 'signup' ? 'Sign Up' : 'Login';
+  const loginButton = document.getElementById('auth-submit-button');
+  const signupButton = document.getElementById('signup-submit-button');
+  if (loginButton) loginButton.textContent = 'Continue';
+  if (signupButton) signupButton.textContent = 'Create Account';
 }
 
-function resetAuthFlow(options = {}) {
-  const { preserveMode = false } = options;
-
+function resetAuthFlow() {
   authState = {
-    mode: preserveMode ? authState.mode : 'phone',
-    phoneOtpSent: false,
-    emailMode: preserveMode ? authState.emailMode : 'login'
+    mode: 'email',
+    emailMode: 'login'
   };
 
   const loginError = document.getElementById('login-error');
@@ -588,81 +571,57 @@ function resetAuthFlow(options = {}) {
     forgotMessage.textContent = '';
   }
 
-  const phoneOtpSection = document.getElementById('phone-otp-section');
   const emailLoginSection = document.getElementById('email-login-section');
   const emailSignupSection = document.getElementById('email-signup-section');
-  if (phoneOtpSection) phoneOtpSection.style.display = 'none';
   if (emailLoginSection) emailLoginSection.style.display = 'block';
   if (emailSignupSection) emailSignupSection.style.display = 'none';
 
-  ['login-phone', 'login-otp', 'phone-name', 'login-email', 'login-password', 'signup-name', 'signup-email', 'signup-password', 'reset-email'].forEach((id) => {
+  ['login-email', 'login-password', 'signup-name', 'signup-email', 'signup-password', 'reset-email'].forEach((id) => {
     const input = document.getElementById(id);
     if (input) input.value = '';
   });
 
-  ['phone-role'].forEach((id) => {
-    const select = document.getElementById(id);
-    if (select) select.value = 'tenant';
-  });
-
-  setAuthMode(authState.mode, { silentReset: true });
+  showLogin();
 }
 
-function setAuthMode(mode, options = {}) {
-  const { silentReset = false } = options;
-  authState.mode = mode === 'email' ? 'email' : 'phone';
+function showLogin(event) {
+  if (event?.preventDefault) event.preventDefault();
+  authState.mode = 'email';
+  authState.emailMode = 'login';
 
-  if (!silentReset) {
-    authState.phoneOtpSent = false;
-    authState.emailMode = 'login';
-  }
-
-  const phoneTab = document.getElementById('auth-tab-phone');
-  const emailTab = document.getElementById('auth-tab-email');
-  const phoneFields = document.getElementById('auth-phone-fields');
-  const emailFields = document.getElementById('auth-email-fields');
-  const phoneOtpSection = document.getElementById('phone-otp-section');
-  const forgotLink = document.getElementById('forgot-password-link');
-  const loginError = document.getElementById('login-error');
-
-  if (phoneTab) phoneTab.classList.toggle('is-active', authState.mode === 'phone');
-  if (emailTab) emailTab.classList.toggle('is-active', authState.mode === 'email');
-  if (phoneFields) phoneFields.style.display = authState.mode === 'phone' ? 'block' : 'none';
-  if (emailFields) emailFields.style.display = authState.mode === 'email' ? 'block' : 'none';
-  if (phoneOtpSection) phoneOtpSection.style.display = authState.mode === 'phone' && authState.phoneOtpSent ? 'block' : 'none';
-  if (forgotLink) forgotLink.style.display = 'none';
-  if (loginError) loginError.textContent = '';
-
-  setEmailMode(authState.emailMode, { silent: true });
-
-  if (forgotLink) {
-    forgotLink.style.display = authState.mode === 'email' && authState.emailMode === 'login' ? 'inline-block' : 'none';
-  }
-
-  setAuthButtonLabel();
-}
-
-function setEmailMode(mode, options = {}) {
-  const { silent = false } = options;
-
-  authState.emailMode = mode === 'signup' ? 'signup' : 'login';
-
-  const loginTab = document.getElementById('email-tab-login');
-  const signupTab = document.getElementById('email-tab-signup');
   const loginSection = document.getElementById('email-login-section');
   const signupSection = document.getElementById('email-signup-section');
   const forgotLink = document.getElementById('forgot-password-link');
   const loginError = document.getElementById('login-error');
 
-  if (loginTab) loginTab.classList.toggle('is-active', authState.emailMode === 'login');
-  if (signupTab) signupTab.classList.toggle('is-active', authState.emailMode === 'signup');
-  if (loginSection) loginSection.style.display = authState.emailMode === 'login' ? 'block' : 'none';
-  if (signupSection) signupSection.style.display = authState.emailMode === 'signup' ? 'block' : 'none';
-  if (forgotLink) forgotLink.style.display = authState.mode === 'email' && authState.emailMode === 'login' ? 'inline-block' : 'none';
+  if (loginSection) loginSection.style.display = 'block';
+  if (signupSection) signupSection.style.display = 'none';
+  if (forgotLink) forgotLink.style.display = 'inline-block';
+  if (loginError) loginError.textContent = '';
 
-  if (!silent && loginError) {
-    loginError.textContent = '';
-  }
+  const forgotSection = document.getElementById('forgot-password-section');
+  if (forgotSection) forgotSection.style.display = 'none';
+
+  setAuthButtonLabel();
+}
+
+function showSignup(event) {
+  if (event?.preventDefault) event.preventDefault();
+  authState.mode = 'email';
+  authState.emailMode = 'signup';
+
+  const loginSection = document.getElementById('email-login-section');
+  const signupSection = document.getElementById('email-signup-section');
+  const forgotLink = document.getElementById('forgot-password-link');
+  const loginError = document.getElementById('login-error');
+
+  if (loginSection) loginSection.style.display = 'none';
+  if (signupSection) signupSection.style.display = 'block';
+  if (forgotLink) forgotLink.style.display = 'none';
+  if (loginError) loginError.textContent = '';
+
+  const forgotSection = document.getElementById('forgot-password-section');
+  if (forgotSection) forgotSection.style.display = 'none';
 
   setAuthButtonLabel();
 }
@@ -2384,15 +2343,6 @@ async function continueAuth() {
   if (errorField) errorField.textContent = '';
 
   try {
-    if (authState.mode === 'phone') {
-      if (authState.phoneOtpSent) {
-        await verifyPhoneOtp();
-      } else {
-        await startPhoneOtp();
-      }
-      return;
-    }
-
     if (authState.emailMode === 'signup') {
       await registerEmailAccount();
     } else {
@@ -2401,56 +2351,6 @@ async function continueAuth() {
   } catch (err) {
     if (errorField) errorField.textContent = err.message || 'Unable to continue right now.';
   }
-}
-
-async function startPhoneOtp() {
-  const phone = sanitizePhone(document.getElementById('login-phone')?.value || '');
-  if (!isPhoneIdentifier(phone)) {
-    throw new Error('Please enter a valid phone number.');
-  }
-
-  await apiFetchJson('/api/auth/continue', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ identifier: phone })
-  });
-
-  authState.phoneOtpSent = true;
-  setAuthMode('phone', { silentReset: true });
-
-  const errorField = document.getElementById('login-error');
-  if (errorField) errorField.textContent = 'OTP sent. Use the code from the console to continue.';
-}
-
-async function resendPhoneOtp() {
-  const errorField = document.getElementById('login-error');
-  if (errorField) errorField.textContent = '';
-  authState.phoneOtpSent = false;
-  setAuthMode('phone', { silentReset: true });
-  await startPhoneOtp();
-}
-
-async function verifyPhoneOtp() {
-  const phone = sanitizePhone(document.getElementById('login-phone')?.value || '');
-  const otp = String(document.getElementById('login-otp')?.value || '').trim();
-  const name = String(document.getElementById('phone-name')?.value || '').trim();
-  const role = String(document.getElementById('phone-role')?.value || 'tenant');
-
-  if (!isPhoneIdentifier(phone)) {
-    throw new Error('Please enter a valid phone number.');
-  }
-
-  if (!/^\d{6}$/.test(otp)) {
-    throw new Error('Please enter the 6-digit OTP.');
-  }
-
-  const data = await apiFetchJson('/api/auth/verify-otp', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ phone, otp, name, role })
-  });
-
-  await completeAuthSession(data);
 }
 
 async function continueEmailAuth() {
@@ -2477,7 +2377,7 @@ async function continueEmailAuth() {
     const signupPassword = document.getElementById('signup-password');
     if (signupEmail) signupEmail.value = email;
     if (signupPassword) signupPassword.value = password;
-    setAuthMode('email', { silentReset: true });
+    showSignup();
 
     const errorField = document.getElementById('login-error');
     if (errorField) errorField.textContent = 'This email is new. Complete signup to create your account.';
@@ -3267,9 +3167,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const loginError = document.getElementById('login-error');
   [
-    'login-phone',
-    'login-otp',
-    'phone-name',
     'login-email',
     'login-password',
     'signup-name',
@@ -3277,12 +3174,6 @@ document.addEventListener('DOMContentLoaded', () => {
     'signup-password'
   ].forEach((id) => {
     document.getElementById(id)?.addEventListener('input', () => {
-      if (loginError) loginError.textContent = '';
-    });
-  });
-
-  ['phone-role'].forEach((id) => {
-    document.getElementById(id)?.addEventListener('change', () => {
       if (loginError) loginError.textContent = '';
     });
   });
@@ -3301,12 +3192,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
   document.getElementById('send-reset-link')?.addEventListener('click', requestPasswordReset);
 
-  document.getElementById('login-phone')?.addEventListener('keydown', (event) => {
-    if (event.key === 'Enter') continueAuth();
-  });
-  document.getElementById('login-otp')?.addEventListener('keydown', (event) => {
-    if (event.key === 'Enter') continueAuth();
-  });
   document.getElementById('login-email')?.addEventListener('keydown', (event) => {
     if (event.key === 'Enter') continueAuth();
   });
