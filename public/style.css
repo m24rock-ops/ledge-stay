@@ -2494,6 +2494,16 @@ body.modal-open {
   }
 }
 
+@media (max-width: 600px) {
+  .hero h1 {
+    font-size: 22px;
+  }
+
+  .search-bar {
+    border-radius: 20px;
+  }
+}
+
 @media (max-width: 480px) {
   .hero-shell,
   .featured-section,
