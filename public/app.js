@@ -34,6 +34,7 @@ let authState = {
   emailMode: 'login',
   phoneOtpSent: false,
   phoneNeedsProfile: false,
+  loginRole: 'tenant',
   resendEndsAt: 0,
   resendTimerId: null
 };
@@ -563,6 +564,82 @@ function setAuthError(message = '') {
   if (loginError) loginError.textContent = message;
 }
 
+function setLoginRole(role) {
+  authState.loginRole = role === 'owner' ? 'owner' : 'tenant';
+
+  const tenantBtn = document.getElementById('role-tenant-btn');
+  const ownerBtn = document.getElementById('role-owner-btn');
+
+  if (tenantBtn) tenantBtn.classList.toggle('is-active', authState.loginRole === 'tenant');
+  if (ownerBtn) ownerBtn.classList.toggle('is-active', authState.loginRole === 'owner');
+}
+
+function toggleAuthPasswordVisibility() {
+  const passwordInput = document.getElementById('auth-password');
+  const toggleButton = document.getElementById('auth-password-toggle');
+  if (!passwordInput || !toggleButton) return;
+
+  const shouldShow = passwordInput.type === 'password';
+  passwordInput.type = shouldShow ? 'text' : 'password';
+  toggleButton.textContent = shouldShow ? 'Hide' : 'Show';
+  toggleButton.setAttribute('aria-label', shouldShow ? 'Hide password' : 'Show password');
+}
+
+async function submitRoleLogin() {
+  const identifier = String(document.getElementById('auth-identifier')?.value || '').trim();
+  const password = String(document.getElementById('auth-password')?.value || '');
+  const role = authState.loginRole || 'tenant';
+  const button = document.getElementById('auth-login-button');
+
+  setAuthError('');
+
+  if (!identifier) {
+    setAuthError('Please enter your email or phone.');
+    return;
+  }
+
+  if (!password) {
+    setAuthError('Please enter your password.');
+    return;
+  }
+
+  if (button) {
+    button.disabled = true;
+    button.textContent = 'Logging in...';
+  }
+
+  try {
+    const data = await apiFetchJson('/api/auth/continue', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ identifier, password, role })
+    });
+
+    if (!data?.token || !data?.user) {
+      throw new Error('Unexpected login response from server.');
+    }
+
+    localStorage.setItem('token', data.token);
+    localStorage.setItem('user', JSON.stringify(data.user));
+    await loadWishlistState();
+    updateNav();
+
+    const resolvedRole = data.user.role || role;
+    if (resolvedRole === 'owner') {
+      showPage('dashboard');
+    } else {
+      showPage('browse');
+    }
+  } catch (err) {
+    setAuthError(err.message || 'Unable to login right now.');
+  } finally {
+    if (button) {
+      button.disabled = false;
+      button.textContent = 'Login';
+    }
+  }
+}
+
 function updateResendTimerUI() {
   const resendLink = document.getElementById('resend-otp-link');
   const timerText = document.getElementById('resend-timer-text');
@@ -689,10 +766,11 @@ function showOTP() {
 
 function resetAuthFlow() {
   authState = {
-    mode: 'phone',
+    mode: 'email',
     emailMode: 'login',
     phoneOtpSent: false,
     phoneNeedsProfile: false,
+    loginRole: authState.loginRole || 'tenant',
     resendEndsAt: 0,
     resendTimerId: authState.resendTimerId
   };
@@ -712,19 +790,13 @@ function resetAuthFlow() {
   if (newUserSection) newUserSection.style.display = 'none';
 
   [
-    'login-phone', 'login-otp', 'phone-name',
-    'login-email', 'login-password',
-    'signup-name', 'signup-email', 'signup-password',
-    'reset-email'
+    'auth-identifier', 'auth-password'
   ].forEach((id) => {
     const input = document.getElementById(id);
     if (input) input.value = '';
   });
 
-  const role = document.getElementById('phone-role');
-  if (role) role.value = 'tenant';
-
-  showPhone();
+  setLoginRole(authState.loginRole);
 }
 
 async function completeAuthSession(data) {
@@ -3367,67 +3439,36 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const loginError = document.getElementById('login-error');
   [
-    'login-phone',
-    'login-otp',
-    'phone-name',
-    'login-email',
-    'login-password',
-    'signup-name',
-    'signup-email',
-    'signup-password'
+    'auth-identifier',
+    'auth-password'
   ].forEach((id) => {
     document.getElementById(id)?.addEventListener('input', () => {
       if (loginError) loginError.textContent = '';
     });
   });
 
-  document.getElementById('phone-role')?.addEventListener('change', () => {
+  ['role-tenant-btn', 'role-owner-btn'].forEach((id) => {
+    document.getElementById(id)?.addEventListener('click', () => {
+      if (loginError) loginError.textContent = '';
+    });
+  });
+
+  document.getElementById('auth-identifier')?.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter') submitRoleLogin();
+  });
+  document.getElementById('auth-password')?.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter') submitRoleLogin();
+  });
+
+  document.getElementById('role-tenant-btn')?.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter') submitRoleLogin();
+  });
+  document.getElementById('role-owner-btn')?.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter') submitRoleLogin();
+  });
+
+  document.getElementById('auth-login-button')?.addEventListener('click', () => {
     if (loginError) loginError.textContent = '';
-  });
-
-  const forgotEmailInput = document.getElementById('reset-email');
-  const forgotMessage = document.getElementById('forgot-password-message');
-  if (forgotEmailInput && forgotMessage) {
-    forgotEmailInput.addEventListener('input', () => {
-      forgotMessage.style.display = 'none';
-      forgotMessage.textContent = '';
-    });
-    forgotEmailInput.addEventListener('keydown', (event) => {
-      if (event.key === 'Enter') requestPasswordReset(event);
-    });
-  }
-
-  document.getElementById('send-reset-link')?.addEventListener('click', requestPasswordReset);
-
-  document.getElementById('login-phone')?.addEventListener('keydown', (event) => {
-    if (event.key === 'Enter') {
-      if (authState.phoneOtpSent) {
-        verifyPhoneOtp();
-      } else {
-        sendPhoneOtp();
-      }
-    }
-  });
-  document.getElementById('login-otp')?.addEventListener('keydown', (event) => {
-    if (event.key === 'Enter') verifyPhoneOtp();
-  });
-  document.getElementById('phone-name')?.addEventListener('keydown', (event) => {
-    if (event.key === 'Enter') verifyPhoneOtp();
-  });
-  document.getElementById('login-email')?.addEventListener('keydown', (event) => {
-    if (event.key === 'Enter') continueEmailAuth();
-  });
-  document.getElementById('login-password')?.addEventListener('keydown', (event) => {
-    if (event.key === 'Enter') continueEmailAuth();
-  });
-  document.getElementById('signup-name')?.addEventListener('keydown', (event) => {
-    if (event.key === 'Enter') registerEmailAccount();
-  });
-  document.getElementById('signup-email')?.addEventListener('keydown', (event) => {
-    if (event.key === 'Enter') registerEmailAccount();
-  });
-  document.getElementById('signup-password')?.addEventListener('keydown', (event) => {
-    if (event.key === 'Enter') registerEmailAccount();
   });
 
   document.addEventListener('keydown', (event) => {
