@@ -934,11 +934,6 @@ function updateWishlistButtonElement(button, saved) {
   button.classList.toggle('active', saved);
   button.setAttribute('aria-pressed', saved ? 'true' : 'false');
   button.setAttribute('aria-label', saved ? 'Remove from wishlist' : 'Save to wishlist');
-
-  const icon = button.querySelector('.wishlist-heart-icon');
-  if (icon) {
-    icon.textContent = saved ? '♥' : '♡';
-  }
 }
 
 function applyWishlistUI(targetListingId = null, forcedSavedState = null) {
@@ -1014,7 +1009,11 @@ function initWishlistEventDelegation() {
 }
 
 function renderWishlistHeartIcon(saved) {
-  return `<span class="wishlist-heart-icon" aria-hidden="true">${saved ? '♥' : '♡'}</span>`;
+  return `
+    <svg class="wishlist-heart-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+      <path d="M12 20.4 10.55 19.08C5.4 14.42 2 11.34 2 7.5 2 5.01 3.99 3 6.45 3c1.74 0 3.41.81 4.55 2.09A6 6 0 0 1 15.55 3C18.01 3 20 5.01 20 7.5c0 3.84-3.4 6.92-8.55 11.58Z"></path>
+    </svg>
+  `;
 }
 
 function renderWishlistHeart(listingId, options = {}) {
@@ -1257,6 +1256,7 @@ function buildListingCardData(listing = {}) {
     address,
     location,
     tags,
+    verified: Boolean(listing.verified),
     distanceKm,
     price,
     rating,
@@ -1269,25 +1269,38 @@ function buildListingCardData(listing = {}) {
 
 function renderListingCard(listing) {
   const card = buildListingCardData(listing);
-  const locationLine = card.location || card.address || card.city;
-  const quickTag = card.tags.length ? card.tags[0] : 'Easy view';
+  const amenityTags = (card.tags.length ? card.tags : ['WiFi', 'AC', 'Meals']).slice(0, 3);
+  const amenityMarkup = amenityTags
+    .map((tag) => `<span class="listing-amenity-pill" title="${escapeHtml(tag)}">${escapeHtml(tag)}</span>`)
+    .join('');
 
   return `
-    <article class="listing-card listing-card--compact" id="listing-card-${card.id}" data-id="${card.id}" onclick="showDetail('${card.id}')">
+    <article class="listing-card listing-card--premium" id="listing-card-${card.id}" data-id="${card.id}" onclick="showDetail('${card.id}')">
       <div class="card-img-wrap">
+        ${card.verified ? `
+          <div class="listing-verified-badge" aria-label="Verified listing">
+            <span class="listing-verified-dot" aria-hidden="true"></span>
+            <span>Verified</span>
+          </div>
+        ` : ''}
         ${card.imageHtml}
         ${renderWishlistHeart(card.id, { source: 'listing' })}
       </div>
       <div class="card-body">
         <div class="card-meta-row">
-          <p class="card-location" title="${escapeHtml(locationLine)}">${escapeHtml(locationLine)}</p>
-          <span class="card-quick-tag" title="${escapeHtml(quickTag)}">${escapeHtml(quickTag)}</span>
+          <p class="card-city-label" title="${escapeHtml(card.city)}">${escapeHtml(card.city)}</p>
+          <span class="card-quick-tag">Easy view</span>
         </div>
         <h3 class="card-title" title="${escapeHtml(card.title)}">${escapeHtml(card.title)}</h3>
+        <div class="listing-amenity-row" aria-label="Amenities">${amenityMarkup}</div>
+        <div class="listing-card-divider" aria-hidden="true"></div>
         <div class="card-footer">
-          <div class="price" title="${escapeHtml(card.price)}">${escapeHtml(card.price)}</div>
+          <div class="listing-price-block">
+            <span class="listing-price-label">Starting from</span>
+            <div class="price" title="${escapeHtml(card.price)}">${escapeHtml(card.price)}</div>
+          </div>
           <div class="card-actions" onclick="event.stopPropagation()">
-            <button class="btn-details" onclick="event.stopPropagation();showDetail('${card.id}')">View Details</button>
+            <button class="btn-details" onclick="event.stopPropagation();showDetail('${card.id}')">See details</button>
           </div>
         </div>
       </div>
