@@ -2014,36 +2014,35 @@ body.modal-open {
 .location-card-copy {
   position: absolute;
   inset: auto 0 0;
-  padding: 24px;
+  padding: 20px;
   color: #fff;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 
-.location-card-copy p,
-.location-card-copy span {
-  opacity: 0.88;
+.location-card-city {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  opacity: 0.75;
 }
 
-.location-card-copy h3 {
-  margin: 6px 0 10px;
+.location-card-name {
+  margin: 0;
   font-family: 'Plus Jakarta Sans', 'Inter', sans-serif;
-  font-size: 26px;
+  font-size: 24px;
+  font-weight: 800;
+  line-height: 1.1;
+  letter-spacing: -0.01em;
 }
 
-.location-card-blurb {
-  margin-top: 14px;
-  line-height: 1.6;
-  color: rgba(255, 255, 255, 0.82);
-}
-
-.location-card-action {
-  margin-top: 16px;
-  display: inline-flex;
-  padding: 8px 12px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.16);
-  color: #fff;
-  font-size: 13px;
-  font-weight: 700;
+.location-card-count {
+  margin-top: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  opacity: 0.82;
 }
 
 .home-reviews-grid {
@@ -2105,7 +2104,6 @@ body.modal-open {
     max-width: none;
   }
 
-  .location-grid,
   .home-reviews-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -3924,7 +3922,7 @@ button.wishlist:active {
 
 /* ── LOCATION CARD h3 MOBILE ── */
 @media (max-width: 900px) {
-  .location-card-copy h3 {
-    font-size: 22px;
+  .location-card-name {
+    font-size: 20px;
   }
 }

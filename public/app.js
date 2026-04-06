@@ -38,31 +38,27 @@ const HOME_REVIEWS = document.getElementById('home-reviews');
 const HOME_REVIEW_ITEMS = Array.isArray(window.HOME_REVIEW_ITEMS) ? window.HOME_REVIEW_ITEMS : [];
 const HOME_LOCATIONS = [
   {
-    count: '20+ stays',
+    area: 'Koramangala',
     city: 'Bengaluru',
-    name: 'Koramangala 📍',
-    blurb: 'A well-known area with many student rooms and PG options.',
+    count: '20+ stays',
     image: 'https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?w=900&q=80'
   },
   {
-    name: 'Rajaji Nagar 📍',
+    area: 'Rajaji Nagar',
     city: 'Bengaluru',
     count: '10+ stays',
-    blurb: 'Good for budget-friendly stays near colleges and work hubs.',
     image: 'https://images.unsplash.com/photo-1484154218962-a197022b5858?w=900&q=80'
   },
   {
-    name: 'Vijaynagara 📍',
+    area: 'Vijaynagara',
     city: 'Bengaluru',
     count: '20+ stays',
-    blurb: 'A student-friendly area with rooms, PGs, and shared flats.',
     image: 'https://images.unsplash.com/photo-1494526585095-c41746248156?w=900&q=80'
   },
   {
-    name: 'Hebbal 📍',
+    area: 'Hebbal',
     city: 'Bengaluru',
     count: '15+ stays',
-    blurb: 'Close to colleges, buses, and daily needs.',
     image: 'https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?w=900&q=80'
   }
 ];
@@ -1737,15 +1733,13 @@ function renderPopularLocations() {
   if (!grid) return;
 
   grid.innerHTML = HOME_LOCATIONS.map((location) => `
-    <article class="location-card" onclick="applyPopularLocation('${escapeHtml(location.city)}')">
-      <img src="${location.image}" alt="PG rooms in ${escapeHtml(location.name.replace(' 📍', ''))} Bengaluru" loading="lazy" decoding="async">
+    <article class="location-card" onclick="applyPopularLocation('${escapeHtml(location.area)}')">
+      <img src="${location.image}" alt="PG rooms in ${escapeHtml(location.area)} ${escapeHtml(location.city)}" loading="lazy" decoding="async">
       <div class="location-card-overlay"></div>
       <div class="location-card-copy">
-        <p>${escapeHtml(location.city)}</p>
-        <h3>${escapeHtml(location.name)}</h3>
-        <span>${escapeHtml(location.count)}</span>
-        <div class="location-card-blurb">${escapeHtml(location.blurb)}</div>
-        <div class="location-card-action">Open stays</div>
+        <span class="location-card-city">${escapeHtml(location.city)}</span>
+        <h3 class="location-card-name">${escapeHtml(location.area)}</h3>
+        <span class="location-card-count">${escapeHtml(location.count)}</span>
       </div>
     </article>
   `).join('');
@@ -1769,8 +1763,8 @@ function renderHomeReviews() {
   `).join('');
 }
 
-function applyPopularLocation(city) {
-  syncLocationInputs(city);
+function applyPopularLocation(area) {
+  syncLocationInputs(area);
   showPage('listings');
 }
 
