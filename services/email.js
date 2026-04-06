@@ -5,7 +5,7 @@
  */
 
 const RESEND_API_URL = 'https://api.resend.com/emails';
-const DEFAULT_FROM_ADDRESS = 'LedgeStay <onboarding@resend.dev>';
+const DEFAULT_FROM_ADDRESS = 'LedgeStay <noreply@ledgestay.in>';
 const DEFAULT_BASE_URL = 'https://ledge-stay.up.railway.app';
 
 function ensureUrlWithProtocol(value, fallback) {
