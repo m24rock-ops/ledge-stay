@@ -59,6 +59,19 @@ function generateOtp() {
   return String(Math.floor(100000 + Math.random() * 900000));
 }
 
+function issuePhoneOtp(phone) {
+  console.log('Sending OTP to:', phone);
+
+  const otp = generateOtp();
+  otpStore.set(phone, {
+    otp,
+    expiresAt: Date.now() + OTP_EXPIRY_MS,
+    attempts: 0
+  });
+
+  console.log(`[auth] OTP for ${phone}: ${otp}`);
+}
+
 function signAuthToken(user) {
   return jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET, { expiresIn: '7d' });
 }
@@ -121,16 +134,7 @@ async function continueHandler(req, res) {
       return res.status(400).json({ message: 'Please enter a valid email or phone number.' });
     }
 
-    console.log('Sending OTP to:', phone);
-
-    const otp = generateOtp();
-    otpStore.set(phone, {
-      otp,
-      expiresAt: Date.now() + OTP_EXPIRY_MS,
-      attempts: 0
-    });
-
-    console.log(`[auth] OTP for ${phone}: ${otp}`);
+    issuePhoneOtp(phone);
 
     return res.json({
       type: 'otp_sent',
@@ -255,6 +259,25 @@ async function registerEmailHandler(req, res) {
 }
 
 router.post('/continue', continueHandler);
+router.post('/send-otp', (req, res) => {
+  try {
+    pruneExpiredOtps();
+
+    const phone = normalizePhone(req.body.phone);
+    if (!isValidPhone(phone)) {
+      return res.status(400).json({ message: 'Please enter a valid phone number.' });
+    }
+
+    issuePhoneOtp(phone);
+
+    return res.json({
+      type: 'otp_sent',
+      expiresInSeconds: Math.floor(OTP_EXPIRY_MS / 1000)
+    });
+  } catch (err) {
+    return res.status(500).json({ message: 'Server error', error: err.message });
+  }
+});
 router.post('/verify-otp', verifyOtpHandler);
 router.post('/register-email', registerEmailHandler);
 
