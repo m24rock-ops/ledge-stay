@@ -662,7 +662,9 @@ button:hover { background: var(--primary-dark); transform: translateY(-1px); }
   transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease, border-color 0.18s ease;
   appearance: none;
   -webkit-appearance: none;
-  -webkit-tap-highlight-color: transparent;
+  -webkit-tap-highlight-color: rgba(0,0,0,0);
+  touch-action: manipulation;
+  user-select: none;
   outline: none;
 }
 
@@ -671,8 +673,13 @@ button:hover { background: var(--primary-dark); transform: translateY(-1px); }
 .wishlist-btn:focus,
 .wishlist-btn:active {
   outline: none;
-  box-shadow: none;
   background: rgba(255, 255, 255, 0.9);
+}
+
+/* keep the shadow alive on tap — only kill it on keyboard focus */ 
+.wishlist-heart:focus:not(:focus-visible),
+.wishlist-btn:focus:not(:focus-visible) {
+  box-shadow: 0 8px 16px rgba(15, 23, 42, 0.12);
 }
 
 .wishlist-heart svg,
@@ -2620,7 +2627,8 @@ body.modal-open {
   }
 
   .btn-contact,
-  .btn-details {
+  .btn-details,
+  .btn-whatsapp--card {
     min-height: 34px;
     padding: 8px 10px;
     border-radius: 10px;
@@ -3862,6 +3870,9 @@ button.wishlist:active {
 .listing-card--premium .card-actions {
   width: auto;
   margin-top: 0;
+  overflow: visible;
+  flex-wrap: wrap;
+  gap: 6px;
 }
 
 .listing-card--premium .btn-details {
