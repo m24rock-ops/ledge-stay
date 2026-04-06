@@ -38,9 +38,9 @@ const HOME_REVIEWS = document.getElementById('home-reviews');
 const HOME_REVIEW_ITEMS = Array.isArray(window.HOME_REVIEW_ITEMS) ? window.HOME_REVIEW_ITEMS : [];
 const HOME_LOCATIONS = [
   {
-    name: 'Koramangala 📍',
-    city: 'Bengaluru',
     count: '20+ stays',
+    city: 'Bengaluru',
+    name: 'Koramangala 📍',
     blurb: 'A well-known area with many student rooms and PG options.',
     image: 'https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?w=900&q=80'
   },
