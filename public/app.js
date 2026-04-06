@@ -570,8 +570,14 @@ function setLoginRole(role) {
   const tenantBtn = document.getElementById('role-tenant-btn');
   const ownerBtn = document.getElementById('role-owner-btn');
 
-  if (tenantBtn) tenantBtn.classList.toggle('is-active', authState.loginRole === 'tenant');
-  if (ownerBtn) ownerBtn.classList.toggle('is-active', authState.loginRole === 'owner');
+  if (tenantBtn) {
+    tenantBtn.classList.toggle('is-active', authState.loginRole === 'tenant');
+    tenantBtn.classList.toggle('active', authState.loginRole === 'tenant');
+  }
+  if (ownerBtn) {
+    ownerBtn.classList.toggle('is-active', authState.loginRole === 'owner');
+    ownerBtn.classList.toggle('active', authState.loginRole === 'owner');
+  }
 }
 
 function toggleAuthPasswordVisibility() {
@@ -694,7 +700,9 @@ function showPhone(event) {
   const forgotLink = document.getElementById('forgot-password-link');
 
   if (phoneTab) phoneTab.classList.add('is-active');
+  if (phoneTab) phoneTab.classList.add('active');
   if (emailTab) emailTab.classList.remove('is-active');
+  if (emailTab) emailTab.classList.remove('active');
   if (identifierInput) {
     identifierInput.placeholder = 'Phone number';
     identifierInput.setAttribute('inputmode', 'tel');
@@ -716,7 +724,9 @@ function showEmail(event) {
   const forgotLink = document.getElementById('forgot-password-link');
 
   if (phoneTab) phoneTab.classList.remove('is-active');
+  if (phoneTab) phoneTab.classList.remove('active');
   if (emailTab) emailTab.classList.add('is-active');
+  if (emailTab) emailTab.classList.add('active');
   if (identifierInput) {
     identifierInput.placeholder = 'Email address';
     identifierInput.setAttribute('inputmode', 'email');

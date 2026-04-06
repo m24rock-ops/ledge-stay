@@ -899,6 +899,76 @@ button:hover { background: var(--primary-dark); transform: translateY(-1px); }
   background: radial-gradient(circle at top, #ffffff 0%, #f4faff 45%, #eef7ff 100%);
 }
 
+.login {
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: linear-gradient(135deg, #eef5ff, #f9fbff);
+}
+
+.login-container {
+  width: 100%;
+  max-width: 380px;
+  background: white;
+  padding: 25px;
+  border-radius: 16px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+}
+
+.login-container input {
+  width: 100%;
+  padding: 12px;
+  margin-bottom: 12px;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+  outline: none;
+}
+
+.login-container input:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 2px rgba(59,130,246,0.2);
+}
+
+.role-toggle {
+  display: flex;
+  gap: 10px;
+  margin: 10px 0;
+}
+
+.role-toggle button {
+  flex: 1;
+  padding: 10px;
+  border-radius: 10px;
+  border: none;
+  background: #e0ecff;
+}
+
+.role-toggle .active {
+  background: #3b82f6;
+  color: white;
+}
+
+.tabs {
+  display: flex;
+  background: #f1f5f9;
+  border-radius: 10px;
+  overflow: hidden;
+  margin-bottom: 15px;
+}
+
+.tabs button {
+  flex: 1;
+  padding: 10px;
+  border: none;
+  background: transparent;
+}
+
+.tabs .active {
+  background: linear-gradient(135deg, #3b82f6, #60a5fa);
+  color: white;
+}
+
 .auth-brand-block {
   text-align: center;
   margin-bottom: 28px;

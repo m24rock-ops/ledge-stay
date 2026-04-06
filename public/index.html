@@ -202,42 +202,46 @@
   </div>
 
   <div id="page-login" class="page" style="display:none">
-    <div class="auth-card">
-      <div class="auth-brand-block">
-        <div class="auth-logo">Ledge-Stay</div>
-        <p class="auth-tagline">Find verified PGs &amp; rooms near your college</p>
+    <section class="login">
+      <div class="login-container">
+        <div class="auth-card">
+          <div class="auth-brand-block">
+            <div class="auth-logo">Ledge-Stay</div>
+            <p class="auth-tagline">Find verified PGs &amp; rooms near your college</p>
+          </div>
+
+          <h2>Welcome back</h2>
+          <p class="auth-lead">Sign in to your account</p>
+
+          <div class="auth-toggle tabs" role="tablist" aria-label="Auth mode">
+            <button type="button" id="auth-tab-phone" class="auth-toggle-button is-active active" onclick="showPhone(event)">Phone</button>
+            <button type="button" id="auth-tab-email" class="auth-toggle-button" onclick="showEmail(event)">Email</button>
+          </div>
+
+          <div id="auth-phone-fields"></div>
+          <div id="auth-email-fields"></div>
+
+          <input type="text" id="auth-identifier" placeholder="Phone number" autocomplete="username" inputmode="tel">
+          <div class="auth-password-wrap">
+            <input type="password" id="auth-password" placeholder="Password" autocomplete="current-password">
+            <button id="auth-password-toggle" class="auth-password-toggle" type="button" onclick="toggleAuthPasswordVisibility()" aria-label="Show password">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6z"/><circle cx="12" cy="12" r="3"/></svg>
+            </button>
+          </div>
+
+          <a href="/reset-password" id="forgot-password-link" class="forgot-password-link">Forgot password?</a>
+
+          <div class="auth-role-toggle role-toggle" role="group" aria-label="Login role">
+            <button type="button" id="role-tenant-btn" class="is-active active" onclick="setLoginRole('tenant')">Tenant</button>
+            <button type="button" id="role-owner-btn" onclick="setLoginRole('owner')">Owner</button>
+          </div>
+
+          <button id="auth-submit-button" type="button" onclick="submitRoleLogin()">Login</button>
+          <p id="login-error" class="error"></p>
+          <p class="auth-bottom-note">New here? Create an account - it's free.</p>
+        </div>
       </div>
-
-      <h2>Welcome back</h2>
-      <p class="auth-lead">Sign in to your account</p>
-
-      <div class="auth-toggle" role="tablist" aria-label="Auth mode">
-        <button type="button" id="auth-tab-phone" class="auth-toggle-button is-active" onclick="showPhone(event)">Phone</button>
-        <button type="button" id="auth-tab-email" class="auth-toggle-button" onclick="showEmail(event)">Email</button>
-      </div>
-
-      <div id="auth-phone-fields"></div>
-      <div id="auth-email-fields"></div>
-
-      <input type="text" id="auth-identifier" placeholder="Phone number" autocomplete="username" inputmode="tel">
-      <div class="auth-password-wrap">
-        <input type="password" id="auth-password" placeholder="Password" autocomplete="current-password">
-        <button id="auth-password-toggle" class="auth-password-toggle" type="button" onclick="toggleAuthPasswordVisibility()" aria-label="Show password">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6z"/><circle cx="12" cy="12" r="3"/></svg>
-        </button>
-      </div>
-
-      <a href="/reset-password" id="forgot-password-link" class="forgot-password-link">Forgot password?</a>
-
-      <div class="auth-role-toggle" role="group" aria-label="Login role">
-        <button type="button" id="role-tenant-btn" class="is-active" onclick="setLoginRole('tenant')">Tenant</button>
-        <button type="button" id="role-owner-btn" onclick="setLoginRole('owner')">Owner</button>
-      </div>
-
-      <button id="auth-submit-button" type="button" onclick="submitRoleLogin()">Login</button>
-      <p id="login-error" class="error"></p>
-      <p class="auth-bottom-note">New here? Create an account - it's free.</p>
-    </div>
+    </section>
   </div>
 
   <div id="page-reset-password" class="page" style="display:none">
