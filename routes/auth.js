@@ -267,17 +267,21 @@ router.post('/register', registerEmailHandler);
 router.post('/forgot-password', async (req, res) => {
   try {
     const email = normalizeEmail(req.body.email);
+    console.log('[auth] forgot-password request for:', email || '(empty)');
+
     if (!email) return res.status(400).json({ message: 'Email is required' });
 
     const user = await findUserByEmail(email);
 
     if (!user || !user.email) {
+      console.log('[auth] forgot-password: no account found for:', email);
       return res.json({ message: 'If that email is registered, a reset link has been sent.' });
     }
 
     const token = crypto.randomBytes(32).toString('hex');
+    console.log('[auth] forgot-password: token generated for user', String(user._id));
     user.resetToken = token;
-    user.resetTokenExpiry = new Date(Date.now() + 60 * 60 * 1000);
+    user.resetTokenExpiry = new Date(Date.now() + 15 * 60 * 1000);
     await user.save();
 
     const baseUrl = process.env.APP_BASE_URL || 'https://ledge-stay.up.railway.app';
@@ -289,10 +293,13 @@ router.post('/forgot-password', async (req, res) => {
       resetUrl
     });
 
-    if (!emailResult.ok) {
-      console.warn('[auth] Password reset email was not delivered', {
+    if (emailResult.ok) {
+      console.log('[auth] forgot-password: reset email sent to', user.email, '| resend id:', emailResult.id || 'n/a');
+    } else {
+      console.warn('[auth] forgot-password: reset email NOT delivered', {
         userId: String(user._id),
         email: user.email,
+        skipped: emailResult.skipped || false,
         issues: emailResult.issues || [],
         hint: emailResult.hint || '',
         error: emailResult.error || ''
@@ -301,6 +308,7 @@ router.post('/forgot-password', async (req, res) => {
 
     return res.json({ message: 'If that email is registered, a reset link has been sent.' });
   } catch (err) {
+    console.error('[auth] forgot-password error:', err.message);
     return res.status(500).json({ message: 'Server error', error: err.message });
   }
 });

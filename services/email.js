@@ -253,6 +253,9 @@ async function sendEnquiryConfirmationToTenant({ tenantEmail, tenantName, listin
 }
 
 async function sendPasswordResetEmail({ toEmail, userName, resetUrl }) {
+  console.log('[email] sendPasswordResetEmail called for:', toEmail);
+  const config = getEmailConfig();
+  console.log('[email] Resend config ready:', config.ready, config.ready ? '' : config.issues.join('; '));
   return sendEmail({
     to: toEmail,
     subject: 'Reset your LedgeStay password',

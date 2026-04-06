@@ -38,25 +38,25 @@ const HOME_REVIEWS = document.getElementById('home-reviews');
 const HOME_REVIEW_ITEMS = Array.isArray(window.HOME_REVIEW_ITEMS) ? window.HOME_REVIEW_ITEMS : [];
 const HOME_LOCATIONS = [
   {
-    area: 'Koramangala',
+    area: 'Koramangala 📍',
     city: 'Bengaluru',
     count: '20+ stays',
     image: 'https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?w=900&q=80'
   },
   {
-    area: 'Rajaji Nagar',
+    area: 'Rajaji Nagar 📍',
     city: 'Bengaluru',
     count: '10+ stays',
     image: 'https://images.unsplash.com/photo-1484154218962-a197022b5858?w=900&q=80'
   },
   {
-    area: 'Vijaynagara',
+    area: 'Vijaynagara 📍',
     city: 'Bengaluru',
     count: '20+ stays',
     image: 'https://images.unsplash.com/photo-1494526585095-c41746248156?w=900&q=80'
   },
   {
-    area: 'Hebbal',
+    area: 'Hebbal📍',
     city: 'Bengaluru',
     count: '15+ stays',
     image: 'https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?w=900&q=80'
@@ -593,7 +593,7 @@ function resetAuthFlow(options = {}) {
   if (phoneOtpSection) phoneOtpSection.style.display = 'none';
   if (emailRegisterSection) emailRegisterSection.style.display = 'none';
 
-  ['login-phone', 'login-otp', 'phone-name', 'login-email', 'login-password', 'email-register-name', 'forgot-password-email'].forEach((id) => {
+  ['login-phone', 'login-otp', 'phone-name', 'login-email', 'login-password', 'email-register-name', 'reset-email'].forEach((id) => {
     const input = document.getElementById(id);
     if (input) input.value = '';
   });
@@ -2495,14 +2495,16 @@ function showForgotPassword(event) {
 
 async function requestPasswordReset(event) {
   if (event?.preventDefault) event.preventDefault();
-  const email = document.getElementById('forgot-password-email')?.value?.trim() || '';
+  const email = document.getElementById('reset-email')?.value?.trim() || '';
   const message = document.getElementById('forgot-password-message');
-  const btn = document.querySelector('#forgot-password-section button');
+  const btn = document.getElementById('send-reset-link');
 
   if (!email) {
     if (message) { message.textContent = 'Please enter your email address.'; message.style.display = 'block'; }
     return;
   }
+
+  console.log('[auth] Sending password reset request for:', email);
 
   if (btn) btn.disabled = true;
   if (message) { message.textContent = 'Sending...'; message.style.display = 'block'; }
@@ -2514,8 +2516,10 @@ async function requestPasswordReset(event) {
       body: JSON.stringify({ email })
     });
     const data = await res.json();
+    console.log('[auth] Password reset response:', data);
     if (message) { message.textContent = data.message; message.style.color = '#166534'; message.style.display = 'block'; }
   } catch (err) {
+    console.error('[auth] Password reset error:', err);
     if (message) { message.textContent = 'Something went wrong. Please try again.'; message.style.display = 'block'; }
   } finally {
     if (btn) btn.disabled = false;
@@ -3246,14 +3250,19 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  const forgotEmailInput = document.getElementById('forgot-password-email');
+  const forgotEmailInput = document.getElementById('reset-email');
   const forgotMessage = document.getElementById('forgot-password-message');
   if (forgotEmailInput && forgotMessage) {
     forgotEmailInput.addEventListener('input', () => {
       forgotMessage.style.display = 'none';
       forgotMessage.textContent = '';
     });
+    forgotEmailInput.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter') requestPasswordReset(event);
+    });
   }
+
+  document.getElementById('send-reset-link')?.addEventListener('click', requestPasswordReset);
 
   document.getElementById('login-phone')?.addEventListener('keydown', (event) => {
     if (event.key === 'Enter') continueAuth();

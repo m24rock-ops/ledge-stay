@@ -272,10 +272,10 @@
       <button id="auth-submit-button" onclick="continueAuth()">Send OTP</button>
       <p id="login-error" class="error"></p>
       <div id="forgot-password-section" style="display:none;">
-        <input type="email" id="forgot-password-email" placeholder="Email">
-        <a href="#" onclick="requestPasswordReset(event)" style="display:inline-block;margin-top:-8px;font-size:14px;color:#2563EB;text-decoration:none;">
+        <input type="email" id="reset-email" placeholder="Email" autocomplete="email">
+        <button id="send-reset-link" type="button" style="display:inline-block;margin-top:8px;width:100%;padding:12px;background:#2563EB;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;">
           Send reset link
-        </a>
+        </button>
         <p id="forgot-password-message" style="display:none; margin-top:10px; color:#6B7280; font-size:14px; overflow-wrap:anywhere;"></p>
       </div>
     </div>
