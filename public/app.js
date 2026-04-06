@@ -1270,38 +1270,26 @@ function buildListingCardData(listing = {}) {
 function renderListingCard(listing) {
   const card = buildListingCardData(listing);
   const locationLine = card.location || card.address || card.city;
-  const tagsMarkup = card.tags.length
-    ? card.tags.map((tag) => `<span class="listing-tag-pill" title="${escapeHtml(tag)}">${escapeHtml(tag)}</span>`).join('')
-    : '<span class="listing-tag-pill is-muted">Essentials available</span>';
+  const quickTag = card.tags.length ? card.tags[0] : 'Easy view';
 
   return `
-    <article class="listing-card" id="listing-card-${card.id}" data-id="${card.id}" onclick="showDetail('${card.id}')">
+    <article class="listing-card listing-card--compact" id="listing-card-${card.id}" data-id="${card.id}" onclick="showDetail('${card.id}')">
       <div class="card-img-wrap">
         ${card.imageHtml}
         ${renderWishlistHeart(card.id, { source: 'listing' })}
-        ${card.badges.length ? `<div class="card-img-badges">${card.badges.join('')}</div>` : ''}
       </div>
       <div class="card-body">
-        <div class="card-copy">
-          <div class="card-city-label" title="${escapeHtml(card.city)}">${escapeHtml(card.city).toUpperCase()}</div>
-          <h3 class="card-title">${escapeHtml(card.title)}</h3>
+        <div class="card-meta-row">
           <p class="card-location" title="${escapeHtml(locationLine)}">${escapeHtml(locationLine)}</p>
+          <span class="card-quick-tag" title="${escapeHtml(quickTag)}">${escapeHtml(quickTag)}</span>
         </div>
-        <div class="card-meta-stack">
-          ${card.distanceKm ? `<div class="card-distance">${card.distanceKm}</div>` : ''}
-          ${card.rating ? `<div class="card-rating" title="⭐ ${card.rating.value} (${card.rating.count})"><span class="card-rating-compact">⭐ ${card.rating.value} (${card.rating.count})</span></div>` : '<div class="card-rating card-rating--empty">New listing</div>'}
-          <div class="listing-tag-row" aria-label="Amenities">${tagsMarkup}</div>
-        </div>
+        <h3 class="card-title" title="${escapeHtml(card.title)}">${escapeHtml(card.title)}</h3>
         <div class="card-footer">
           <div class="price" title="${escapeHtml(card.price)}">${escapeHtml(card.price)}</div>
           <div class="card-actions" onclick="event.stopPropagation()">
-            ${card.whatsappUrl
-              ? `<a class="btn-contact" href="${card.whatsappUrl}" target="_blank" rel="noopener noreferrer">Contact</a>`
-              : '<button class="btn-contact" disabled>Contact</button>'}
             <button class="btn-details" onclick="event.stopPropagation();showDetail('${card.id}')">View Details</button>
           </div>
         </div>
-        ${card.ownerActions}
       </div>
     </article>`;
 }

@@ -3241,3 +3241,195 @@ body,
   border-color: rgba(236, 72, 153, 0.4);
   background: rgba(255, 255, 255, 0.98);
 }
+
+.listing-card--compact {
+  max-height: 240px;
+  min-height: 240px;
+  border-radius: 12px;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+  display: grid;
+  grid-template-rows: 140px minmax(0, 100px);
+  overflow: hidden;
+}
+
+.listing-card--compact:hover {
+  box-shadow: 0 14px 28px rgba(15, 23, 42, 0.12);
+}
+
+.listing-card--compact .card-img-wrap {
+  width: 100%;
+  height: 140px;
+  min-height: 140px;
+  border-radius: 12px 12px 0 0;
+  background: linear-gradient(135deg, #dbeafe, #eff6ff);
+}
+
+.listing-card--compact .card-img-wrap img,
+.listing-card--compact .card-img-wrap .no-image {
+  width: 100%;
+  height: 140px;
+  object-fit: cover;
+  border-radius: 12px 12px 0 0;
+}
+
+.listing-card--compact .card-body {
+  min-height: 100px;
+  max-height: 100px;
+  padding: 10px 12px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  overflow: hidden;
+}
+
+.listing-card--compact .card-meta-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+}
+
+.listing-card--compact .card-title {
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 14px;
+  line-height: 1.25;
+  font-weight: 700;
+}
+
+.listing-card--compact .card-location {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  color: #64748b;
+  font-size: 11px;
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.listing-card--compact .card-quick-tag {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  min-height: 20px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: #eef6ff;
+  color: #2563eb;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.listing-card--compact .card-footer {
+  margin-top: auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding-top: 0;
+}
+
+.listing-card--compact .price {
+  min-width: 0;
+  padding: 0;
+  background: transparent;
+  box-shadow: none;
+  color: #0f172a;
+  font-size: 16px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.listing-card--compact .card-actions {
+  margin-top: 0;
+  width: auto;
+  flex-shrink: 0;
+}
+
+.listing-card--compact .btn-details {
+  min-height: 32px;
+  height: 32px;
+  padding: 0 10px;
+  border-radius: 8px;
+  font-size: 11px;
+  line-height: 1;
+  border: 1px solid #cfe2f5;
+  background: #ffffff;
+  color: #2563eb;
+}
+
+.listing-card--compact .btn-contact,
+.listing-card--compact .card-img-badges,
+.listing-card--compact .card-distance,
+.listing-card--compact .card-rating,
+.listing-card--compact .listing-tag-row,
+.listing-card--compact .card-city-label,
+.listing-card--compact .owner-listing-actions {
+  display: none;
+}
+
+.listing-card--compact .wishlist-heart--card,
+.listing-card--compact .wishlist-btn {
+  top: 8px;
+  right: 8px;
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  min-height: 32px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.98);
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.12);
+  z-index: 2;
+}
+
+.listing-card--compact .wishlist-heart-icon {
+  font-size: 16px;
+}
+
+@media (max-width: 768px) {
+  #listings-grid {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(104px, calc((100vw - 56px) / 3.15));
+    grid-template-columns: none !important;
+    gap: 12px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: 16px 0 8px;
+    scroll-snap-type: x proximity;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  #listings-grid .listing-card--compact {
+    scroll-snap-align: start;
+  }
+
+  #listings-grid::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+@media (max-width: 480px) {
+  #listings-grid {
+    grid-auto-columns: minmax(100px, calc((100vw - 44px) / 3.1));
+  }
+
+  .listing-card--compact .card-body {
+    padding: 10px;
+  }
+
+  .listing-card--compact .price {
+    font-size: 14px;
+  }
+
+  .listing-card--compact .btn-details {
+    padding: 0 8px;
+    font-size: 10px;
+  }
+}
