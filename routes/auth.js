@@ -266,6 +266,7 @@ router.post('/register', registerEmailHandler);
 
 router.post('/forgot-password', async (req, res) => {
   try {
+    console.log('STEP 1: API HIT');
     const email = normalizeEmail(req.body.email);
     console.log('[auth] forgot-password request for:', email || '(empty)');
 
@@ -292,6 +293,8 @@ router.post('/forgot-password', async (req, res) => {
       userName: user.name,
       resetUrl
     });
+
+    console.log('STEP 2: EMAIL RESPONSE', emailResult);
 
     if (emailResult.ok) {
       console.log('[auth] forgot-password: reset email sent to', user.email, '| resend id:', emailResult.id || 'n/a');
