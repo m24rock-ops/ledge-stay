@@ -581,7 +581,6 @@ function toggleAuthPasswordVisibility() {
 
   const shouldShow = passwordInput.type === 'password';
   passwordInput.type = shouldShow ? 'text' : 'password';
-  toggleButton.textContent = shouldShow ? 'Hide' : 'Show';
   toggleButton.setAttribute('aria-label', shouldShow ? 'Hide password' : 'Show password');
 }
 
@@ -589,7 +588,7 @@ async function submitRoleLogin() {
   const identifier = String(document.getElementById('auth-identifier')?.value || '').trim();
   const password = String(document.getElementById('auth-password')?.value || '');
   const role = authState.loginRole || 'tenant';
-  const button = document.getElementById('auth-login-button');
+  const button = document.getElementById('auth-submit-button');
 
   setAuthError('');
 
@@ -690,15 +689,18 @@ function showPhone(event) {
 
   const phoneTab = document.getElementById('auth-tab-phone');
   const emailTab = document.getElementById('auth-tab-email');
-  const phoneFields = document.getElementById('auth-phone-fields');
-  const emailFields = document.getElementById('auth-email-fields');
-  const forgotSection = document.getElementById('forgot-password-section');
+  const identifierInput = document.getElementById('auth-identifier');
+  const passwordInput = document.getElementById('auth-password');
+  const forgotLink = document.getElementById('forgot-password-link');
 
   if (phoneTab) phoneTab.classList.add('is-active');
   if (emailTab) emailTab.classList.remove('is-active');
-  if (phoneFields) phoneFields.style.display = 'block';
-  if (emailFields) emailFields.style.display = 'none';
-  if (forgotSection) forgotSection.style.display = 'none';
+  if (identifierInput) {
+    identifierInput.placeholder = 'Phone number';
+    identifierInput.setAttribute('inputmode', 'tel');
+  }
+  if (passwordInput) passwordInput.style.display = '';
+  if (forgotLink) forgotLink.style.display = 'none';
 
   setAuthError('');
 }
@@ -709,16 +711,20 @@ function showEmail(event) {
 
   const phoneTab = document.getElementById('auth-tab-phone');
   const emailTab = document.getElementById('auth-tab-email');
-  const phoneFields = document.getElementById('auth-phone-fields');
-  const emailFields = document.getElementById('auth-email-fields');
+  const identifierInput = document.getElementById('auth-identifier');
+  const passwordInput = document.getElementById('auth-password');
+  const forgotLink = document.getElementById('forgot-password-link');
 
   if (phoneTab) phoneTab.classList.remove('is-active');
   if (emailTab) emailTab.classList.add('is-active');
-  if (phoneFields) phoneFields.style.display = 'none';
-  if (emailFields) emailFields.style.display = 'block';
+  if (identifierInput) {
+    identifierInput.placeholder = 'Email address';
+    identifierInput.setAttribute('inputmode', 'email');
+  }
+  if (passwordInput) passwordInput.style.display = '';
+  if (forgotLink) forgotLink.style.display = 'block';
 
   setAuthError('');
-  showLogin();
 }
 
 function showLogin(event) {
@@ -797,6 +803,7 @@ function resetAuthFlow() {
   });
 
   setLoginRole(authState.loginRole);
+  showEmail();
 }
 
 async function completeAuthSession(data) {
@@ -3467,7 +3474,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (event.key === 'Enter') submitRoleLogin();
   });
 
-  document.getElementById('auth-login-button')?.addEventListener('click', () => {
+  document.getElementById('auth-submit-button')?.addEventListener('click', () => {
     if (loginError) loginError.textContent = '';
   });
 
