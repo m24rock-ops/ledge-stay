@@ -231,8 +231,36 @@
 
   <div id="page-login" class="page" style="display:none">
     <div class="form-box">
-      <h2>Welcome Back</h2>
+      <h2>Welcome back</h2>
       <p class="auth-lead">Sign in to your account</p>
+
+      <div class="auth-toggle" role="tablist" aria-label="Authentication method">
+        <button type="button" id="auth-tab-phone" class="auth-toggle-button is-active" onclick="showPhone(event)">Phone</button>
+        <button type="button" id="auth-tab-email" class="auth-toggle-button" onclick="showEmail(event)">Email</button>
+      </div>
+
+      <div id="auth-phone-fields">
+        <input type="tel" id="login-phone" placeholder="Phone number" inputmode="tel" autocomplete="tel">
+        <button id="phone-send-otp-btn" type="button" onclick="sendPhoneOtp()">Send OTP</button>
+
+        <div id="phone-otp-section" style="display:none;">
+          <input type="text" id="login-otp" placeholder="Enter 6-digit OTP" inputmode="numeric" maxlength="6" autocomplete="one-time-code">
+
+          <div id="phone-new-user-section" style="display:none;">
+            <input type="text" id="phone-name" placeholder="Full name" autocomplete="name">
+            <select id="phone-role">
+              <option value="tenant">Tenant</option>
+              <option value="owner">Owner</option>
+            </select>
+          </div>
+
+          <button id="phone-verify-otp-btn" type="button" onclick="verifyPhoneOtp()">Verify OTP</button>
+          <div class="auth-inline-row">
+            <button id="resend-otp-link" class="auth-inline-link" type="button" onclick="resendPhoneOtp()" disabled>Resend OTP</button>
+            <span id="resend-timer-text" class="auth-note-inline">in 30s</span>
+          </div>
+        </div>
+      </div>
 
       <div id="auth-email-fields">
         <div id="email-login-section">
@@ -241,15 +269,15 @@
           <a href="#" onclick="showForgotPassword(event)" id="forgot-password-link" style="display:inline-block;margin-top:-4px;margin-bottom:12px;font-size:14px;color:#6B7280;text-decoration:none;">
             Forgot password?
           </a>
-          <button id="auth-submit-button" onclick="continueAuth()">Continue</button>
-          <p class="auth-switch-copy">Don't have an account? <a href="#" onclick="showSignup(event)">Sign up</a></p>
+          <button id="email-login-btn" type="button" onclick="continueEmailAuth()">Login with Email</button>
+          <p class="auth-switch-copy">New here? <a href="#" onclick="showSignup(event)">Create account</a> - it's free.</p>
         </div>
 
         <div id="email-signup-section" style="display:none;">
           <input type="text" id="signup-name" placeholder="Full Name" autocomplete="name">
           <input type="email" id="signup-email" placeholder="Email" autocomplete="email">
           <input type="password" id="signup-password" placeholder="Password" autocomplete="new-password">
-          <button id="signup-submit-button" onclick="continueAuth()">Create Account</button>
+          <button id="signup-submit-button" type="button" onclick="registerEmailAccount()">Create Account</button>
           <p class="auth-switch-copy">Already have an account? <a href="#" onclick="showLogin(event)">Login</a></p>
         </div>
       </div>
