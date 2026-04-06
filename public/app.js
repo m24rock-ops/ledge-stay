@@ -32,7 +32,7 @@ let nearbySearchState = {
 let authState = {
   mode: 'phone',
   phoneOtpSent: false,
-  emailNeedsRegistration: false
+  emailMode: 'login'
 };
 const HOME_REVIEWS = document.getElementById('home-reviews');
 const HOME_REVIEW_ITEMS = Array.isArray(window.HOME_REVIEW_ITEMS) ? window.HOME_REVIEW_ITEMS : [];
@@ -565,7 +565,7 @@ function setAuthButtonLabel() {
     return;
   }
 
-  button.textContent = authState.emailNeedsRegistration ? 'Create Account' : 'Continue';
+  button.textContent = authState.emailMode === 'signup' ? 'Sign Up' : 'Login';
 }
 
 function resetAuthFlow(options = {}) {
@@ -574,7 +574,7 @@ function resetAuthFlow(options = {}) {
   authState = {
     mode: preserveMode ? authState.mode : 'phone',
     phoneOtpSent: false,
-    emailNeedsRegistration: false
+    emailMode: preserveMode ? authState.emailMode : 'login'
   };
 
   const loginError = document.getElementById('login-error');
@@ -589,16 +589,18 @@ function resetAuthFlow(options = {}) {
   }
 
   const phoneOtpSection = document.getElementById('phone-otp-section');
-  const emailRegisterSection = document.getElementById('email-register-section');
+  const emailLoginSection = document.getElementById('email-login-section');
+  const emailSignupSection = document.getElementById('email-signup-section');
   if (phoneOtpSection) phoneOtpSection.style.display = 'none';
-  if (emailRegisterSection) emailRegisterSection.style.display = 'none';
+  if (emailLoginSection) emailLoginSection.style.display = 'block';
+  if (emailSignupSection) emailSignupSection.style.display = 'none';
 
-  ['login-phone', 'login-otp', 'phone-name', 'login-email', 'login-password', 'email-register-name', 'reset-email'].forEach((id) => {
+  ['login-phone', 'login-otp', 'phone-name', 'login-email', 'login-password', 'signup-name', 'signup-email', 'signup-password', 'reset-email'].forEach((id) => {
     const input = document.getElementById(id);
     if (input) input.value = '';
   });
 
-  ['phone-role', 'email-register-role'].forEach((id) => {
+  ['phone-role'].forEach((id) => {
     const select = document.getElementById(id);
     if (select) select.value = 'tenant';
   });
@@ -612,7 +614,7 @@ function setAuthMode(mode, options = {}) {
 
   if (!silentReset) {
     authState.phoneOtpSent = false;
-    authState.emailNeedsRegistration = false;
+    authState.emailMode = 'login';
   }
 
   const phoneTab = document.getElementById('auth-tab-phone');
@@ -620,7 +622,6 @@ function setAuthMode(mode, options = {}) {
   const phoneFields = document.getElementById('auth-phone-fields');
   const emailFields = document.getElementById('auth-email-fields');
   const phoneOtpSection = document.getElementById('phone-otp-section');
-  const emailRegisterSection = document.getElementById('email-register-section');
   const forgotLink = document.getElementById('forgot-password-link');
   const loginError = document.getElementById('login-error');
 
@@ -629,9 +630,39 @@ function setAuthMode(mode, options = {}) {
   if (phoneFields) phoneFields.style.display = authState.mode === 'phone' ? 'block' : 'none';
   if (emailFields) emailFields.style.display = authState.mode === 'email' ? 'block' : 'none';
   if (phoneOtpSection) phoneOtpSection.style.display = authState.mode === 'phone' && authState.phoneOtpSent ? 'block' : 'none';
-  if (emailRegisterSection) emailRegisterSection.style.display = authState.mode === 'email' && authState.emailNeedsRegistration ? 'block' : 'none';
-  if (forgotLink) forgotLink.style.display = authState.mode === 'email' && !authState.emailNeedsRegistration ? 'inline-block' : 'none';
+  if (forgotLink) forgotLink.style.display = 'none';
   if (loginError) loginError.textContent = '';
+
+  setEmailMode(authState.emailMode, { silent: true });
+
+  if (forgotLink) {
+    forgotLink.style.display = authState.mode === 'email' && authState.emailMode === 'login' ? 'inline-block' : 'none';
+  }
+
+  setAuthButtonLabel();
+}
+
+function setEmailMode(mode, options = {}) {
+  const { silent = false } = options;
+
+  authState.emailMode = mode === 'signup' ? 'signup' : 'login';
+
+  const loginTab = document.getElementById('email-tab-login');
+  const signupTab = document.getElementById('email-tab-signup');
+  const loginSection = document.getElementById('email-login-section');
+  const signupSection = document.getElementById('email-signup-section');
+  const forgotLink = document.getElementById('forgot-password-link');
+  const loginError = document.getElementById('login-error');
+
+  if (loginTab) loginTab.classList.toggle('is-active', authState.emailMode === 'login');
+  if (signupTab) signupTab.classList.toggle('is-active', authState.emailMode === 'signup');
+  if (loginSection) loginSection.style.display = authState.emailMode === 'login' ? 'block' : 'none';
+  if (signupSection) signupSection.style.display = authState.emailMode === 'signup' ? 'block' : 'none';
+  if (forgotLink) forgotLink.style.display = authState.mode === 'email' && authState.emailMode === 'login' ? 'inline-block' : 'none';
+
+  if (!silent && loginError) {
+    loginError.textContent = '';
+  }
 
   setAuthButtonLabel();
 }
@@ -2362,7 +2393,7 @@ async function continueAuth() {
       return;
     }
 
-    if (authState.emailNeedsRegistration) {
+    if (authState.emailMode === 'signup') {
       await registerEmailAccount();
     } else {
       await continueEmailAuth();
@@ -2441,11 +2472,15 @@ async function continueEmailAuth() {
   });
 
   if (data.type === 'new_user_email') {
-    authState.emailNeedsRegistration = true;
+    authState.emailMode = 'signup';
+    const signupEmail = document.getElementById('signup-email');
+    const signupPassword = document.getElementById('signup-password');
+    if (signupEmail) signupEmail.value = email;
+    if (signupPassword) signupPassword.value = password;
     setAuthMode('email', { silentReset: true });
 
     const errorField = document.getElementById('login-error');
-    if (errorField) errorField.textContent = 'This email is new. Add your name and account type to finish setup.';
+    if (errorField) errorField.textContent = 'This email is new. Complete signup to create your account.';
     return;
   }
 
@@ -2453,10 +2488,10 @@ async function continueEmailAuth() {
 }
 
 async function registerEmailAccount() {
-  const email = String(document.getElementById('login-email')?.value || '').trim().toLowerCase();
-  const password = String(document.getElementById('login-password')?.value || '');
-  const name = String(document.getElementById('email-register-name')?.value || '').trim();
-  const role = String(document.getElementById('email-register-role')?.value || 'tenant');
+  const email = String(document.getElementById('signup-email')?.value || '').trim().toLowerCase();
+  const password = String(document.getElementById('signup-password')?.value || '');
+  const name = String(document.getElementById('signup-name')?.value || '').trim();
+  const role = 'tenant';
 
   if (!email) {
     throw new Error('Please enter your email address.');
@@ -3237,14 +3272,16 @@ document.addEventListener('DOMContentLoaded', () => {
     'phone-name',
     'login-email',
     'login-password',
-    'email-register-name'
+    'signup-name',
+    'signup-email',
+    'signup-password'
   ].forEach((id) => {
     document.getElementById(id)?.addEventListener('input', () => {
       if (loginError) loginError.textContent = '';
     });
   });
 
-  ['phone-role', 'email-register-role'].forEach((id) => {
+  ['phone-role'].forEach((id) => {
     document.getElementById(id)?.addEventListener('change', () => {
       if (loginError) loginError.textContent = '';
     });
@@ -3274,6 +3311,15 @@ document.addEventListener('DOMContentLoaded', () => {
     if (event.key === 'Enter') continueAuth();
   });
   document.getElementById('login-password')?.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter') continueAuth();
+  });
+  document.getElementById('signup-name')?.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter') continueAuth();
+  });
+  document.getElementById('signup-email')?.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter') continueAuth();
+  });
+  document.getElementById('signup-password')?.addEventListener('keydown', (event) => {
     if (event.key === 'Enter') continueAuth();
   });
 

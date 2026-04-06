@@ -813,6 +813,10 @@ button:hover { background: var(--primary-dark); transform: translateY(-1px); }
   border: 1px solid var(--border);
 }
 
+.auth-toggle--inner {
+  margin-bottom: 14px;
+}
+
 .auth-toggle-button {
   width: 100%;
   margin-top: 0 !important;

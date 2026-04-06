@@ -254,19 +254,25 @@
       </div>
 
       <div id="auth-email-fields" style="display:none;">
-        <input type="email" id="login-email" placeholder="Email" autocomplete="email">
-        <input type="password" id="login-password" placeholder="Password" autocomplete="current-password">
+        <div class="auth-toggle auth-toggle--inner" role="tablist" aria-label="Email authentication">
+          <button type="button" id="email-tab-login" class="auth-toggle-button is-active" onclick="setEmailMode('login')">Login</button>
+          <button type="button" id="email-tab-signup" class="auth-toggle-button" onclick="setEmailMode('signup')">Sign Up</button>
+        </div>
+
+        <div id="email-login-section">
+          <input type="email" id="login-email" placeholder="Email" autocomplete="email">
+          <input type="password" id="login-password" placeholder="Password" autocomplete="current-password">
+        </div>
+
+        <div id="email-signup-section" style="display:none;">
+          <input type="text" id="signup-name" placeholder="Name" autocomplete="name">
+          <input type="email" id="signup-email" placeholder="Email" autocomplete="email">
+          <input type="password" id="signup-password" placeholder="Password" autocomplete="new-password">
+        </div>
+
         <a href="#" onclick="showForgotPassword(event)" id="forgot-password-link" style="display:inline-block;margin-top:-4px;margin-bottom:12px;font-size:14px;color:#6B7280;text-decoration:none;">
           Forgot password?
         </a>
-        <div id="email-register-section" style="display:none;">
-          <input type="text" id="email-register-name" placeholder="Full name">
-          <select id="email-register-role">
-            <option value="tenant">I am looking for a place (Tenant)</option>
-            <option value="owner">I want to post a listing (Owner)</option>
-          </select>
-          <p class="auth-note">We did not find this email. Complete these details to create your account.</p>
-        </div>
       </div>
 
       <button id="auth-submit-button" onclick="continueAuth()">Send OTP</button>

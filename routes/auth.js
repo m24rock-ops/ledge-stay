@@ -9,7 +9,10 @@ const { sendPasswordResetEmail } = require('../services/email');
 const router = express.Router();
 
 const OTP_EXPIRY_MS = 5 * 60 * 1000;
+const OTP_REQUEST_WINDOW_MS = 5 * 60 * 1000;
+const OTP_MAX_REQUESTS_PER_WINDOW = 3;
 const client = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
+const otpRequestStore = new Map();
 
 function escapeRegExp(str) {
   return String(str).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -45,8 +48,44 @@ function isValidRole(role) {
   return ['tenant', 'owner'].includes(String(role || ''));
 }
 
+function consumeOtpRequestQuota(phone) {
+  const now = Date.now();
+  const existing = otpRequestStore.get(phone);
+
+  if (!existing || now - existing.windowStart >= OTP_REQUEST_WINDOW_MS) {
+    otpRequestStore.set(phone, { count: 1, windowStart: now });
+    return { allowed: true, remaining: OTP_MAX_REQUESTS_PER_WINDOW - 1, retryAfterSeconds: 0 };
+  }
+
+  if (existing.count >= OTP_MAX_REQUESTS_PER_WINDOW) {
+    const retryAfterMs = Math.max(OTP_REQUEST_WINDOW_MS - (now - existing.windowStart), 0);
+    return {
+      allowed: false,
+      remaining: 0,
+      retryAfterSeconds: Math.ceil(retryAfterMs / 1000)
+    };
+  }
+
+  existing.count += 1;
+  otpRequestStore.set(phone, existing);
+
+  return {
+    allowed: true,
+    remaining: OTP_MAX_REQUESTS_PER_WINDOW - existing.count,
+    retryAfterSeconds: 0
+  };
+}
+
 async function issuePhoneOtp(phone) {
   console.log('Sending OTP to:', phone);
+
+  const rateLimitResult = consumeOtpRequestQuota(phone);
+  if (!rateLimitResult.allowed) {
+    const err = new Error('Too many OTP requests. Please try again later.');
+    err.status = 429;
+    err.retryAfterSeconds = rateLimitResult.retryAfterSeconds;
+    throw err;
+  }
 
   const sanitizedPhone = String(phone || '').replace(/^\+/, '');
 
@@ -127,6 +166,12 @@ async function continueHandler(req, res) {
       expiresInSeconds: Math.floor(OTP_EXPIRY_MS / 1000)
     });
   } catch (err) {
+    if (err.status === 429) {
+      return res.status(429).json({
+        message: err.message,
+        retryAfterSeconds: err.retryAfterSeconds || 0
+      });
+    }
     return res.status(500).json({ message: 'Server error', error: err.message });
   }
 }
@@ -239,6 +284,12 @@ router.post('/send-otp', async (req, res) => {
       expiresInSeconds: Math.floor(OTP_EXPIRY_MS / 1000)
     });
   } catch (err) {
+    if (err.status === 429) {
+      return res.status(429).json({
+        message: err.message,
+        retryAfterSeconds: err.retryAfterSeconds || 0
+      });
+    }
     return res.status(500).json({ message: 'Server error', error: err.message });
   }
 });
