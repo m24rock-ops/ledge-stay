@@ -121,6 +121,8 @@ async function continueHandler(req, res) {
       return res.status(400).json({ message: 'Please enter a valid email or phone number.' });
     }
 
+    console.log('Sending OTP to:', phone);
+
     const otp = generateOtp();
     otpStore.set(phone, {
       otp,
