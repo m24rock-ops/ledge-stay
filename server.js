@@ -5,7 +5,9 @@ const dotenv = require('dotenv');
 const path = require('path');
 const { getEmailConfig } = require('./services/email');
 
-dotenv.config();
+if (process.env.NODE_ENV !== 'production') {
+  dotenv.config();
+}
 
 const app = express();
 

@@ -77,11 +77,14 @@ function getFriendlyResendHint(details) {
   return '';
 }
 
-async function sendEmail({ to, subject, html, text, replyTo }) {
+async function sendEmail({ to, subject, html, text, replyTo, throwOnConfigError = false }) {
   const config = getEmailConfig();
 
   if (!config.ready) {
     console.warn('[email] Resend is not configured correctly:', config.issues.join(' '));
+    if (throwOnConfigError) {
+      throw new Error(`Resend configuration issues: ${config.issues.join(' ')}`);
+    }
     return {
       ok: false,
       skipped: true,
@@ -140,6 +143,13 @@ async function sendEmail({ to, subject, html, text, replyTo }) {
         details: parsedBody || rawBody,
         hint
       });
+
+      if (throwOnConfigError) {
+        const apiError = new Error(parsedBody?.message || rawBody || 'Resend API request failed');
+        apiError.status = response.status;
+        apiError.hint = hint;
+        throw apiError;
+      }
 
       return {
         ok: false,
@@ -252,11 +262,27 @@ async function sendEnquiryConfirmationToTenant({ tenantEmail, tenantName, listin
   });
 }
 
-async function sendPasswordResetEmail({ toEmail, userName, resetUrl }) {
-  console.log('[email] sendPasswordResetEmail called for:', toEmail);
+async function sendPasswordResetEmail(emailOrParams, resetLink, displayName = 'there') {
+  const toEmail = typeof emailOrParams === 'object' && emailOrParams !== null
+    ? emailOrParams.toEmail
+    : emailOrParams;
+  const resetUrl = typeof emailOrParams === 'object' && emailOrParams !== null
+    ? emailOrParams.resetUrl
+    : resetLink;
+  const userName = typeof emailOrParams === 'object' && emailOrParams !== null
+    ? (emailOrParams.userName || 'there')
+    : displayName;
+
   const config = getEmailConfig();
-  console.log('[email] Resend config ready:', config.ready, config.ready ? '' : config.issues.join('; '));
-  return sendEmail({
+  console.log('[email] sendPasswordResetEmail called', {
+    to: toEmail,
+    from: config.fromAddress,
+    emailFromEnv: process.env.EMAIL_FROM || null,
+    resendFromEnv: process.env.RESEND_FROM_EMAIL || null,
+    configReady: config.ready
+  });
+
+  const response = await sendEmail({
     to: toEmail,
     subject: 'Reset your LedgeStay password',
     html: `
@@ -280,8 +306,12 @@ async function sendPasswordResetEmail({ toEmail, userName, resetUrl }) {
         </div>
       </div>
     `,
-    text: `Hi ${userName}, reset your password using this link: ${resetUrl}`
+    text: `Hi ${userName}, reset your password using this link: ${resetUrl}`,
+    throwOnConfigError: true
   });
+
+  console.log('[email] sendPasswordResetEmail response:', response);
+  return response;
 }
 
 module.exports = {

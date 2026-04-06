@@ -288,11 +288,7 @@ router.post('/forgot-password', async (req, res) => {
     const baseUrl = process.env.APP_BASE_URL || 'https://ledge-stay.up.railway.app';
     const resetUrl = `${baseUrl}/reset-password?token=${token}`;
 
-    const emailResult = await sendPasswordResetEmail({
-      toEmail: user.email,
-      userName: user.name,
-      resetUrl
-    });
+    const emailResult = await sendPasswordResetEmail(user.email, resetUrl);
 
     console.log('STEP 2: EMAIL RESPONSE', emailResult);
 
