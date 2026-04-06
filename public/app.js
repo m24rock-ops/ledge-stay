@@ -29,7 +29,11 @@ let nearbySearchState = {
   lng: null,
   radiusKm: 10
 };
+let selectedRole = 'tenant';
 let authState = {
+  loginMode: 'phone',
+  otpSent: false,
+  otpPhone: '',
   loginRole: 'tenant'
 };
 const HOME_REVIEWS = document.getElementById('home-reviews');
@@ -104,6 +108,11 @@ function showPage(page, options = {}) {
 
   const activePage = document.getElementById(`page-${normalizedPage}`);
   if (activePage) activePage.style.display = 'block';
+
+  const siteNav = document.querySelector('.site-nav');
+  if (siteNav) {
+    siteNav.style.display = normalizedPage === 'login' ? 'none' : '';
+  }
 
   // Reset auth UI whenever switching between auth pages.
   if (normalizedPage === 'login') {
@@ -553,39 +562,363 @@ function sanitizePhone(phone) {
   return String(phone || '').replace(/[^\d]/g, '');
 }
 
-function resetAuthFlow() {
-  ['auth-identifier', 'auth-password'].forEach((id) => {
-    const input = document.getElementById(id);
+function ensureLoginUiElements() {
+  const loginCard = document.querySelector('#page-login .login-card');
+  if (!loginCard) return null;
+
+  const submitButton = loginCard.querySelector('.login-btn');
+  if (!submitButton) return null;
+
+  const tabs = loginCard.querySelectorAll('.tabs button');
+  const phoneTab = tabs[0] || null;
+  const emailTab = tabs[1] || null;
+
+  const roleButtons = loginCard.querySelectorAll('.role-toggle button');
+  const tenantButton = roleButtons[0] || null;
+  const ownerButton = roleButtons[1] || null;
+
+  let phoneInput = document.getElementById('login-phone')
+    || loginCard.querySelector('input[type="tel"]')
+    || loginCard.querySelector('input[placeholder*="Phone" i]')
+    || loginCard.querySelector(':scope > input[type="text"]');
+  if (phoneInput && !phoneInput.id) phoneInput.id = 'login-phone';
+
+  let emailInput = document.getElementById('login-email')
+    || loginCard.querySelector('input[type="email"]')
+    || null;
+
+  const passwordField = loginCard.querySelector('.password-field') || null;
+  const passwordInput = document.getElementById('login-password')
+    || passwordField?.querySelector('input')
+    || null;
+  if (passwordInput && !passwordInput.id) passwordInput.id = 'login-password';
+
+  let phoneFields = document.getElementById('auth-phone-fields');
+  if (!phoneFields) {
+    phoneFields = document.createElement('div');
+    phoneFields.id = 'auth-phone-fields';
+    if (phoneInput) {
+      phoneInput.parentNode?.insertBefore(phoneFields, phoneInput);
+      phoneFields.appendChild(phoneInput);
+    } else {
+      loginCard.insertBefore(phoneFields, passwordField || submitButton);
+    }
+  }
+
+  if (phoneInput && phoneInput.parentElement !== phoneFields) {
+    phoneFields.insertBefore(phoneInput, phoneFields.firstChild);
+  }
+
+  let emailFields = document.getElementById('auth-email-fields');
+  if (!emailFields) {
+    emailFields = document.createElement('div');
+    emailFields.id = 'auth-email-fields';
+    loginCard.insertBefore(emailFields, submitButton);
+  }
+
+  if (!emailInput) {
+    emailInput = document.createElement('input');
+    emailInput.type = 'email';
+    emailInput.id = 'login-email';
+    emailInput.placeholder = 'Email address';
+  }
+
+  if (emailInput.parentElement !== emailFields) {
+    emailFields.appendChild(emailInput);
+  }
+
+  if (passwordField && passwordField.parentElement !== emailFields) {
+    emailFields.appendChild(passwordField);
+  }
+
+  let otpSection = document.getElementById('phone-otp-section');
+  if (!otpSection) {
+    otpSection = document.createElement('div');
+    otpSection.id = 'phone-otp-section';
+    otpSection.style.display = 'none';
+    otpSection.innerHTML = `
+      <input type="text" id="login-otp" placeholder="Enter 6-digit OTP" inputmode="numeric" maxlength="6">
+      <input type="text" id="login-name" placeholder="Full name (for new users)">
+    `;
+    phoneFields.appendChild(otpSection);
+  }
+
+  let errorField = document.getElementById('login-error');
+  if (!errorField) {
+    errorField = document.createElement('p');
+    errorField.id = 'login-error';
+    submitButton.insertAdjacentElement('afterend', errorField);
+  }
+
+  errorField.style.color = '#dc2626';
+  errorField.style.marginTop = '10px';
+
+  return {
+    loginCard,
+    submitButton,
+    phoneTab,
+    emailTab,
+    tenantButton,
+    ownerButton,
+    phoneInput,
+    emailInput,
+    passwordField,
+    passwordInput,
+    phoneFields,
+    emailFields,
+    otpSection,
+    otpInput: document.getElementById('login-otp'),
+    nameInput: document.getElementById('login-name'),
+    errorField
+  };
+}
+
+function setLoginError(message = '') {
+  const ui = ensureLoginUiElements();
+  if (!ui?.errorField) return;
+  ui.errorField.textContent = message;
+}
+
+function applyRoleToggleState() {
+  const ui = ensureLoginUiElements();
+  if (!ui) return;
+
+  if (ui.tenantButton) ui.tenantButton.classList.toggle('active', selectedRole === 'tenant');
+  if (ui.ownerButton) ui.ownerButton.classList.toggle('active', selectedRole === 'owner');
+}
+
+function applyAuthModeState(nextMode = authState.loginMode) {
+  const ui = ensureLoginUiElements();
+  if (!ui) return;
+
+  const mode = nextMode === 'email' ? 'email' : 'phone';
+  authState.loginMode = mode;
+
+  if (ui.phoneTab) ui.phoneTab.classList.toggle('active', mode === 'phone');
+  if (ui.emailTab) ui.emailTab.classList.toggle('active', mode === 'email');
+
+  if (ui.phoneFields) ui.phoneFields.style.display = mode === 'phone' ? '' : 'none';
+  if (ui.emailFields) ui.emailFields.style.display = mode === 'email' ? '' : 'none';
+
+  // Password is only used for email login mode.
+  if (ui.passwordField) ui.passwordField.style.display = mode === 'email' ? '' : 'none';
+
+  if (mode === 'phone') {
+    if (ui.otpSection) ui.otpSection.style.display = authState.otpSent ? '' : 'none';
+    if (ui.submitButton) ui.submitButton.textContent = authState.otpSent ? 'Verify OTP' : 'Send OTP';
+  } else {
+    authState.otpSent = false;
+    authState.otpPhone = '';
+    if (ui.otpSection) ui.otpSection.style.display = 'none';
+    if (ui.submitButton) ui.submitButton.textContent = 'Login';
+  }
+}
+
+function setSelectedRole(role) {
+  selectedRole = role === 'owner' ? 'owner' : 'tenant';
+  authState.loginRole = selectedRole;
+  applyRoleToggleState();
+}
+
+function resetAuthFlow(options = {}) {
+  const { preserveMode = false } = options;
+  const ui = ensureLoginUiElements();
+  if (!ui) return;
+
+  [ui.phoneInput, ui.emailInput, ui.passwordInput, ui.otpInput, ui.nameInput].forEach((input) => {
     if (input) input.value = '';
   });
 
-  const tabActive = document.querySelector('.tabs .active');
-  if (tabActive) tabActive.classList.remove('active');
-  const firstTab = document.querySelector('.tabs button');
-  if (firstTab) firstTab.classList.add('active');
+  authState.otpSent = false;
+  authState.otpPhone = '';
 
-  const roleActive = document.querySelector('.role-toggle .active');
-  if (roleActive) roleActive.classList.remove('active');
-  const firstRole = document.querySelector('.role-toggle button');
-  if (firstRole) firstRole.classList.add('active');
+  if (!preserveMode) {
+    authState.loginMode = 'phone';
+  }
 
-  const errorField = document.getElementById('login-error');
-  if (errorField) errorField.textContent = '';
+  setSelectedRole('tenant');
+  setLoginError('');
+  applyAuthModeState(authState.loginMode);
 }
 
-async function completeAuthSession(data) {
+async function sendOtpForPhoneLogin() {
+  const ui = ensureLoginUiElements();
+  if (!ui) return;
+
+  setLoginError('');
+  const phone = sanitizePhone(ui.phoneInput?.value || '');
+  if (!/^\d{10}$/.test(phone)) {
+    setLoginError('Please enter a valid 10-digit phone number.');
+    return;
+  }
+
+  ui.submitButton.disabled = true;
+  try {
+    const res = await fetch('/api/auth/send-otp', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone })
+    });
+    const data = await res.json();
+
+    if (!res.ok) {
+      throw new Error(data.message || 'Unable to send OTP.');
+    }
+
+    authState.otpSent = true;
+    authState.otpPhone = phone;
+    if (ui.otpSection) ui.otpSection.style.display = '';
+    applyAuthModeState('phone');
+  } catch (err) {
+    setLoginError(err.message || 'Unable to send OTP.');
+  } finally {
+    ui.submitButton.disabled = false;
+  }
+}
+
+async function verifyPhoneOtpLogin() {
+  const ui = ensureLoginUiElements();
+  if (!ui) return;
+
+  setLoginError('');
+  const phone = sanitizePhone(ui.phoneInput?.value || authState.otpPhone || '');
+  const otp = String(ui.otpInput?.value || '').trim();
+  const name = String(ui.nameInput?.value || '').trim();
+
+  if (!/^\d{10}$/.test(phone)) {
+    setLoginError('Please enter a valid 10-digit phone number.');
+    return;
+  }
+
+  if (!/^\d{6}$/.test(otp)) {
+    setLoginError('Please enter a valid 6-digit OTP.');
+    return;
+  }
+
+  ui.submitButton.disabled = true;
+  try {
+    const res = await fetch('/api/auth/verify-otp', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone, otp, name, role: selectedRole })
+    });
+    const data = await res.json();
+
+    if (!res.ok) {
+      throw new Error(data.message || 'OTP verification failed.');
+    }
+
+    await completeAuthSession(data, { redirectPage: 'home' });
+  } catch (err) {
+    setLoginError(err.message || 'OTP verification failed.');
+  } finally {
+    ui.submitButton.disabled = false;
+  }
+}
+
+async function loginWithEmailPassword() {
+  const ui = ensureLoginUiElements();
+  if (!ui) return;
+
+  setLoginError('');
+  const email = String(ui.emailInput?.value || '').trim();
+  const password = String(ui.passwordInput?.value || '').trim();
+
+  if (!email) {
+    setLoginError('Please enter your email address.');
+    return;
+  }
+
+  if (!password) {
+    setLoginError('Please enter your password.');
+    return;
+  }
+
+  ui.submitButton.disabled = true;
+  try {
+    const res = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password, role: selectedRole })
+    });
+    const data = await res.json();
+
+    if (!res.ok || !data?.token || !data?.user) {
+      throw new Error(data.message || 'Login failed.');
+    }
+
+    await completeAuthSession(data, { redirectPage: 'home' });
+  } catch (err) {
+    setLoginError(err.message || 'Login failed.');
+  } finally {
+    ui.submitButton.disabled = false;
+  }
+}
+
+async function handleLoginSubmit(event) {
+  if (event) event.preventDefault();
+  setLoginError('');
+
+  if (authState.loginMode === 'phone') {
+    if (authState.otpSent) {
+      await verifyPhoneOtpLogin();
+      return;
+    }
+    await sendOtpForPhoneLogin();
+    return;
+  }
+
+  await loginWithEmailPassword();
+}
+
+function bindLoginUiEvents() {
+  const ui = ensureLoginUiElements();
+  if (!ui || ui.loginCard.dataset.authBound === 'true') return;
+
+  ui.phoneTab?.addEventListener('click', () => {
+    authState.otpSent = false;
+    authState.otpPhone = '';
+    applyAuthModeState('phone');
+    setLoginError('');
+  });
+
+  ui.emailTab?.addEventListener('click', () => {
+    applyAuthModeState('email');
+    setLoginError('');
+  });
+
+  ui.tenantButton?.addEventListener('click', () => {
+    setSelectedRole('tenant');
+  });
+
+  ui.ownerButton?.addEventListener('click', () => {
+    setSelectedRole('owner');
+  });
+
+  ui.submitButton?.addEventListener('click', handleLoginSubmit);
+
+  ui.loginCard.querySelectorAll('input').forEach((input) => {
+    input.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter') {
+        handleLoginSubmit(event);
+      }
+    });
+  });
+
+  ui.loginCard.dataset.authBound = 'true';
+}
+
+async function completeAuthSession(data, options = {}) {
+  const { redirectPage = 'home' } = options;
+  if (!data?.token || !data?.user) {
+    throw new Error('Invalid login response from server.');
+  }
+
   localStorage.setItem('token', data.token);
   localStorage.setItem('user', JSON.stringify(data.user));
   await loadWishlistState();
   updateNav();
-
-  if (data.user.role === 'admin') {
-    showPage('admin');
-  } else if (data.user.role === 'owner') {
-    showPage('dashboard');
-  } else {
-    showPage('wishlist');
-  }
+  showPage(redirectPage);
 }
 
 function carouselGoTo(triggerEl, index) {
@@ -3005,23 +3338,9 @@ document.addEventListener('DOMContentLoaded', () => {
     };
   }
 
-  const tabButtons = document.querySelectorAll('.tabs button');
-  tabButtons.forEach((btn) => {
-    btn.onclick = () => {
-      const activeTab = document.querySelector('.tabs .active');
-      if (activeTab) activeTab.classList.remove('active');
-      btn.classList.add('active');
-    };
-  });
-
-  const roleButtons = document.querySelectorAll('.role-toggle button');
-  roleButtons.forEach((btn) => {
-    btn.onclick = () => {
-      const activeRole = document.querySelector('.role-toggle .active');
-      if (activeRole) activeRole.classList.remove('active');
-      btn.classList.add('active');
-    };
-  });
+  bindLoginUiEvents();
+  applyAuthModeState('phone');
+  applyRoleToggleState();
 
   document.addEventListener('keydown', (event) => {
     if (event.key === 'Escape') {
