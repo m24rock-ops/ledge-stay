@@ -3194,3 +3194,50 @@ body,
     font-size: 11px;
   }
 }
+
+.card-img-wrap img,
+.card-img-wrap .no-image,
+.featured-image-wrap img,
+.featured-image-wrap .no-image,
+.card-img-badges,
+.featured-card-badge-row,
+.featured-card-badge,
+.card-badges,
+.img-badge,
+.badge {
+  pointer-events: none;
+}
+
+.card-img-wrap .wishlist-heart--card,
+.card-img-wrap .wishlist-btn,
+.featured-image-wrap .wishlist-heart--card,
+.featured-image-wrap .wishlist-btn {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 5;
+  pointer-events: auto;
+}
+
+.wishlist-heart,
+.wishlist-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  user-select: none;
+}
+
+.wishlist-heart-icon {
+  display: block;
+  font-size: 18px;
+  line-height: 1;
+  pointer-events: none;
+}
+
+.wishlist-heart.is-saved,
+.wishlist-btn.is-saved,
+.wishlist-heart.active,
+.wishlist-btn.active {
+  border-color: rgba(236, 72, 153, 0.4);
+  background: rgba(255, 255, 255, 0.98);
+}

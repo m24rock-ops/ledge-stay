@@ -891,6 +891,10 @@ function isListingSaved(listingId) {
   return savedListingIds.has(String(listingId));
 }
 
+function normalizeWishlistListingId(listingId) {
+  return String(listingId || '').trim();
+}
+
 function getWishlist() {
   try {
     const raw = localStorage.getItem(WISHLIST_STORAGE_KEY) || localStorage.getItem(WISHLIST_LEGACY_STORAGE_KEY);
@@ -923,34 +927,38 @@ function saveWishlist(ids = savedListingIds) {
   }
 }
 
+function updateWishlistButtonElement(button, saved) {
+  if (!button) return;
+
+  button.classList.toggle('is-saved', saved);
+  button.classList.toggle('active', saved);
+  button.setAttribute('aria-pressed', saved ? 'true' : 'false');
+  button.setAttribute('aria-label', saved ? 'Remove from wishlist' : 'Save to wishlist');
+
+  const icon = button.querySelector('.wishlist-heart-icon');
+  if (icon) {
+    icon.textContent = saved ? '❤️' : '🤍';
+  }
+}
+
 function applyWishlistUI(targetListingId = null, forcedSavedState = null) {
-  document.querySelectorAll('.wishlist-btn, [data-wishlist-id]').forEach((button) => {
-    const listingId = button.getAttribute('data-wishlist-id')
+  const normalizedTargetId = targetListingId ? normalizeWishlistListingId(targetListingId) : null;
+
+  document.querySelectorAll('.wishlist-btn[data-wishlist-id]').forEach((button) => {
+    const listingId = normalizeWishlistListingId(
+      button.getAttribute('data-wishlist-id')
       || button.getAttribute('data-id')
-      || button.closest('[data-id]')?.getAttribute('data-id');
+      || button.closest('[data-id]')?.getAttribute('data-id')
+    );
     if (!listingId) return;
-    if (targetListingId && String(targetListingId) !== String(listingId)) return;
+    if (normalizedTargetId && normalizedTargetId !== listingId) return;
 
     const saved = typeof forcedSavedState === 'boolean'
       ? forcedSavedState
-      : savedListingIds.has(String(listingId));
-    const stroke = saved ? '#ec4899' : '#f472b6';
-    const fill = saved ? '#ec4899' : 'none';
+      : savedListingIds.has(listingId);
 
-    button.classList.toggle('is-saved', saved);
-    button.classList.toggle('active', saved);
-    button.setAttribute('aria-pressed', saved ? 'true' : 'false');
-    button.setAttribute('aria-label', saved ? 'Remove from wishlist' : 'Save to wishlist');
-
-    const svg = button.querySelector('svg');
-    if (svg) {
-      svg.setAttribute('fill', fill);
-      svg.setAttribute('stroke', stroke);
-      const path = svg.querySelector('path');
-      if (path) { path.setAttribute('fill', fill); path.setAttribute('stroke', stroke); }
-    }
-
-    console.debug('[wishlist] applyWishlistUI:', { listingId: String(listingId), saved });
+    updateWishlistButtonElement(button, saved);
+    console.debug('[wishlist] applyWishlistUI:', { listingId, saved });
   });
 }
 
@@ -970,39 +978,43 @@ function updateWishlistButtons(listingId, saved) {
   applyWishlistUI(listingId, saved);
 }
 
+function handleWishlistClick(event, listingId, source = 'listing') {
+  if (event) {
+    event.preventDefault();
+    event.stopPropagation();
+  }
+
+  const normalizedId = normalizeWishlistListingId(listingId);
+  if (!normalizedId) {
+    console.error('[wishlist] click ignored: missing listing id');
+    return;
+  }
+
+  console.debug('[wishlist] click fired:', { listingId: normalizedId, source });
+  void toggleWishlist(normalizedId, { source });
+}
+
 function initWishlistEventDelegation() {
   if (window.__wishlistDelegationBound) return;
   window.__wishlistDelegationBound = true;
 
   document.addEventListener('click', (e) => {
+    if (e.defaultPrevented) return;
+
     const btn = e.target.closest('.wishlist-btn, [data-wishlist-id]');
     if (!btn) return;
-
-    e.preventDefault();
-    e.stopPropagation();
 
     const listingId = btn.getAttribute('data-wishlist-id')
       || btn.getAttribute('data-id')
       || btn.closest('[data-id]')?.getAttribute('data-id');
-    if (!listingId) {
-      console.error('Missing data-id');
-      return;
-    }
 
     const source = btn.getAttribute('data-wishlist-source') || 'listing';
-    console.debug('[wishlist] click:', { listingId: String(listingId), source });
-    toggleWishlist(listingId, { source });
-  }, true);
+    handleWishlistClick(e, listingId, source);
+  });
 }
 
 function renderWishlistHeartIcon(saved) {
-  const stroke = saved ? '#ec4899' : '#f472b6';
-  const fill = saved ? '#ec4899' : 'none';
-  return `
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false" style="width:18px;height:18px;display:block;transition:fill 0.18s,stroke 0.18s;" fill="${fill}" stroke="${stroke}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M12 20.8l-1.45-1.32C5.4 14.36 2 11.28 2 7.5 2 5 4 3 6.5 3c1.86 0 3.35.93 4.12 2.29C11.15 3.93 12.64 3 14.5 3 17 3 19 5 19 7.5c0 3.78-3.4 6.86-8.55 11.98L12 20.8z" fill="${fill}" stroke="${stroke}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
-    </svg>
-  `;
+  return `<span class="wishlist-heart-icon" aria-hidden="true">${saved ? '❤️' : '🤍'}</span>`;
 }
 
 function renderWishlistHeart(listingId, options = {}) {
@@ -1022,6 +1034,7 @@ function renderWishlistHeart(listingId, options = {}) {
       aria-pressed="${saved ? 'true' : 'false'}"
       aria-label="${saved ? 'Remove from wishlist' : 'Save to wishlist'}"
       type="button"
+      onclick="handleWishlistClick(event, '${listingId}', '${source}')"
     >
       ${renderWishlistHeartIcon(saved)}
     </button>
@@ -1479,7 +1492,7 @@ async function toggleWishlist(listingId, options = {}) {
     return;
   }
 
-  const normalizedId = String(listingId).trim();
+  const normalizedId = normalizeWishlistListingId(listingId);
   if (!normalizedId) {
     console.debug('[wishlist] toggle ignored: missing id');
     return;
