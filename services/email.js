@@ -42,7 +42,7 @@ function getEmailConfig() {
   }
 
   if (!isValidFromAddress(fromAddress)) {
-    issues.push('EMAIL_FROM must be a full sender address like "LedgeStay <noreply@yourdomain.com>".');
+    issues.push('EMAIL_FROM must be a full sender address like "LedgeStay <noreply@ledgestay.in>".');
   }
 
   if (replyTo && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(replyTo)) {
@@ -67,7 +67,7 @@ function getFriendlyResendHint(details) {
   }
 
   if (message.includes('from')) {
-    return 'EMAIL_FROM must match a verified sender, for example "LedgeStay <noreply@yourdomain.com>".';
+    return 'EMAIL_FROM must match a verified sender, for example "LedgeStay <noreply@ledgestay.in>".';
   }
 
   if (message.includes('api key') || message.includes('unauthorized')) {
