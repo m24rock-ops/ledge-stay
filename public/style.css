@@ -15,7 +15,7 @@
   --shadow-lg: 0 28px 70px rgba(49,140,246,0.16);
 }
 
-* { margin: 0; padding: 0; box-sizing: border-box; }
+* { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 html, body { max-width: 100%; overflow-x: hidden; }
 body { font-family: 'Inter', 'Segoe UI', sans-serif; background: radial-gradient(circle at top, #ffffff 0%, #f4faff 45%, #eef7ff 100%); color: var(--text); font-size: 15px; line-height: 1.6; }
 
@@ -3225,6 +3225,41 @@ body,
   align-items: center;
   justify-content: center;
   user-select: none;
+  outline: none;
+  -webkit-tap-highlight-color: transparent;
+  background: transparent;
+  border: none;
+}
+
+.heart-btn,
+button.wishlist {
+  outline: none;
+  -webkit-tap-highlight-color: transparent;
+  background: transparent;
+  border: none;
+}
+
+.wishlist-btn:focus,
+.wishlist-btn:active,
+.heart-btn:focus,
+.heart-btn:active,
+button.wishlist:focus,
+button.wishlist:active {
+  outline: none;
+  box-shadow: none;
+  background: transparent;
+}
+
+.wishlist-heart:hover,
+.wishlist-heart:active,
+.wishlist-btn:hover,
+.wishlist-btn:active,
+.heart-btn:hover,
+.heart-btn:active,
+button.wishlist:hover,
+button.wishlist:active {
+  background-color: transparent !important;
+  border-radius: 50%;
 }
 
 .wishlist-heart-icon {
@@ -3232,6 +3267,24 @@ body,
   font-size: 18px;
   line-height: 1;
   pointer-events: none;
+  color: #ff4d6d;
+}
+
+.wishlist-btn svg,
+.wishlist-btn i {
+  color: #ff4d6d;
+  stroke: #ff4d6d;
+  fill: none;
+}
+
+.wishlist-btn.active svg,
+.wishlist-btn.is-saved svg {
+  fill: #ff4d6d;
+}
+
+.wishlist-btn.active .wishlist-heart-icon,
+.wishlist-btn.is-saved .wishlist-heart-icon {
+  color: #ff4d6d;
 }
 
 .wishlist-heart.is-saved,

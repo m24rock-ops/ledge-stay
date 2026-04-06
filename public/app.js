@@ -937,7 +937,7 @@ function updateWishlistButtonElement(button, saved) {
 
   const icon = button.querySelector('.wishlist-heart-icon');
   if (icon) {
-    icon.textContent = saved ? '❤️' : '🤍';
+    icon.textContent = saved ? '♥' : '♡';
   }
 }
 
@@ -1014,7 +1014,7 @@ function initWishlistEventDelegation() {
 }
 
 function renderWishlistHeartIcon(saved) {
-  return `<span class="wishlist-heart-icon" aria-hidden="true">${saved ? '❤️' : '🤍'}</span>`;
+  return `<span class="wishlist-heart-icon" aria-hidden="true">${saved ? '♥' : '♡'}</span>`;
 }
 
 function renderWishlistHeart(listingId, options = {}) {
