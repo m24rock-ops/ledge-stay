@@ -118,6 +118,7 @@ function showPage(page, options = {}) {
   if (normalizedPage === 'login') {
     resetAuthFlow({ preserveMode: true });
     bindLoginUiEvents();
+    bindRegisterEvents();
   }
 
   if (updateHistory) {
@@ -921,6 +922,107 @@ async function completeAuthSession(data, options = {}) {
   await loadWishlistState();
   updateNav();
   showPage(redirectPage);
+}
+
+// ── REGISTRATION FLOW ────────────────────────────────────────────────────────
+
+let registerRole = 'tenant';
+
+function showRegisterForm() {
+  // Hide login elements
+  document.querySelector('.tabs').style.display = 'none';
+  document.getElementById('auth-phone-fields').style.display = 'none';
+  document.getElementById('auth-email-fields').style.display = 'none';
+  document.querySelector('.role-toggle').style.display = 'none';
+  document.getElementById('login-submit-btn').style.display = 'none';
+  document.getElementById('show-register-link').style.display = 'none';
+
+  // Show register elements
+  document.getElementById('register-fields').style.display = 'block';
+  document.getElementById('show-login-link').style.display = 'inline';
+}
+
+function showLoginForm() {
+  // Hide register elements
+  document.getElementById('register-fields').style.display = 'none';
+  document.getElementById('show-login-link').style.display = 'none';
+
+  // Show login elements
+  document.querySelector('.tabs').style.display = '';
+  document.querySelector('.role-toggle').style.display = '';
+  document.getElementById('login-submit-btn').style.display = '';
+  document.getElementById('show-register-link').style.display = 'inline';
+
+  applyAuthModeState(authState.loginMode);
+}
+
+function bindRegisterEvents() {
+  if (window.__registerBound) return;
+  window.__registerBound = true;
+
+  document.getElementById('show-register-link')?.addEventListener('click', (e) => {
+    e.preventDefault();
+    showRegisterForm();
+  });
+
+  document.getElementById('show-login-link')?.addEventListener('click', (e) => {
+    e.preventDefault();
+    showLoginForm();
+  });
+
+  document.getElementById('register-tenant-btn')?.addEventListener('click', () => {
+    registerRole = 'tenant';
+    document.getElementById('register-tenant-btn').classList.add('active');
+    document.getElementById('register-owner-btn').classList.remove('active');
+  });
+
+  document.getElementById('register-owner-btn')?.addEventListener('click', () => {
+    registerRole = 'owner';
+    document.getElementById('register-owner-btn').classList.add('active');
+    document.getElementById('register-tenant-btn').classList.remove('active');
+  });
+
+  document.getElementById('register-submit-btn')?.addEventListener('click', handleRegisterSubmit);
+}
+
+async function handleRegisterSubmit() {
+  const name = document.getElementById('register-name')?.value.trim() || '';
+  const email = document.getElementById('register-email')?.value.trim() || '';
+  const password = document.getElementById('register-password')?.value || '';
+  const errorEl = document.getElementById('register-error');
+  const btn = document.getElementById('register-submit-btn');
+
+  errorEl.textContent = '';
+
+  if (!name) { errorEl.textContent = 'Please enter your full name.'; return; }
+  if (!email) { errorEl.textContent = 'Please enter your email.'; return; }
+  if (!password) { errorEl.textContent = 'Please enter a password.'; return; }
+  if (password.length < 8) { errorEl.textContent = 'Password must be at least 8 characters.'; return; }
+
+  btn.disabled = true;
+  btn.textContent = 'Creating account...';
+
+  try {
+    const res = await fetch('/api/auth/register-email', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, email, password, role: registerRole })
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      errorEl.textContent = data.message || 'Registration failed.';
+      return;
+    }
+
+    await completeAuthSession(data, { redirectPage: 'home' });
+  } catch (err) {
+    errorEl.textContent = err.message || 'Something went wrong.';
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Create Account';
+  }
 }
 
 function carouselGoTo(triggerEl, index) {
@@ -3211,6 +3313,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   bindLoginUiEvents();
+  bindRegisterEvents();
   applyAuthModeState('phone');
   applyRoleToggleState();
 

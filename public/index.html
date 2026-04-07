@@ -228,8 +228,21 @@
         <button class="login-btn" id="login-submit-btn">Send OTP</button>
 
         <p class="signup">
-          New here? Just enter your number and verify — your account is created automatically.
+          New here? <a href="#" id="show-register-link">Create an account</a> - it's free.
+          Already have one? <a href="#" id="show-login-link" style="display:none">Sign in</a>
         </p>
+
+        <div id="register-fields" style="display:none">
+          <input type="text" id="register-name" placeholder="Full name">
+          <input type="email" id="register-email" placeholder="Email address">
+          <input type="password" id="register-password" placeholder="Password (8+ chars, letters & numbers)">
+          <div class="role-toggle" id="register-role-toggle">
+            <button type="button" class="active" id="register-tenant-btn">Tenant</button>
+            <button type="button" id="register-owner-btn">Owner</button>
+          </div>
+          <button class="login-btn" id="register-submit-btn" type="button">Create Account</button>
+          <p id="register-error" style="color:#dc2626;margin-top:10px;font-size:14px"></p>
+        </div>
 
       </div>
     </section>
