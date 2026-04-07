@@ -264,8 +264,10 @@ router.get('/mine', auth, async (req, res) => {
 // Get single listing
 router.get('/:id', async (req, res) => {
   try {
+    console.log("PARAM ID:", req.params.id);
     const user = getOptionalUser(req);
     const listing = await Listing.findById(req.params.id).populate('owner', 'name email');
+    console.log("FOUND LISTING:", listing);
     if (!listing) return res.status(404).json({ message: 'Listing not found' });
 
     const ownerId = String(listing.owner?._id || listing.owner || '');
