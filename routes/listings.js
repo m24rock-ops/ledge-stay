@@ -274,14 +274,14 @@ router.get('/:id', async (req, res) => {
     console.log("FOUND LISTING:", listing);
     if (!listing) return res.status(404).json({ message: 'Listing not found' });
 
-    const ownerId = String(listing.owner?._id || listing.owner || '');
+    const ownerId = String(listing.owner?._id || listing.owner?._id?.toString() || listing.owner || '');
     console.log('DEBUG edit check:', {
       userId: user?.id,
       ownerId: String(listing?.owner?._id || ''),
       match: user?.id === String(listing?.owner?._id || '')
     });
     const canViewHiddenListing = Boolean(
-      user && (user.role === 'admin' || String(user.id) === ownerId)
+      user && (user.role === 'admin' || String(user.id) === String(ownerId))
     );
 
     if (listing.approvalStatus !== 'approved' && !canViewHiddenListing) {
