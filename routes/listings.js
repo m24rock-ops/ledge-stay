@@ -87,7 +87,11 @@ function getOptionalUser(req) {
   if (!token) return null;
 
   try {
-    return jwt.verify(token, process.env.JWT_SECRET);
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    return {
+      ...decoded,
+      id: decoded.id || decoded._id || decoded.userId
+    };
   } catch (err) {
     return null;
   }
