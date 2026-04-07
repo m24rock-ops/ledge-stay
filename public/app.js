@@ -2144,6 +2144,7 @@ function openCreateListingForm() {
 
 async function openEditListingForm(listingId) {
   try {
+    console.log('Fetching:', `/api/listings/${listingId}`);
     const listing = await apiFetchJson(`/api/listings/${listingId}`);
     populateListingForm(listing);
     showPage('post', { skipReset: true });
