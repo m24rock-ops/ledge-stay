@@ -2470,10 +2470,9 @@ async function loadOwnerDashboardImpl() {
             ${listing.rejectionNote ? `<p class="dashboard-status-note">Rejection note: ${escapeHtml(listing.rejectionNote)}</p>` : ''}
           </div>
           <div class="dashboard-listing-metrics">
-            <div class="dashboard-chip ${listing.available ? 'is-active' : 'is-inactive'}">
-              ${listing.available ? 'Active' : 'Unavailable'}
-            </div>
-            ${renderApprovalChip(listing.approvalStatus)}
+            ${listing.status === 'active'
+              ? '<span class="badge green">Active</span>'
+              : '<span class="badge yellow">Pending</span>'}
             ${listing.is_featured ? '<div class="dashboard-chip is-featured">Featured</div>' : ''}
             <div class="dashboard-enquiries">${Number(listing.enquiryCount || 0)} enquiries</div>
           </div>

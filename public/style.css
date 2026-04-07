@@ -3833,6 +3833,10 @@ button.wishlist:active {
   color: green;
 }
 
+.yellow {
+  color: #a16207;
+}
+
 /* BUTTONS */
 .detail-actions {
   display: flex;

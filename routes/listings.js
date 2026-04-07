@@ -268,29 +268,15 @@ router.get('/mine', auth, async (req, res) => {
 // Get single listing
 router.get('/:id', async (req, res) => {
   try {
-    console.log("PARAM ID:", req.params.id);
-    const user = getOptionalUser(req);
-    const listing = await Listing.findById(req.params.id).populate('owner', 'name email');
-    console.log("FOUND LISTING:", listing);
-    if (!listing) return res.status(404).json({ message: 'Listing not found' });
+    const listing = await Listing.findById(req.params.id);
 
-    const ownerId = String(listing.owner?._id || listing.owner?._id?.toString() || listing.owner || '');
-    console.log('DEBUG edit check:', {
-      userId: user?.id,
-      ownerId: String(listing?.owner?._id || ''),
-      match: user?.id === String(listing?.owner?._id || '')
-    });
-    const canViewHiddenListing = Boolean(
-      user && (user.role === 'admin' || String(user.id) === String(ownerId))
-    );
-
-    if (listing.approvalStatus !== 'approved' && !canViewHiddenListing) {
+    if (!listing) {
       return res.status(404).json({ message: 'Listing not found' });
     }
 
     res.json(listing);
   } catch (err) {
-    res.status(500).json({ message: 'Server error', error: err.message });
+    res.status(500).json({ message: 'Server error' });
   }
 });
 
@@ -330,7 +316,8 @@ router.post('/', auth, uploadListingPhotos, async (req, res) => {
       lng: parseCoordinate(req.body.lng),
       available: parseBoolean(req.body.available, true),
       is_featured: parseBoolean(req.body.is_featured, false),
-      // approvalStatus defaults to 'pending' — admin must approve before it goes live
+      // Mark newly created listings as live immediately.
+      approvalStatus: 'approved',
       rejectionNote: ''
     });
     await syncLocationForListingChange(null, listing.toObject());
