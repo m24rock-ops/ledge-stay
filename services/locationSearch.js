@@ -131,7 +131,6 @@ function isSearchableListing(listing) {
   return Boolean(
     listing &&
     listing.available === true &&
-    listing.approvalStatus === 'approved' &&
     cleanText(listing.city) &&
     cleanText(listing.address || listing.city)
   );

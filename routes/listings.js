@@ -253,10 +253,7 @@ router.get('/mine', auth, async (req, res) => {
     const listings = await Listing.find({ owner: req.user.id }).sort({ createdAt: -1 });
     const summary = {
       totalListings: listings.length,
-      totalEnquiries: listings.reduce((sum, listing) => sum + Number(listing.enquiryCount || 0), 0),
-      pendingListings: listings.filter((listing) => listing.approvalStatus === 'pending').length,
-      approvedListings: listings.filter((listing) => listing.approvalStatus === 'approved').length,
-      rejectedListings: listings.filter((listing) => listing.approvalStatus === 'rejected').length
+      totalEnquiries: listings.reduce((sum, listing) => sum + Number(listing.enquiryCount || 0), 0)
     };
 
     res.json({ summary, listings });

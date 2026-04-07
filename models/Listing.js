@@ -18,12 +18,6 @@ const listingSchema = new mongoose.Schema({
   enquiryCount: { type: Number, default: 0 },
   is_featured: { type: Boolean, default: false },
   available: { type: Boolean, default: true },
-  approvalStatus: {
-    type: String,
-    enum: ['pending', 'approved', 'rejected'],
-    // Default to approved so listings show up immediately on browse.
-    default: 'pending'
-  },
   rejectionNote: { type: String, default: '' },
   reviewedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
   reviewedAt: { type: Date, default: null },

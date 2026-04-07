@@ -2112,12 +2112,6 @@ function renderOwnerNotifications(notifications = []) {
   `).join('');
 }
 
-function renderApprovalChip(status) {
-  const normalizedStatus = status || 'pending';
-  const label = normalizedStatus.charAt(0).toUpperCase() + normalizedStatus.slice(1);
-  return `<div class="dashboard-chip is-status-${normalizedStatus}">${label}</div>`;
-}
-
 function populateListingForm(listing) {
   editingListingId = listing._id;
   document.getElementById('post-form-title').textContent = 'Edit Listing';
@@ -2470,9 +2464,7 @@ async function loadOwnerDashboardImpl() {
             ${listing.rejectionNote ? `<p class="dashboard-status-note">Rejection note: ${escapeHtml(listing.rejectionNote)}</p>` : ''}
           </div>
           <div class="dashboard-listing-metrics">
-            ${listing.status === 'active'
-              ? '<span class="badge green">Active</span>'
-              : '<span class="badge yellow">Pending</span>'}
+            <span class="badge green">Listed</span>
             ${listing.is_featured ? '<div class="dashboard-chip is-featured">Featured</div>' : ''}
             <div class="dashboard-enquiries">${Number(listing.enquiryCount || 0)} enquiries</div>
           </div>
@@ -3037,7 +3029,7 @@ async function loadAdminPanel(status = null) {
               ${listing.rejectionNote ? `<p class="dashboard-status-note">Rejection note: ${escapeHtml(listing.rejectionNote)}</p>` : ''}
             </div>
             <div class="dashboard-listing-metrics">
-              ${renderApprovalChip(listing.approvalStatus)}
+              <span class="badge green">Listed</span>
             </div>
           </div>
           <div class="dashboard-listing-actions">
