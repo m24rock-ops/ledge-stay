@@ -90,7 +90,7 @@ function getOptionalUser(req) {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     return {
       ...decoded,
-      id: decoded.id || decoded._id || decoded.userId
+      id: String(decoded.id || decoded._id || decoded.userId || '')
     };
   } catch (err) {
     return null;
@@ -275,6 +275,11 @@ router.get('/:id', async (req, res) => {
     if (!listing) return res.status(404).json({ message: 'Listing not found' });
 
     const ownerId = String(listing.owner?._id || listing.owner || '');
+    console.log('DEBUG edit check:', {
+      userId: user?.id,
+      ownerId: String(listing?.owner?._id || ''),
+      match: user?.id === String(listing?.owner?._id || '')
+    });
     const canViewHiddenListing = Boolean(
       user && (user.role === 'admin' || String(user.id) === ownerId)
     );
