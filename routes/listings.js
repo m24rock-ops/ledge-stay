@@ -118,19 +118,21 @@ function calculateDistanceKm(fromLat, fromLng, toLat, toLng) {
 router.get('/', async (req, res) => {
   try {
     const { city, type, gender, minPrice, maxPrice, sort, featured, limit: limitParam, page: pageParam } = req.query;
-    // Only show approved listings on the browse page
-    let query = { available: true, approvalStatus: 'approved' };
+    let filter = { available: true };
 
     const locationFilter = buildLocationFilter(city);
-    if (locationFilter) Object.assign(query, locationFilter);
-    if (type) query.type = type;
-    if (gender) query.gender = gender;
-    if (featured === 'true') query.is_featured = true;
+    if (locationFilter) Object.assign(filter, locationFilter);
+    if (type) filter.type = type;
+    if (gender) filter.gender = gender;
+    if (featured === 'true') filter.is_featured = true;
     if (minPrice || maxPrice) {
-      query.price = {};
-      if (minPrice) query.price.$gte = Number(minPrice);
-      if (maxPrice) query.price.$lte = Number(maxPrice);
+      filter.price = {};
+      if (minPrice) filter.price.$gte = Number(minPrice);
+      if (maxPrice) filter.price.$lte = Number(maxPrice);
     }
+
+    delete filter.approvalStatus;
+    delete filter.status;
 
     let sortOption = {};
     if (sort === 'price_asc') sortOption.price = 1;
@@ -145,9 +147,9 @@ router.get('/', async (req, res) => {
     const page  = Math.max(1, Number(pageParam) || 1);
     const skip  = isPaginated ? (page - 1) * limit : 0;
 
-    const total = await Listing.countDocuments(query);
+    const total = await Listing.countDocuments(filter || {});
 
-    let listingQuery = Listing.find(query).sort(sortOption).populate('owner', 'name email').skip(skip).limit(limit);
+    let listingQuery = Listing.find(filter || {}).sort(sortOption).populate('owner', 'name email').skip(skip).limit(limit);
 
     const listings = await listingQuery;
 
