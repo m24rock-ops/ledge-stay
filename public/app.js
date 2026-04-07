@@ -2519,94 +2519,95 @@ async function showDetail(id) {
     };
 
     document.getElementById('detail-content').innerHTML = `
-    <section class="detail-hero-media">
-      ${renderPhotoCarousel(listing.photos)}
-    </section>
-    <div class="detail-info detail-trust-layout">
-      <div class="detail-summary" id="detail-summary">
-        <div class="detail-headline-row">
-          <h1>${escapeHtml(detailTitle)}</h1>
-          <div class="detail-headline-price" title="${escapeHtml(detailRent)}">${escapeHtml(detailRent)}</div>
-        </div>
-        <div class="detail-location-rating">
-          <span class="detail-location-pill">📍 ${escapeHtml(detailLocation)}</span>
-          <span class="detail-rating-pill">${escapeHtml(detailRating)}</span>
-        </div>
+    <div class="detail-container">
 
-        <div class="detail-key-info" aria-label="Key information">
-          <article class="detail-key-info-card">
-            <p>Rent</p>
-            <strong>${escapeHtml(detailRent)}</strong>
-          </article>
-          <article class="detail-key-info-card">
-            <p>Deposit</p>
-            <strong>${escapeHtml(detailDeposit)}</strong>
-          </article>
-          <article class="detail-key-info-card">
-            <p>Availability</p>
-            <strong>${escapeHtml(detailAvailability)}</strong>
-          </article>
+      <!-- IMAGE SECTION -->
+      <div class="detail-gallery">
+        <div class="main-image">
+          ${renderPhotoCarousel(listing.photos)}
         </div>
-
-        ${(detailAmenities.length > 0) ? `
-          <div class="detail-amenities" aria-label="Amenities">
-            ${detailAmenities.slice(0, 8).map((amenity) => `
-              <span class="detail-amenity-pill" title="${escapeHtml(amenity)}">
-                <span class="detail-amenity-icon" aria-hidden="true">${amenityIconFor(amenity)}</span>
-                <span class="detail-amenity-text">${escapeHtml(amenity)}</span>
-              </span>
-            `).join('')}
-          </div>
-        ` : `
-          <div class="detail-amenities" aria-label="Amenities">
-            <span class="detail-amenity-pill"><span class="detail-amenity-icon" aria-hidden="true">📶</span><span class="detail-amenity-text">WiFi</span></span>
-            <span class="detail-amenity-pill"><span class="detail-amenity-icon" aria-hidden="true">🛏️</span><span class="detail-amenity-text">Bed</span></span>
-            <span class="detail-amenity-pill"><span class="detail-amenity-icon" aria-hidden="true">💧</span><span class="detail-amenity-text">Water</span></span>
-          </div>
-        `}
-
-        <section class="detail-owner-trust" aria-label="Owner details">
-          <div class="detail-owner-trust-head">
-            <h3>Owner</h3>
-            <span class="detail-verified-badge">Verified</span>
-          </div>
-          <p class="detail-owner-name">${escapeHtml(ownerName)}</p>
-          <p class="detail-owner-contact">${escapeHtml(ownerPhone)}</p>
-        </section>
+        <div class="side-images">
+          <div>Add photo</div>
+          <div>+ ${Math.max(0, (listing.photos || []).length - 1)} more</div>
+        </div>
       </div>
 
-      <div class="detail-side-actions">
-        ${renderWishlistButton(listing, { detail: true })}
+      <!-- TITLE + PRICE -->
+      <div class="detail-header">
+        <div>
+          <h1 class="detail-title">${escapeHtml(detailTitle)}</h1>
+          <div class="detail-tags">
+            <span>📍 ${escapeHtml(detailLocation)}</span>
+            <span class="tag new">${escapeHtml(detailRating)}</span>
+            <span class="tag verified">✔ Verified owner</span>
+          </div>
+        </div>
+        <div class="detail-price">
+          ${escapeHtml(detailRent)}<span>/month</span>
+          <p>Deposit: ${escapeHtml(detailDeposit)}</p>
+        </div>
+      </div>
+
+      <!-- INFO CARDS -->
+      <div class="detail-info-grid">
+        <div class="info-card">
+          <p>RENT</p>
+          <h3>${escapeHtml(detailRent)}/month</h3>
+        </div>
+        <div class="info-card">
+          <p>DEPOSIT</p>
+          <h3>${escapeHtml(detailDeposit)}</h3>
+        </div>
+        <div class="info-card">
+          <p>AVAILABILITY</p>
+          <h3 class="${listing.available === false ? '' : 'green'}">${escapeHtml(detailAvailability)}</h3>
+        </div>
+        <div class="info-card">
+          <p>TYPE</p>
+          <h3>${escapeHtml(listing.type || 'PG / Room')}</h3>
+        </div>
+      </div>
+
+      <!-- ACTIONS -->
+      <div class="detail-actions">
         ${renderOwnerListingActions(listing, { detail: true })}
-        <button onclick="showPage('listings')" class="back-button">Back</button>
+        ${renderWishlistButton(listing, { detail: true })}
+        <button class="btn-outline" onclick="showPage('listings')">Back</button>
       </div>
 
-      ${renderMapSection(listing)}
-
-      <div class="distance-card">
-        <h3 class="distance-title">How far is this from your place?</h3>
-        <p class="distance-subtitle">Enter your college or workplace to see commute time</p>
-        <div class="distance-form">
-          <input
-            type="text"
-            id="distance-input"
-            placeholder="e.g. bengaluru University, Bengaluru"
-            class="distance-input"
-          >
-          <button
-            id="distance-btn"
-            onclick="calculateDistance('${listing._id}')"
-            class="distance-button"
-          >
-            Calculate
-          </button>
+      <!-- AMENITIES -->
+      <div class="detail-card">
+        <h2>Amenities</h2>
+        <div class="amenities">
+          ${(detailAmenities.length > 0)
+            ? detailAmenities.slice(0, 8).map(amenity => `<span>${amenityIconFor(amenity)} ${escapeHtml(amenity)}</span>`).join('')
+            : '<span>📶 WiFi</span><span>🍽️ Meals</span><span>👕 Laundry</span><span>❄️ AC</span><span>🅿️ Parking</span>'
+          }
         </div>
+      </div>
+
+      <!-- DISTANCE -->
+      <div class="detail-card">
+        <h2>How far is this from your place?</h2>
+        <div class="distance-box">
+          <input type="text" id="distance-input" placeholder="e.g. Bengaluru University">
+          <button id="distance-btn" onclick="calculateDistance('${listing._id}')">Calculate</button>
+        </div>
+        ${renderMapSection(listing)}
         <div id="distance-result"></div>
       </div>
 
-      <section id="reviews-section" class="reviews-section">
-        <div class="reviews-loading">Loading reviews...</div>
-      </section>
+      <!-- REVIEWS -->
+      <div class="detail-card">
+        <div class="review-header">
+          <h2>Reviews &amp; ratings</h2>
+          <div class="rating">${escapeHtml(detailRating)}</div>
+        </div>
+        <section id="reviews-section" class="reviews-section">
+          <div class="reviews-loading">Loading reviews...</div>
+        </section>
+      </div>
+
     </div>
     ${renderStickyListingCta(listing)}
   `;
@@ -2614,9 +2615,20 @@ async function showDetail(id) {
     initializeDetailCarousels(document.getElementById('detail-content'));
     loadReviews(id);
     showPage('detail', { updateHistory: true });
+    setTimeout(() => {
+      attachEventListeners();
+    }, 0);
   } catch (err) {
     alert(err.message || 'Unable to load the listing.');
   }
+}
+
+function attachEventListeners() {
+  // Re-apply wishlist saved/unsaved state to any freshly rendered wishlist buttons
+  applyWishlistStateToButtons();
+
+  // Ensure wishlist click delegation is active (guarded against double-binding internally)
+  initWishlistEventDelegation();
 }
 
 function closeActiveCarouselModal() {
