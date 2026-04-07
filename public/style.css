@@ -4460,3 +4460,98 @@ textarea {
     font-size: 20px;
   }
 }
+
+/* ===== DETAIL PAGE - ID SCOPED ===== */
+#page-detail .detail-container,
+.detail-container { max-width: 1100px; }
+
+#page-detail .detail-header,
+.detail-header { display: flex; justify-content: space-between; align-items: center; }
+
+#page-detail .info-card,
+.info-card { background: #f8fafc; padding: 15px; border-radius: 10px; }
+
+/*  MOBILE FIX */
+@media (max-width: 768px) {
+
+  /* CONTAINER */
+  .detail-container {
+    padding: 12px;
+    gap: 14px;
+  }
+
+  /* GALLERY */
+  .detail-gallery {
+    grid-template-columns: 1fr;
+  }
+
+  .main-image {
+    height: 200px;
+  }
+
+  .side-images {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  .side-images div {
+    height: 90px;
+  }
+
+  /* HEADER */
+  .detail-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .detail-title {
+    font-size: 18px;
+  }
+
+  .detail-price {
+    font-size: 18px;
+  }
+
+  /* TAGS WRAP */
+  .detail-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  /* INFO GRID */
+  .detail-info-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .info-card {
+    padding: 12px;
+  }
+
+  /* BUTTONS */
+  .detail-actions {
+    flex-direction: column;
+  }
+
+  .btn-primary,
+  .btn-outline {
+    width: 100%;
+  }
+
+  /* DISTANCE */
+  .distance-box {
+    flex-direction: column;
+  }
+
+  .distance-box button {
+    width: 100%;
+  }
+
+  /* REVIEWS */
+  textarea {
+    font-size: 14px;
+  }
+
+}
