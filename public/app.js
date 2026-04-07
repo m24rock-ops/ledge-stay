@@ -111,7 +111,7 @@ function showPage(page, options = {}) {
 
   const siteNav = document.querySelector('.site-nav');
   if (siteNav) {
-    siteNav.style.display = normalizedPage === 'login' ? 'none' : '';
+    siteNav.style.display = '';
   }
 
   // Reset auth UI whenever switching between auth pages.
@@ -987,7 +987,7 @@ function bindRegisterEvents() {
 
 async function handleRegisterSubmit() {
   const name = document.getElementById('register-name')?.value.trim() || '';
-  const email = document.getElementById('register-email')?.value.trim() || '';
+  const emailOrPhone = document.getElementById('register-email')?.value.trim() || '';
   const password = document.getElementById('register-password')?.value || '';
   const errorEl = document.getElementById('register-error');
   const btn = document.getElementById('register-submit-btn');
@@ -995,30 +995,62 @@ async function handleRegisterSubmit() {
   errorEl.textContent = '';
 
   if (!name) { errorEl.textContent = 'Please enter your full name.'; return; }
-  if (!email) { errorEl.textContent = 'Please enter your email.'; return; }
+  if (!emailOrPhone) { errorEl.textContent = 'Please enter your email or phone number.'; return; }
   if (!password) { errorEl.textContent = 'Please enter a password.'; return; }
-  if (password.length < 8) { errorEl.textContent = 'Password must be at least 8 characters.'; return; }
+  if (password.length < 8) {
+    errorEl.textContent = 'Password must be at least 8 characters with letters and numbers.';
+    return;
+  }
+
+  // Detect if phone or email
+  const isPhone = /^\d{10}$/.test(emailOrPhone.replace(/[^\d]/g, ''));
 
   btn.disabled = true;
   btn.textContent = 'Creating account...';
 
   try {
-    const res = await fetch('/api/auth/register-email', {
+    let res;
+    let data;
+
+    if (isPhone) {
+      // Phone registration — send OTP first, then let OTP flow handle it
+      errorEl.style.color = '#2563eb';
+      errorEl.textContent = 'Phone detected — switching to OTP flow...';
+
+      setTimeout(() => {
+        showLoginForm();
+        const phoneInput = document.getElementById('login-phone');
+        if (phoneInput) phoneInput.value = emailOrPhone;
+        applyAuthModeState('phone');
+        errorEl.textContent = '';
+      }, 1000);
+      return;
+    }
+
+    // Email registration
+    res = await fetch('/api/auth/register-email', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, email, password, role: registerRole })
+      body: JSON.stringify({
+        name,
+        email: emailOrPhone,
+        password,
+        role: registerRole
+      })
     });
 
-    const data = await res.json();
+    data = await res.json();
 
     if (!res.ok) {
+      errorEl.style.color = '#dc2626';
       errorEl.textContent = data.message || 'Registration failed.';
       return;
     }
 
     await completeAuthSession(data, { redirectPage: 'home' });
   } catch (err) {
-    errorEl.textContent = err.message || 'Something went wrong.';
+    errorEl.style.color = '#dc2626';
+    errorEl.textContent = err.message || 'Something went wrong. Please try again.';
   } finally {
     btn.disabled = false;
     btn.textContent = 'Create Account';
