@@ -117,6 +117,7 @@ function showPage(page, options = {}) {
   // Reset auth UI whenever switching between auth pages.
   if (normalizedPage === 'login') {
     resetAuthFlow({ preserveMode: true });
+    bindLoginUiEvents();
   }
 
   if (updateHistory) {
@@ -566,7 +567,8 @@ function ensureLoginUiElements() {
   const loginCard = document.querySelector('#page-login .login-card');
   if (!loginCard) return null;
 
-  const submitButton = loginCard.querySelector('.login-btn');
+  const submitButton = document.getElementById('login-submit-btn') 
+    || loginCard.querySelector('.login-btn');
   if (!submitButton) return null;
 
   const tabs = loginCard.querySelectorAll('.tabs button');
@@ -2159,140 +2161,10 @@ function renderPagination(currentPage, totalPages) {
     </div>`;
 }
 
-function renderListingsMarkup(listings) {
-  return listings.map((listing) => {
-    const avg = listing.averageRating ? Number(listing.averageRating).toFixed(1) : null;
-    const count = listing.reviewCount || 0;
-    const fullStars = avg ? Math.round(avg) : 0;
-    const stars = '★'.repeat(fullStars) + '☆'.repeat(5 - fullStars);
-
-    const badges = [];
-    if (listing.noBrokerage) badges.push('<span class="img-badge badge-green">No Brokerage</span>');
-    if (listing.verified) badges.push('<span class="img-badge badge-teal">Verified</span>');
-    if (listing.is_featured) badges.push('<span class="img-badge badge-gold">Best Deal</span>');
-
-    const ownerPhone = listing.owner?.whatsapp || listing.owner?.phone || '';
-    const waMsg = encodeURIComponent(`Hi, I'm interested in your PG "${listing.title}" on Ledge Stay`);
-    const waUrl = ownerPhone ? `https://wa.me/${ownerPhone}?text=${waMsg}` : null;
-    const imgHtml = listing.photos?.[0]
-      ? `<img src="${listing.photos[0]}" alt="${escapeHtml(listing.title)}">`
-      : '<div class="no-image"></div>';
-
-    return `
-      <div class="listing-card" id="listing-card-${listing._id}" data-id="${listing._id}" onclick="showDetail('${listing._id}')">
-        <div class="card-img-wrap">
-          ${imgHtml}
-          ${renderWishlistHeart(listing._id, { source: 'listing' })}
-          <div class="card-img-badges">${badges.join('')}</div>
-        </div>
-        <div class="card-body">
-          <div class="card-city-label">${escapeHtml(listing.city || '').toUpperCase()}</div>
-          <h3>${escapeHtml(listing.title)}</h3>
-          <div class="meta">${escapeHtml(listing.address || '')}</div>
-          ${typeof listing.distanceKm === 'number' ? `<div class="card-distance">${listing.distanceKm.toFixed(1)} km away</div>` : ''}
-          ${avg ? `<div class="card-rating"><span class="card-stars">${stars}</span><span class="card-rating-val">${avg}</span><span class="card-rating-count">(${count} reviews)</span></div>` : ''}
-          <div class="price">₹${Number(listing.price).toLocaleString('en-IN')}/month</div>
-          <div class="card-actions" onclick="event.stopPropagation()">
-            ${waUrl
-              ? `<a class="btn-contact" href="${waUrl}" target="_blank" rel="noopener">Chat on whatsapp</a>`
-              : '<button class="btn-contact" disabled>Chat on whatsapp</button>'}
-            <button class="btn-details" onclick="event.stopPropagation();showDetail('${listing._id}')">View Details</button>
-          </div>
-          ${renderOwnerListingActions(listing)}
-        </div>
-      </div>`;
-  }).join('');
-}
-
 async function goToListingsPage(page) {
   currentListingsPage = page;
   await loadListings();
   document.getElementById('page-listings')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-}
-
-async function loadListings() {
-  const query = nearbySearchState.active
-    ? buildNearbyListingsQuery(currentListingsPage)
-    : buildListingsQuery(currentListingsPage);
-  const endpoint = nearbySearchState.active ? '/api/listings/nearby' : '/api/listings';
-  const grid  = document.getElementById('listings-grid');
-  let paginationEl = document.getElementById('listings-pagination');
-
-  if (!paginationEl) {
-    paginationEl = document.createElement('div');
-    paginationEl.id = 'listings-pagination';
-    grid.insertAdjacentElement('afterend', paginationEl);
-  }
-
-  grid.innerHTML = '<p style="padding:20px;color:#888">Loading...</p>';
-  paginationEl.innerHTML = '';
-  updateNearbyResultsBanner();
-
-  try {
-    const data = await apiFetchJson(`${endpoint}?${query.toString()}`);
-
-    // Support both paginated ({listings, total, ...}) and legacy plain-array responses
-    const listings   = Array.isArray(data) ? data : data.listings;
-    const totalPages = data.totalPages || 1;
-    const total = Array.isArray(data) ? listings.length : Number(data.total || listings.length);
-
-    if (!Array.isArray(listings) || listings.length === 0) {
-      updateNearbyResultsBanner(0, data.radiusKm);
-      grid.innerHTML = `<p style="padding:20px;color:#888">${nearbySearchState.active ? 'No nearby listings found for this location.' : 'No listings found.'}</p>`;
-      return;
-    }
-
-    grid.innerHTML = listings.map((listing) => {
-      const avg = listing.averageRating ? Number(listing.averageRating).toFixed(1) : null;
-      const count = listing.reviewCount || 0;
-      const fullStars = avg ? Math.round(avg) : 0;
-      const stars = '★'.repeat(fullStars) + '☆'.repeat(5 - fullStars);
-
-      const badges = [];
-      if (listing.noBrokerage) badges.push(`<span class="img-badge badge-green">✓ No Brokerage</span>`);
-      if (listing.verified) badges.push(`<span class="img-badge badge-teal">✓ Verified</span>`);
-      if (listing.is_featured) badges.push(`<span class="img-badge badge-gold">Best Deal</span>`);
-
-      const ownerPhone = listing.owner?.whatsapp || listing.owner?.phone || '';
-      const waMsg = encodeURIComponent(`Hi, I'm interested in your PG "${listing.title}" on Ledge Stay`);
-      const waUrl = ownerPhone ? `https://wa.me/${ownerPhone}?text=${waMsg}` : null;
-
-      const imgHtml = listing.photos?.[0]
-        ? `<img src="${listing.photos[0]}" alt="${escapeHtml(listing.title)}">`
-        : `<div class="no-image"></div>`;
-
-      return `
-        <div class="listing-card" id="listing-card-${listing._id}" data-id="${listing._id}" onclick="showDetail('${listing._id}')">
-          <div class="card-img-wrap">
-            ${imgHtml}
-            ${renderWishlistHeart(listing._id, { source: 'listing' })}
-            <div class="card-img-badges">${badges.join('')}</div>
-          </div>
-          <div class="card-body">
-            <div class="card-city-label">${escapeHtml(listing.city || '').toUpperCase()}</div>
-            <h3>${escapeHtml(listing.title)}</h3>
-            <div class="meta">${escapeHtml(listing.address || '')}</div>
-            ${typeof listing.distanceKm === 'number' ? `<div class="card-distance">${listing.distanceKm.toFixed(1)} km away</div>` : ''}
-            ${avg ? `<div class="card-rating"><span class="card-stars">${stars}</span><span class="card-rating-val">${avg}</span><span class="card-rating-count">(${count} reviews)</span></div>` : ''}
-            <div class="price">₹${Number(listing.price).toLocaleString('en-IN')}/month</div>
-            <div class="card-actions" onclick="event.stopPropagation()">
-              ${waUrl
-                ? `<a class="btn-contact" href="${waUrl}" target="_blank" rel="noopener">Chat on whatsapp</a>`
-                : `<button class="btn-contact" disabled>Chat on whatsapp</button>`}
-              <button class="btn-details" onclick="event.stopPropagation();showDetail('${listing._id}')">View Details</button>
-            </div>
-            ${renderOwnerListingActions(listing)}
-          </div>
-        </div>`;
-    }).join('');
-
-    applyWishlistStateToButtons();
-    updateNearbyResultsBanner(total, data.radiusKm);
-    paginationEl.innerHTML = renderPagination(currentListingsPage, totalPages);
-  } catch (err) {
-    updateNearbyResultsBanner();
-    grid.innerHTML = `<p style="padding:20px;color:#c0392b">${err.message || 'Unable to load listings.'}</p>`;
-  }
 }
 
 async function loadOwnerDashboard() {
