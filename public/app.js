@@ -1246,7 +1246,7 @@ function renderOwnerListingActions(listing, options = {}) {
 
   return `
     <div class="${actionClass}" onclick="event.stopPropagation()">
-      <button class="owner-action-button" onclick="openEditListingForm('${listing._id}')">Edit</button>
+      <button class="owner-action-button" onclick="editListing('${listing._id}')">Edit</button>
       <button class="owner-action-button is-danger" onclick="deleteListing('${listing._id}', { source: '${detail ? 'detail' : 'listings'}' })">Delete</button>
     </div>
   `;
@@ -2153,6 +2153,11 @@ async function openEditListingForm(listingId) {
   }
 }
 
+function editListing(listingId) {
+  console.log('Editing ID:', listingId);
+  return openEditListingForm(listingId);
+}
+
 async function loadFeaturedListings() {
   const featuredGrid = document.getElementById('featured-grid');
   if (!featuredGrid) return;
@@ -2473,7 +2478,7 @@ async function loadOwnerDashboardImpl() {
           </div>
         </div>
         <div class="dashboard-listing-actions">
-          <button class="dashboard-action-button" onclick="openEditListingForm('${listing._id}')">Edit</button>
+          <button class="dashboard-action-button" onclick="editListing('${listing._id}')">Edit</button>
           <button class="dashboard-action-button is-danger" onclick="deleteListing('${listing._id}')">Delete</button>
         </div>
       </article>
