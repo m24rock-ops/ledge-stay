@@ -117,6 +117,9 @@ function showPage(page, options = {}) {
   // Reset auth UI whenever switching between auth pages.
   if (normalizedPage === 'login') {
     resetAuthFlow({ preserveMode: true });
+    // Reset bound flags so events re-attach cleanly
+    const loginCard = document.querySelector('#page-login .login-card');
+    if (loginCard) delete loginCard.dataset.authBound;
     bindLoginUiEvents();
     bindRegisterEvents();
   }
@@ -705,6 +708,8 @@ function applyAuthModeState(nextMode = authState.loginMode) {
 
   // Password is only used for email login mode.
   if (ui.passwordField) ui.passwordField.style.display = mode === 'email' ? '' : 'none';
+  const forgotWrap = document.getElementById('forgot-password-wrap');
+  if (forgotWrap) forgotWrap.style.display = mode === 'email' ? '' : 'none';
 
   if (mode === 'phone') {
     if (ui.otpSection) ui.otpSection.style.display = authState.otpSent ? '' : 'none';
@@ -908,6 +913,11 @@ function bindLoginUiEvents() {
     });
   });
 
+  document.getElementById('forgot-password-link')?.addEventListener('click', (e) => {
+    e.preventDefault();
+    handleForgotPassword();
+  });
+
   ui.loginCard.dataset.authBound = 'true';
 }
 
@@ -929,37 +939,50 @@ async function completeAuthSession(data, options = {}) {
 let registerRole = 'tenant';
 
 function showRegisterForm() {
-  // Hide login elements
-  document.querySelector('.tabs').style.display = 'none';
-  document.getElementById('auth-phone-fields').style.display = 'none';
-  document.getElementById('auth-email-fields').style.display = 'none';
-  document.querySelector('.role-toggle').style.display = 'none';
-  document.getElementById('login-submit-btn').style.display = 'none';
-  document.getElementById('show-register-link').style.display = 'none';
+  // Hide login elements safely
+  const tabs = document.querySelector('#page-login .tabs');
+  const phoneFields = document.getElementById('auth-phone-fields');
+  const emailFields = document.getElementById('auth-email-fields');
+  const roleToggle = document.querySelector('#page-login .role-toggle');
+  const loginBtn = document.getElementById('login-submit-btn');
+  const showRegisterLink = document.getElementById('show-register-link');
+
+  if (tabs) tabs.style.display = 'none';
+  if (phoneFields) phoneFields.style.display = 'none';
+  if (emailFields) emailFields.style.display = 'none';
+  if (roleToggle) roleToggle.style.display = 'none';
+  if (loginBtn) loginBtn.style.display = 'none';
+  if (showRegisterLink) showRegisterLink.style.display = 'none';
 
   // Show register elements
-  document.getElementById('register-fields').style.display = 'block';
-  document.getElementById('show-login-link').style.display = 'inline';
+  const registerFields = document.getElementById('register-fields');
+  const showLoginLink = document.getElementById('show-login-link');
+  if (registerFields) registerFields.style.display = 'block';
+  if (showLoginLink) showLoginLink.style.display = 'inline';
 }
 
 function showLoginForm() {
   // Hide register elements
-  document.getElementById('register-fields').style.display = 'none';
-  document.getElementById('show-login-link').style.display = 'none';
+  const registerFields = document.getElementById('register-fields');
+  const showLoginLink = document.getElementById('show-login-link');
+  if (registerFields) registerFields.style.display = 'none';
+  if (showLoginLink) showLoginLink.style.display = 'none';
 
-  // Show login elements
-  document.querySelector('.tabs').style.display = '';
-  document.querySelector('.role-toggle').style.display = '';
-  document.getElementById('login-submit-btn').style.display = '';
-  document.getElementById('show-register-link').style.display = 'inline';
+  // Show login elements safely
+  const tabs = document.querySelector('#page-login .tabs');
+  const roleToggle = document.querySelector('#page-login .role-toggle');
+  const loginBtn = document.getElementById('login-submit-btn');
+  const showRegisterLink = document.getElementById('show-register-link');
+
+  if (tabs) tabs.style.display = '';
+  if (roleToggle) roleToggle.style.display = '';
+  if (loginBtn) loginBtn.style.display = '';
+  if (showRegisterLink) showRegisterLink.style.display = 'inline';
 
   applyAuthModeState(authState.loginMode);
 }
 
 function bindRegisterEvents() {
-  if (window.__registerBound) return;
-  window.__registerBound = true;
-
   document.getElementById('show-register-link')?.addEventListener('click', (e) => {
     e.preventDefault();
     showRegisterForm();
@@ -1054,6 +1077,48 @@ async function handleRegisterSubmit() {
   } finally {
     btn.disabled = false;
     btn.textContent = 'Create Account';
+  }
+}
+
+async function handleForgotPassword() {
+  const ui = ensureLoginUiElements();
+  const email = ui?.emailInput?.value?.trim() || '';
+  const errorEl = document.getElementById('login-error');
+  const link = document.getElementById('forgot-password-link');
+
+  if (!email) {
+    if (errorEl) errorEl.textContent = 'Please enter your email address first.';
+    return;
+  }
+
+  if (link) {
+    link.textContent = 'Sending...';
+    link.style.pointerEvents = 'none';
+  }
+
+  try {
+    const res = await fetch('/api/auth/forgot-password', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email })
+    });
+
+    const data = await res.json();
+
+    if (errorEl) {
+      errorEl.style.color = '#166534';
+      errorEl.textContent = data.message || 'Reset link sent! Check your email.';
+    }
+  } catch (err) {
+    if (errorEl) {
+      errorEl.style.color = '#dc2626';
+      errorEl.textContent = 'Unable to send reset link. Please try again.';
+    }
+  } finally {
+    if (link) {
+      link.textContent = 'Forgot password?';
+      link.style.pointerEvents = '';
+    }
   }
 }
 
