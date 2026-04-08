@@ -4559,3 +4559,18 @@ textarea {
   }
 
 }
+
+.carousel-zoom-controls {
+  position: absolute;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  z-index: 10;
+  background: rgba(0,0,0,0.4);
+  padding: 6px;
+  border-radius: 12px;
+  backdrop-filter: blur(8px);
+}

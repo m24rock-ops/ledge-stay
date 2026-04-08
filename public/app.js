@@ -538,6 +538,15 @@ function getCarouselElements(root) {
 }
 
 function setCarouselIndex(root, index) {
+  _modalZoom = 1;
+  const btn = document.getElementById('zoom-reset-btn');
+  if (btn) btn.textContent = '100%';
+  const img = document.getElementById('carousel-modal-img');
+  if (img) {
+    img.style.transform = 'scale(1)';
+    img.style.cursor = 'zoom-in';
+  }
+
   const elements = getCarouselElements(root);
   if (!elements || !elements.total) return;
 
@@ -1138,9 +1147,11 @@ function openCarouselModal(triggerEl, index) {
   if (!elements?.modal) return;
 
   setCarouselIndex(root, index);
+  elements.modal.dataset.zoom = '1';
   elements.modal.classList.add('is-open');
   elements.modal.setAttribute('aria-hidden', 'false');
   document.body.classList.add('modal-open');
+  zoomModal(0);
 }
 
 function closeCarouselModal(event) {
@@ -1152,6 +1163,31 @@ function closeCarouselModal(event) {
     modal.setAttribute('aria-hidden', 'true');
     document.body.classList.remove('modal-open');
   }
+}
+
+let _modalZoom = 1;
+
+function handleModalBackdropClick(event) {
+  // only close if clicking the dark backdrop itself, not controls
+  if (event.target.classList.contains('carousel-modal')) {
+    closeCarouselModal(event);
+  }
+}
+
+function zoomModal(dir) {
+  const img = document.getElementById('carousel-modal-img');
+  const btn = document.getElementById('zoom-reset-btn');
+  if (!img) return;
+
+  if (dir === 0) {
+    _modalZoom = 1;
+  } else {
+    _modalZoom = Math.min(4, Math.max(0.5, _modalZoom + dir * 0.5));
+  }
+
+  img.style.transform = `scale(${_modalZoom})`;
+  img.style.cursor = _modalZoom > 1 ? 'zoom-out' : 'zoom-in';
+  if (btn) btn.textContent = Math.round(_modalZoom * 100) + '%';
 }
 
 function carouselCurrentIndex(root) {
@@ -2569,7 +2605,7 @@ async function showDetail(id) {
       <div class="detail-actions">
         ${renderOwnerListingActions(listing, { detail: true })}
         ${renderWishlistButton(listing, { detail: true })}
-        <button class="btn-outline" onclick="showPage('listings')">Back</button>
+        <button onclick="showPage('listings')" class="back-button" style="display:inline-flex;align-items:center;gap:6px;padding:10px 18px;border-radius:10px;background:#fff;color:#1f7de2;border:1.5px solid #d9e8f5;font-size:14px;font-weight:600;cursor:pointer;">← Back to listings</button>
       </div>
 
       <!-- AMENITIES -->
@@ -2684,11 +2720,20 @@ function renderPhotoCarousel(photos) {
       <button type="button" class="carousel-open-viewer" aria-label="Open fullscreen gallery" onclick="openCarouselModal(this, carouselCurrentIndex(carouselRoot(this)))">View Fullscreen</button>
     </div>
     ${thumbs}
-    <div class="carousel-modal" aria-hidden="true" onclick="closeCarouselModal(event)">
+    <div class="carousel-modal" aria-hidden="true" onclick="handleModalBackdropClick(event)">
       <button class="carousel-modal-close" type="button" aria-label="Close fullscreen gallery" onclick="closeCarouselModal(event)">&times;</button>
+
+      <div class="carousel-zoom-controls">
+        <button type="button" onclick="zoomModal(-1)" title="Zoom out" style="background:rgba(255,255,255,.15);border:none;border-radius:8px;width:40px;height:40px;color:#fff;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;">−</button>
+        <button type="button" onclick="zoomModal(0)"  title="Reset zoom" style="background:rgba(255,255,255,.15);border:none;border-radius:8px;width:40px;height:40px;color:#fff;font-size:11px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;" id="zoom-reset-btn">100%</button>
+        <button type="button" onclick="zoomModal(1)"  title="Zoom in"  style="background:rgba(255,255,255,.15);border:none;border-radius:8px;width:40px;height:40px;color:#fff;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;">+</button>
+      </div>
+
       <div class="carousel-modal-stage">
         ${photos.length > 1 ? `<button class="carousel-arrow carousel-arrow--prev carousel-modal-arrow" type="button" aria-label="Previous photo" onclick="carouselStep(this,-1)">&#10094;</button>` : ''}
-        <img class="carousel-modal-image" src="${photos[0]}" alt="Fullscreen listing photo" decoding="async">
+        <div id="carousel-modal-img-wrap" style="overflow:auto;display:flex;align-items:center;justify-content:center;width:100%;height:100%;">
+          <img class="carousel-modal-image" src="${photos[0]}" alt="Fullscreen listing photo" decoding="async" style="transform-origin:center;transition:transform .2s;cursor:zoom-in;" id="carousel-modal-img">
+        </div>
         ${photos.length > 1 ? `<button class="carousel-arrow carousel-arrow--next carousel-modal-arrow" type="button" aria-label="Next photo" onclick="carouselStep(this,1)">&#10095;</button>` : ''}
       </div>
       <div class="carousel-modal-footer">
