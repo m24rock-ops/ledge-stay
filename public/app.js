@@ -18,8 +18,8 @@ window.addEventListener('unhandledrejection', (event) => {
 let selectedReviewRating = 0;
 let editingListingId = null;
 let savedListingIds = new Set();
-const WISHLIST_STORAGE_KEY = 'wishlist';
-const WISHLIST_LEGACY_STORAGE_KEY = 'wishlist_listing_ids';
+let wishlistIdsLoaded = false;
+let wishlistIdsLoadPromise = null;
 let appConfig = {
   mapsEmbedApiKey: ''
 };
@@ -880,7 +880,7 @@ async function completeAuthSession(data, options = {}) {
 
   localStorage.setItem('token', data.token);
   localStorage.setItem('user', JSON.stringify(data.user));
-  await loadWishlistState();
+  await loadWishlist();
   updateNav();
   showPage(redirectPage);
 }
@@ -1400,38 +1400,6 @@ function normalizeWishlistListingId(listingId) {
   return String(listingId || '').trim();
 }
 
-function getWishlist() {
-  try {
-    const raw = localStorage.getItem(WISHLIST_STORAGE_KEY) || localStorage.getItem(WISHLIST_LEGACY_STORAGE_KEY);
-    if (!raw) {
-      console.debug('[wishlist] getWishlist: empty');
-      return new Set();
-    }
-    const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed)) {
-      console.debug('[wishlist] getWishlist: invalid payload');
-      return new Set();
-    }
-    const ids = new Set(parsed.map((id) => String(id)).filter(Boolean));
-    console.debug('[wishlist] getWishlist:', [...ids]);
-    return ids;
-  } catch (err) {
-    console.warn('wishlist storage read failed:', err);
-    return new Set();
-  }
-}
-
-function saveWishlist(ids = savedListingIds) {
-  try {
-    const uniqueIds = [...new Set([...ids].map((id) => String(id)).filter(Boolean))];
-    localStorage.setItem(WISHLIST_STORAGE_KEY, JSON.stringify(uniqueIds));
-    localStorage.removeItem(WISHLIST_LEGACY_STORAGE_KEY);
-    console.debug('[wishlist] saveWishlist:', uniqueIds);
-  } catch (err) {
-    console.warn('wishlist storage write failed:', err);
-  }
-}
-
 function updateWishlistButtonElement(button, saved) {
   if (!button) return;
 
@@ -1462,14 +1430,6 @@ function applyWishlistUI(targetListingId = null, forcedSavedState = null) {
   });
 }
 
-function getStoredWishlistIds() {
-  return getWishlist();
-}
-
-function persistWishlistIds(ids = savedListingIds) {
-  saveWishlist(ids);
-}
-
 function applyWishlistStateToButtons() {
   applyWishlistUI();
 }
@@ -1478,20 +1438,30 @@ function updateWishlistButtons(listingId, saved) {
   applyWishlistUI(listingId, saved);
 }
 
-function handleWishlistClick(event, listingId, source = 'listing') {
-  if (event) {
-    event.preventDefault();
-    event.stopPropagation();
-  }
-
+async function handleWishlistClick(listingId, btn) {
   const normalizedId = normalizeWishlistListingId(listingId);
   if (!normalizedId) {
     console.error('[wishlist] click ignored: missing listing id');
     return;
   }
 
-  console.debug('[wishlist] click fired:', { listingId: normalizedId, source });
-  void toggleWishlist(normalizedId, { source });
+  const source = btn?.getAttribute?.('data-wishlist-source') || 'listing';
+
+  try {
+    const res = await toggleWishlist(normalizedId, { source });
+
+    if (res?.saved) {
+      savedListingIds.add(normalizedId);
+      btn?.classList.add('active');
+      btn?.classList.add('is-saved');
+    } else {
+      savedListingIds.delete(normalizedId);
+      btn?.classList.remove('active');
+      btn?.classList.remove('is-saved');
+    }
+  } catch (err) {
+    console.error(err);
+  }
 }
 
 function initWishlistEventDelegation() {
@@ -1504,29 +1474,23 @@ function initWishlistEventDelegation() {
     const btn = e.target.closest('.wishlist-btn, [data-wishlist-id]');
     if (!btn) return;
 
+    e.preventDefault();
+    e.stopPropagation();
+
     const listingId = btn.getAttribute('data-wishlist-id')
       || btn.getAttribute('data-id')
       || btn.closest('[data-id]')?.getAttribute('data-id');
 
-    const source = btn.getAttribute('data-wishlist-source') || 'listing';
-    handleWishlistClick(e, listingId, source);
+    void handleWishlistClick(listingId, btn);
   });
-}
-
-function renderWishlistHeartIcon(saved) {
-  return `
-    <svg class="wishlist-heart-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-      <path d="M12 20.4 10.55 19.08C5.4 14.42 2 11.34 2 7.5 2 5.01 3.99 3 6.45 3c1.74 0 3.41.81 4.55 2.09A6 6 0 0 1 15.55 3C18.01 3 20 5.01 20 7.5c0 3.84-3.4 6.92-8.55 11.58Z"></path>
-    </svg>
-  `;
 }
 
 function renderWishlistHeart(listingId, options = {}) {
   if (!canUseWishlist()) return '';
 
-  const saved = isListingSaved(listingId);
+  const isSaved = wishlistIdsLoaded && savedListingIds.has(String(listingId));
   const variant = options.variant === 'inline' ? 'inline' : 'card';
-  const className = `wishlist-heart wishlist-btn wishlist-heart--${variant} ${saved ? 'is-saved active' : ''}`;
+  const className = `wishlist-heart wishlist-btn wishlist-heart--${variant} ${isSaved ? 'active is-saved' : ''}`;
   const source = options.source || 'listing';
 
   return `
@@ -1535,13 +1499,10 @@ function renderWishlistHeart(listingId, options = {}) {
       data-wishlist-id="${listingId}"
       data-id="${listingId}"
       data-wishlist-source="${source}"
-      aria-pressed="${saved ? 'true' : 'false'}"
-      aria-label="${saved ? 'Remove from wishlist' : 'Save to wishlist'}"
+      aria-pressed="${isSaved ? 'true' : 'false'}"
+      aria-label="${isSaved ? 'Remove from wishlist' : 'Save to wishlist'}"
       type="button"
-      onclick="handleWishlistClick(event, '${listingId}', '${source}')"
-    >
-      ${renderWishlistHeartIcon(saved)}
-    </button>
+    >❤️</button>
   `;
 }
 
@@ -1902,46 +1863,79 @@ async function apiFetchJson(path, options = {}) {
   return data;
 }
 
-async function loadWishlistState() {
+async function loadWishlist() {
+  await loadWishlistIds({ force: true });
+}
+
+function parseWishlistIds(data) {
+  const items = Array.isArray(data)
+    ? data
+    : Array.isArray(data?.wishlist)
+      ? data.wishlist
+      : [];
+
+  const nestedIds = items
+    .map((item) => item?.listingId?._id || item?.listingId || item?._id || item?.id)
+    .filter(Boolean);
+
+  const directIds = Array.isArray(data?.listingIds) ? data.listingIds : [];
+
+  return new Set([...directIds, ...nestedIds].map((id) => String(id)));
+}
+
+async function loadWishlistIds(options = {}) {
+  const { force = false } = options;
+
   if (!canUseWishlist()) {
     savedListingIds = new Set();
-    return;
+    wishlistIdsLoaded = true;
+    return savedListingIds;
   }
-
-  const localIds = getStoredWishlistIds();
-  savedListingIds = new Set(localIds);
 
   if (!canSyncWishlist()) {
-    persistWishlistIds(savedListingIds);
+    savedListingIds = new Set();
+    wishlistIdsLoaded = true;
     applyWishlistStateToButtons();
-    return;
+    return savedListingIds;
   }
 
-  try {
-    const data = await apiFetchJson('/api/wishlist', {
-      headers: { Authorization: `Bearer ${getToken()}` }
-    });
-    const remoteIds = new Set((data.listingIds || []).map((id) => String(id)));
-    const merged = new Set([...remoteIds, ...localIds]);
-    savedListingIds = merged;
-    persistWishlistIds(merged);
+  if (!force && wishlistIdsLoaded) {
+    return savedListingIds;
+  }
 
-    const toAdd = [...merged].filter((id) => !remoteIds.has(id));
-    if (toAdd.length > 0) {
-      await Promise.allSettled(toAdd.map((id) => apiFetchJson('/api/wishlist', {
-        method: 'POST',
+  if (!force && wishlistIdsLoadPromise) {
+    return wishlistIdsLoadPromise;
+  }
+
+  wishlistIdsLoadPromise = (async () => {
+    try {
+      const token = getToken();
+      const res = await fetch('/api/wishlist', {
         headers: {
-          Authorization: `Bearer ${getToken()}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ listingId: id })
-      })));
+          Authorization: `Bearer ${token}`
+        }
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data?.message || 'Unable to load wishlist.');
+      }
+
+      savedListingIds = parseWishlistIds(data);
+      wishlistIdsLoaded = true;
+      return savedListingIds;
+    } catch (err) {
+      console.error('wishlist id load error:', err);
+      wishlistIdsLoaded = true;
+      return savedListingIds;
+    } finally {
+      wishlistIdsLoadPromise = null;
+      applyWishlistStateToButtons();
     }
-  } catch (err) {
-    console.error('wishlist load error:', err);
-  } finally {
-    applyWishlistStateToButtons();
-  }
+  })();
+
+  return wishlistIdsLoadPromise;
 }
 
 async function loadWishlistPage() {
@@ -1960,8 +1954,7 @@ async function loadWishlistPage() {
       headers: { Authorization: `Bearer ${getToken()}` }
     });
 
-    savedListingIds = new Set((data.listingIds || []).map((id) => String(id)));
-    persistWishlistIds(savedListingIds);
+    savedListingIds = parseWishlistIds(data);
     const listings = Array.isArray(data.wishlist) ? data.wishlist : [];
 
     if (listings.length === 0) {
@@ -2015,7 +2008,6 @@ async function toggleWishlist(listingId, options = {}) {
     savedListingIds.delete(normalizedId);
   }
 
-  persistWishlistIds(savedListingIds);
   updateWishlistButtons(normalizedId, nextSaved);
   console.debug('[wishlist] toggled:', { listingId: normalizedId, saved: nextSaved, total: savedListingIds.size });
 
@@ -2033,34 +2025,49 @@ async function toggleWishlist(listingId, options = {}) {
 
   if (!canSyncWishlist()) {
     console.debug('[wishlist] local-only mode');
-    return;
+    return { saved: nextSaved };
   }
+
+  let apiResult = null;
 
   try {
     if (nextSaved) {
-      await apiFetchJson('/api/wishlist', {
+      const token = getToken();
+      const res = await fetch('/api/wishlist', {
         method: 'POST',
         headers: {
-          Authorization: `Bearer ${getToken()}`,
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
         },
         body: JSON.stringify({ listingId: normalizedId })
       });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data?.message || 'Unable to update your saved listings.');
+      }
+
+      apiResult = data;
     } else {
-      await apiFetchJson(`/api/wishlist/${normalizedId}`, {
+      apiResult = await apiFetchJson(`/api/wishlist/${normalizedId}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${getToken()}` }
       });
     }
+
+    return {
+      ...(apiResult && typeof apiResult === 'object' ? apiResult : {}),
+      saved: nextSaved
+    };
   } catch (err) {
     if (nextSaved) {
       savedListingIds.delete(normalizedId);
     } else {
       savedListingIds.add(normalizedId);
     }
-    persistWishlistIds(savedListingIds);
     updateWishlistButtons(normalizedId, !nextSaved);
     alert(err.message || 'Unable to update your saved listings.');
+    throw err;
   }
 }
 
@@ -2410,43 +2417,17 @@ function renderListingsMarkup(listings) {
 }
 
 async function loadListings() {
-  const query = nearbySearchState.active
-    ? buildNearbyListingsQuery(currentListingsPage)
-    : buildListingsQuery(currentListingsPage);
-  const endpoint = nearbySearchState.active ? '/api/listings/nearby' : '/api/listings';
   const grid = document.getElementById('listings-grid');
-  let paginationEl = document.getElementById('listings-pagination');
+  grid.innerHTML = 'Loading...';
 
-  if (!paginationEl) {
-    paginationEl = document.createElement('div');
-    paginationEl.id = 'listings-pagination';
-    grid.insertAdjacentElement('afterend', paginationEl);
-  }
+  await loadWishlistIds();
+  console.log(savedListingIds);
 
-  grid.innerHTML = '<p style="padding:20px;color:#888">Loading...</p>';
-  paginationEl.innerHTML = '';
-  updateNearbyResultsBanner();
+  const listings = await apiFetchJson('/api/listings');
 
-  try {
-    const data = await apiFetchJson(`${endpoint}?${query.toString()}`);
-    const listings = Array.isArray(data) ? data : data.listings;
-    const totalPages = data.totalPages || 1;
-    const total = Array.isArray(data) ? listings.length : Number(data.total || listings.length);
+  grid.innerHTML = listings.map(renderListingCard).join('');
 
-    if (!Array.isArray(listings) || listings.length === 0) {
-      updateNearbyResultsBanner(0, data.radiusKm);
-      grid.innerHTML = `<p style="padding:20px;color:#888">${nearbySearchState.active ? 'No nearby listings found for this location.' : 'No listings found.'}</p>`;
-      return;
-    }
-
-    grid.innerHTML = renderListingsMarkup(listings);
-    applyWishlistStateToButtons();
-    updateNearbyResultsBanner(total, data.radiusKm);
-    paginationEl.innerHTML = renderPagination(currentListingsPage, totalPages);
-  } catch (err) {
-    updateNearbyResultsBanner();
-    grid.innerHTML = `<p style="padding:20px;color:#c0392b">${err.message || 'Unable to load listings.'}</p>`;
-  }
+  applyWishlistStateToButtons();
 }
 
 async function loadOwnerDashboardImpl() {
@@ -2747,7 +2728,8 @@ function renderPhotoCarousel(photos) {
 function logout() {
   localStorage.removeItem('token');
   localStorage.removeItem('user');
-  savedListingIds = getStoredWishlistIds();
+  savedListingIds = new Set();
+  wishlistIdsLoaded = false;
   applyWishlistStateToButtons();
   editingListingId = null;
   resetListingForm();
@@ -3491,7 +3473,7 @@ document.addEventListener('DOMContentLoaded', () => {
   
   initWishlistEventDelegation();
 
-  Promise.allSettled([loadAppConfig(), loadWishlistState()]).finally(() => {
+  Promise.allSettled([loadAppConfig(), loadWishlist()]).finally(() => {
     loadFeaturedListings();
     bootFromPath();
   });
