@@ -1400,6 +1400,15 @@ function normalizeWishlistListingId(listingId) {
   return String(listingId || '').trim();
 }
 
+function showToast(msg) {
+  const toast = document.createElement('div');
+  toast.className = 'toast';
+  toast.innerText = msg;
+  document.body.appendChild(toast);
+
+  setTimeout(() => toast.remove(), 2000);
+}
+
 function updateWishlistButtonElement(button, saved) {
   if (!button) return;
 
@@ -1407,12 +1416,18 @@ function updateWishlistButtonElement(button, saved) {
   button.classList.toggle('active', saved);
   button.setAttribute('aria-pressed', saved ? 'true' : 'false');
   button.setAttribute('aria-label', saved ? 'Remove from wishlist' : 'Save to wishlist');
+  button.setAttribute('title', saved ? 'Remove from wishlist' : 'Save to wishlist');
+
+  const label = button.querySelector('.wishlist-label');
+  if (label) {
+    label.textContent = saved ? 'Saved' : 'Save';
+  }
 }
 
 function applyWishlistUI(targetListingId = null, forcedSavedState = null) {
   const normalizedTargetId = targetListingId ? normalizeWishlistListingId(targetListingId) : null;
 
-  document.querySelectorAll('.wishlist-btn[data-wishlist-id]').forEach((button) => {
+  document.querySelectorAll('.wishlist-btn[data-wishlist-id], .wishlist-heart[data-id]').forEach((button) => {
     const listingId = normalizeWishlistListingId(
       button.getAttribute('data-wishlist-id')
       || button.getAttribute('data-id')
@@ -1454,10 +1469,12 @@ async function handleWishlistClick(listingId, btn) {
       savedListingIds.add(normalizedId);
       btn?.classList.add('active');
       btn?.classList.add('is-saved');
+      showToast('Saved to wishlist ❤️');
     } else {
       savedListingIds.delete(normalizedId);
       btn?.classList.remove('active');
       btn?.classList.remove('is-saved');
+      showToast('Removed from wishlist');
     }
   } catch (err) {
     console.error(err);
@@ -1469,41 +1486,38 @@ function initWishlistEventDelegation() {
   window.__wishlistDelegationBound = true;
 
   document.addEventListener('click', (e) => {
-    if (e.defaultPrevented) return;
-
-    const btn = e.target.closest('.wishlist-btn, [data-wishlist-id]');
+    const btn = e.target.closest('.wishlist-heart, .wishlist-btn, [data-wishlist-id]');
     if (!btn) return;
 
-    e.preventDefault();
+    // Stop the card's onclick from firing
     e.stopPropagation();
+    e.preventDefault();
 
     const listingId = btn.getAttribute('data-wishlist-id')
       || btn.getAttribute('data-id')
       || btn.closest('[data-id]')?.getAttribute('data-id');
 
+    if (!listingId) return;
+
     void handleWishlistClick(listingId, btn);
-  });
+  }, true); // <-- capture: true is the key fix
 }
 
 function renderWishlistHeart(listingId, options = {}) {
-  if (!canUseWishlist()) return '';
-
-  const isSaved = wishlistIdsLoaded && savedListingIds.has(String(listingId));
-  const variant = options.variant === 'inline' ? 'inline' : 'card';
-  const className = `wishlist-heart wishlist-btn wishlist-heart--${variant} ${isSaved ? 'active is-saved' : ''}`;
-  const source = options.source || 'listing';
-
-  return `
-    <button
-      class="${className}"
-      data-wishlist-id="${listingId}"
-      data-id="${listingId}"
-      data-wishlist-source="${source}"
-      aria-pressed="${isSaved ? 'true' : 'false'}"
-      aria-label="${isSaved ? 'Remove from wishlist' : 'Save to wishlist'}"
-      type="button"
-    >❤️</button>
-  `;
+  const { source = 'listing' } = typeof options === 'object' ? options : {};
+  return `<button
+    class="wishlist-heart wishlist-heart--card"
+    data-id="${listingId}"
+    data-wishlist-id="${listingId}"
+    data-wishlist-source="${source}"
+    type="button"
+    aria-label="Save to wishlist"
+    aria-pressed="false">
+    <svg viewBox="0 0 24 24" width="18" height="18">
+      <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"
+        fill="none" stroke="#e11d48" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+  </button>`;
 }
 
 function renderWishlistButton(listing, options = {}) {
