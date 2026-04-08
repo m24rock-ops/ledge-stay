@@ -446,64 +446,6 @@ function setupLocationAutocomplete(inputId, dropdownId) {
   });
 }
 
-// ── PHOTO CAROUSEL ──────────────────────────────────────────────────────────
-
-function renderPhotoCarousel(photos) {
-  if (!photos || photos.length === 0) {
-    return '<div class="no-image detail-no-image">No photo available</div>';
-  }
-
-  const slides = photos.map((src, i) => `
-    <div class="carousel-slide ${i === 0 ? 'is-active' : ''}" data-index="${i}">
-      <img src="${src}" alt="Listing photo ${i + 1}" loading="${i === 0 ? 'eager' : 'lazy'}" decoding="async" onclick="openCarouselModal(this, ${i})">
-    </div>`).join('');
-
-  const dots = photos.length > 1
-    ? `<div class="carousel-dots">
-        ${photos.map((_, i) => `<button class="carousel-dot ${i === 0 ? 'is-active' : ''}" aria-label="Photo ${i + 1}" onclick="carouselGoTo(this,${i})"></button>`).join('')}
-       </div>`
-    : '';
-
-  const arrows = photos.length > 1
-    ? `<button class="carousel-arrow carousel-arrow--prev" aria-label="Previous photo" onclick="carouselStep(this,-1)">&#8592;</button>
-       <button class="carousel-arrow carousel-arrow--next" aria-label="Next photo"     onclick="carouselStep(this, 1)">&#8594;</button>`
-    : '';
-
-  const thumbs = photos.length > 1
-    ? `<div class="carousel-thumbs">
-        ${photos.map((src, i) => `<img src="${src}" class="carousel-thumb ${i === 0 ? 'is-active' : ''}" alt="Thumb ${i + 1}" loading="lazy" decoding="async" onclick="carouselGoTo(this,${i})">`).join('')}
-       </div>`
-    : '';
-
-  const modalDots = photos.length > 1
-    ? `<div class="carousel-modal-dots">
-        ${photos.map((_, i) => `<button class="carousel-modal-dot ${i === 0 ? 'is-active' : ''}" aria-label="Open photo ${i + 1}" onclick="carouselModalGoTo(this,${i})"></button>`).join('')}
-      </div>`
-    : '';
-
-  return `
-    <div class="carousel" data-current="0" tabindex="0"
-         onkeydown="carouselKey(event, this)">
-      <div class="carousel-track">${slides}</div>
-      ${arrows}
-      ${dots}
-      <button type="button" class="carousel-open-viewer" aria-label="Open fullscreen gallery" onclick="openCarouselModal(this, carouselCurrentIndex(carouselRoot(this)))">View Fullscreen</button>
-    </div>
-    ${thumbs}
-    <div class="carousel-modal" aria-hidden="true" onclick="closeCarouselModal(event)">
-      <button class="carousel-modal-close" type="button" aria-label="Close fullscreen gallery" onclick="closeCarouselModal(event)">×</button>
-      <div class="carousel-modal-stage">
-        ${photos.length > 1 ? `<button class="carousel-arrow carousel-arrow--prev carousel-modal-arrow" type="button" aria-label="Previous photo" onclick="carouselStep(this,-1)">&#8592;</button>` : ''}
-        <img class="carousel-modal-image" src="${photos[0]}" alt="Fullscreen listing photo" decoding="async">
-        ${photos.length > 1 ? `<button class="carousel-arrow carousel-arrow--next carousel-modal-arrow" type="button" aria-label="Next photo" onclick="carouselStep(this,1)">&#8594;</button>` : ''}
-      </div>
-      <div class="carousel-modal-footer">
-        <div class="carousel-modal-counter">1 / ${photos.length}</div>
-        ${modalDots}
-      </div>
-    </div>`;
-}
-
 function carouselRoot(el) {
   return el.closest('.detail-photos');
 }
@@ -543,7 +485,7 @@ function setCarouselIndex(root, index) {
   if (btn) btn.textContent = '100%';
   const img = document.getElementById('carousel-modal-img');
   if (img) {
-    img.style.transform = 'scale(1)';
+    img.style.setProperty('--modal-zoom', '1');
     img.style.cursor = 'zoom-in';
   }
 
@@ -1185,7 +1127,7 @@ function zoomModal(dir) {
     _modalZoom = Math.min(4, Math.max(0.5, _modalZoom + dir * 0.5));
   }
 
-  img.style.transform = `scale(${_modalZoom})`;
+  img.style.setProperty('--modal-zoom', String(_modalZoom));
   img.style.cursor = _modalZoom > 1 ? 'zoom-out' : 'zoom-in';
   if (btn) btn.textContent = Math.round(_modalZoom * 100) + '%';
 }
@@ -1258,9 +1200,65 @@ function initializeDetailCarousels(scope = document) {
 
 // ────────────────────────────────────────────────────────────────────────────
 
+function getListingImageUrls(listing) {
+  if (!listing || typeof listing !== 'object') return [];
+
+  const rawImages = Array.isArray(listing.images) ? listing.images : [];
+  const rawPhotos = Array.isArray(listing.photos) ? listing.photos : [];
+
+  const normalizedImages = rawImages
+    .map((image) => {
+      if (typeof image === 'string') return sanitizeAssetUrl(image);
+      if (image && typeof image === 'object') {
+        return sanitizeAssetUrl(image.url || image.secure_url || image.src || '');
+      }
+      return '';
+    })
+    .filter(Boolean);
+
+  const normalizedPhotos = rawPhotos
+    .map((photo) => sanitizeAssetUrl(photo))
+    .filter(Boolean);
+
+  return normalizedImages.length > 0 ? normalizedImages : normalizedPhotos;
+}
+
+function renderDetailSideImages(images) {
+  if (!Array.isArray(images) || images.length <= 1) {
+    return `
+      <div class="side-image-card side-image-card--empty">
+        <span>No more photos</span>
+      </div>
+    `;
+  }
+
+  const previewImages = images.slice(1, 3);
+
+  return previewImages.map((src, index) => {
+    const photoIndex = index + 1;
+    const remaining = images.length - 3;
+    const overlay = index === previewImages.length - 1 && remaining > 0
+      ? `<span class="side-image-more">+${remaining} more</span>`
+      : '';
+
+    return `
+      <button
+        type="button"
+        class="side-image-card"
+        aria-label="Open photo ${photoIndex + 1} in fullscreen"
+        onclick="openCarouselModal(this, ${photoIndex})"
+      >
+        <img src="${src}" alt="Listing preview ${photoIndex + 1}" loading="lazy" decoding="async">
+        ${overlay}
+      </button>
+    `;
+  }).join('');
+}
+
 function renderListingImage(listing, altText) {
-  if (listing.photos && listing.photos.length > 0) {
-    return `<img src="${listing.photos[0]}" alt="${altText}" loading="lazy" decoding="async">`;
+  const imageUrls = getListingImageUrls(listing);
+  if (imageUrls.length > 0) {
+    return `<img src="${imageUrls[0]}" alt="${altText}" loading="lazy" decoding="async">`;
   }
 
   return '<div class="no-image">Home</div>';
@@ -1705,6 +1703,7 @@ function formatListingPrice(price) {
 }
 
 function buildListingCardData(listing = {}) {
+  const imageUrls = getListingImageUrls(listing);
   const city = getSafeListingText(listing.city, {
     fallback: 'Location unavailable',
     minLength: 3,
@@ -1746,7 +1745,7 @@ function buildListingCardData(listing = {}) {
 
   const whatsappMessage = `Hi, I'm interested in your property: ${title}, located at ${location}. Please share details.`;
   const whatsappUrl = buildWhatsAppContactUrl(ownerPhone, whatsappMessage);
-  const imageUrl = sanitizeAssetUrl(listing.photos?.[0] || '');
+  const imageUrl = imageUrls[0] || '';
   const imageHtml = imageUrl
     ? `<img src="${imageUrl}" alt="${escapeHtml(title)}" loading="lazy">`
     : `
@@ -2526,6 +2525,7 @@ async function loadOwnerDashboardImpl() {
 async function showDetail(id) {
   try {
     const listing = await apiFetchJson(`/api/listings/${id}`);
+    const listingImages = getListingImageUrls(listing);
     selectedReviewRating = 0;
     const detailTitle = getSafeListingTitle(listing.title);
     const detailLocation = getSafeListingLocation([listing.address, listing.city], 'Location details unavailable');
@@ -2557,11 +2557,10 @@ async function showDetail(id) {
       <!-- IMAGE SECTION -->
       <div class="detail-gallery">
         <div class="main-image">
-          ${renderPhotoCarousel(listing.photos)}
+          ${renderPhotoCarousel(listingImages)}
         </div>
         <div class="side-images">
-          <div>Add photo</div>
-          <div>+ ${Math.max(0, (listing.photos || []).length - 1)} more</div>
+          ${renderDetailSideImages(listingImages)}
         </div>
       </div>
 
@@ -2686,7 +2685,7 @@ function renderPhotoCarousel(photos) {
 
   const slides = photos.map((src, i) => `
     <div class="carousel-slide ${i === 0 ? 'is-active' : ''}" data-index="${i}">
-      <img src="${src}" alt="Listing photo ${i + 1}" loading="${i === 0 ? 'eager' : 'lazy'}" decoding="async" onclick="openCarouselModal(this, ${i})">
+      <img class="interactive-main-image" src="${src}" alt="Listing photo ${i + 1}" loading="${i === 0 ? 'eager' : 'lazy'}" decoding="async" role="button" tabindex="0" onclick="openCarouselModal(this, ${i})" onkeydown="if(event.key === 'Enter' || event.key === ' '){ event.preventDefault(); openCarouselModal(this, ${i}); }">
     </div>`).join('');
 
   const dots = photos.length > 1
@@ -2713,32 +2712,34 @@ function renderPhotoCarousel(photos) {
     : '';
 
   return `
-    <div class="carousel" data-current="0" tabindex="0" onkeydown="carouselKey(event, this)">
-      <div class="carousel-track">${slides}</div>
-      ${arrows}
-      ${dots}
-      <button type="button" class="carousel-open-viewer" aria-label="Open fullscreen gallery" onclick="openCarouselModal(this, carouselCurrentIndex(carouselRoot(this)))">View Fullscreen</button>
-    </div>
-    ${thumbs}
-    <div class="carousel-modal" aria-hidden="true" onclick="handleModalBackdropClick(event)">
-      <button class="carousel-modal-close" type="button" aria-label="Close fullscreen gallery" onclick="closeCarouselModal(event)">&times;</button>
-
-      <div class="carousel-zoom-controls">
-        <button type="button" onclick="zoomModal(-1)" title="Zoom out" style="background:rgba(255,255,255,.15);border:none;border-radius:8px;width:40px;height:40px;color:#fff;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;">−</button>
-        <button type="button" onclick="zoomModal(0)"  title="Reset zoom" style="background:rgba(255,255,255,.15);border:none;border-radius:8px;width:40px;height:40px;color:#fff;font-size:11px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;" id="zoom-reset-btn">100%</button>
-        <button type="button" onclick="zoomModal(1)"  title="Zoom in"  style="background:rgba(255,255,255,.15);border:none;border-radius:8px;width:40px;height:40px;color:#fff;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;">+</button>
+    <div class="detail-photos">
+      <div class="carousel" data-current="0" tabindex="0" onkeydown="carouselKey(event, this)">
+        <div class="carousel-track">${slides}</div>
+        ${arrows}
+        ${dots}
+        <button type="button" class="carousel-open-viewer" aria-label="Open fullscreen gallery" onclick="openCarouselModal(this, carouselCurrentIndex(carouselRoot(this)))">View Fullscreen</button>
       </div>
+      ${thumbs}
+      <div class="carousel-modal image-viewer" aria-hidden="true" onclick="handleModalBackdropClick(event)">
+        <button class="carousel-modal-close close-btn" type="button" aria-label="Close fullscreen gallery" onclick="closeCarouselModal(event)">&times;</button>
 
-      <div class="carousel-modal-stage">
-        ${photos.length > 1 ? `<button class="carousel-arrow carousel-arrow--prev carousel-modal-arrow" type="button" aria-label="Previous photo" onclick="carouselStep(this,-1)">&#10094;</button>` : ''}
-        <div id="carousel-modal-img-wrap" style="overflow:auto;display:flex;align-items:center;justify-content:center;width:100%;height:100%;">
-          <img class="carousel-modal-image" src="${photos[0]}" alt="Fullscreen listing photo" decoding="async" style="transform-origin:center;transition:transform .2s;cursor:zoom-in;" id="carousel-modal-img">
+        <div class="carousel-zoom-controls">
+          <button type="button" onclick="zoomModal(-1)" title="Zoom out" style="background:rgba(255,255,255,.15);border:none;border-radius:8px;width:40px;height:40px;color:#fff;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;">−</button>
+          <button type="button" onclick="zoomModal(0)"  title="Reset zoom" style="background:rgba(255,255,255,.15);border:none;border-radius:8px;width:40px;height:40px;color:#fff;font-size:11px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;" id="zoom-reset-btn">100%</button>
+          <button type="button" onclick="zoomModal(1)"  title="Zoom in"  style="background:rgba(255,255,255,.15);border:none;border-radius:8px;width:40px;height:40px;color:#fff;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;">+</button>
         </div>
-        ${photos.length > 1 ? `<button class="carousel-arrow carousel-arrow--next carousel-modal-arrow" type="button" aria-label="Next photo" onclick="carouselStep(this,1)">&#10095;</button>` : ''}
-      </div>
-      <div class="carousel-modal-footer">
-        <div class="carousel-modal-counter">1 / ${photos.length}</div>
-        ${modalDots}
+
+        <div class="carousel-modal-stage">
+          ${photos.length > 1 ? `<button class="carousel-arrow carousel-arrow--prev carousel-modal-arrow" type="button" aria-label="Previous photo" onclick="carouselStep(this,-1)">&#10094;</button>` : ''}
+          <div id="carousel-modal-img-wrap" style="overflow:auto;display:flex;align-items:center;justify-content:center;width:100%;height:100%;">
+            <img class="carousel-modal-image modal-image viewer-img" src="${photos[0]}" alt="Fullscreen listing photo" decoding="async" style="--modal-zoom:1;--modal-hover-scale:1;transform-origin:center;cursor:zoom-in;" id="carousel-modal-img" onclick="event.stopPropagation()">
+          </div>
+          ${photos.length > 1 ? `<button class="carousel-arrow carousel-arrow--next carousel-modal-arrow" type="button" aria-label="Next photo" onclick="carouselStep(this,1)">&#10095;</button>` : ''}
+        </div>
+        <div class="carousel-modal-footer">
+          <div class="carousel-modal-counter">1 / ${photos.length}</div>
+          ${modalDots}
+        </div>
       </div>
     </div>`;
 }

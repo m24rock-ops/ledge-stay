@@ -114,6 +114,16 @@ function calculateDistanceKm(fromLat, fromLng, toLat, toLng) {
   return earthRadiusKm * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
+function attachListingImages(listing) {
+  if (!listing || typeof listing !== 'object') return listing;
+
+  const photos = Array.isArray(listing.photos) ? listing.photos.filter(Boolean) : [];
+  return {
+    ...listing,
+    images: photos.map((url) => ({ url }))
+  };
+}
+
 // Get all listings (with search, filters & pagination)
 router.get('/', async (req, res) => {
   try {
@@ -230,7 +240,9 @@ router.get('/nearby', async (req, res) => {
     const total = nearbyListings.length;
     const totalPages = Math.max(1, Math.ceil(total / limit));
     const startIndex = (page - 1) * limit;
-    const paginatedListings = nearbyListings.slice(startIndex, startIndex + limit);
+    const paginatedListings = nearbyListings
+      .slice(startIndex, startIndex + limit)
+      .map(attachListingImages);
 
     res.json({
       listings: paginatedListings,

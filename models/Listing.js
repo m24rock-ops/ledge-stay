@@ -23,7 +23,17 @@ const listingSchema = new mongoose.Schema({
   reviewedAt: { type: Date, default: null },
   noBrokerage: { type: Boolean, default: false },
   verified: { type: Boolean, default: false }
-}, { timestamps: true });
+}, {
+  timestamps: true,
+  toJSON: { virtuals: true },
+  toObject: { virtuals: true }
+});
+
+listingSchema.virtual('images').get(function imagesVirtual() {
+  return Array.isArray(this.photos)
+    ? this.photos.filter(Boolean).map((url) => ({ url }))
+    : [];
+});
 
 listingSchema.index({ approvalStatus: 1, available: 1, city: 1 });
 listingSchema.index({ approvalStatus: 1, available: 1, state: 1 });
