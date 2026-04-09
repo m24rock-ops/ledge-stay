@@ -4933,3 +4933,20 @@ textarea {
   .filter-row-2col { grid-template-columns: 1fr; }
   .filter-floating-card { padding: 18px; gap: 18px; }
 }
+
+#featured-grid,
+.featured-grid {
+  display: flex !important;
+  flex-direction: row !important;
+  flex-wrap: wrap !important;
+  gap: 20px !important;
+  overflow-x: visible !important;
+}
+
+#featured-grid .featured-card--hero,
+.featured-grid .featured-card--hero {
+  width: 260px !important;
+  min-width: 260px !important;
+  max-width: 260px !important;
+  flex: 0 0 260px !important;
+}

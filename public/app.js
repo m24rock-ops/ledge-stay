@@ -2237,12 +2237,11 @@ async function loadFeaturedListings() {
             <p class="featured-location">${listing.city}</p>
             <span class="featured-rating-pill">Easy view</span>
           </div>
-          <h3 class="featured-title">${listing.title}</h3>
+          <h3 class="featured-title" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:14px;line-height:1.25;">${listing.title}</h3>
           <p class="featured-address featured-description">${listing.address}</p>
           <div class="featured-card-footer">
             <div class="featured-price">Rs ${Number(listing.price).toLocaleString()}/month</div>
             <div class="featured-card-actions">
-              ${renderWhatsAppButton(listing)}
               <button class="featured-view-button" onclick="showDetail('${listing._id}')">See Details</button>
             </div>
           </div>
