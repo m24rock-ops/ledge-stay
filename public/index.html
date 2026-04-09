@@ -120,73 +120,92 @@
 
   <div id="page-listings" class="page" style="display:none">
     <div class="browse-header">
-      <div id="nearby-results-banner" class="nearby-results-banner" style="display:none">
-        <div>
-          <strong id="nearby-results-title">Showing stays near you</strong>
-          <p id="nearby-results-copy">Nearby listings are sorted by distance.</p>
-        </div>
-        <button type="button" class="nearby-clear-button" onclick="clearNearMeSearch()">Clear Near Me</button>
-      </div>
-      <div class="browse-search-row">
-        <div class="browse-search-bar">
+
+      <div style="padding:16px 20px 12px;">
+        <div class="browse-search-bar" style="border-radius:14px;padding:12px 18px;">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" stroke-width="2.5" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
           <input type="text" id="filter-city" placeholder="Search city, area..." autocomplete="off" aria-autocomplete="list" aria-controls="filter-city-suggestions" aria-expanded="false">
           <div class="location-autocomplete" id="filter-city-suggestions"></div>
+          <button class="filter-toggle-btn" onclick="toggleBrowseFilters()" id="filter-toggle-btn" aria-label="Filters" style="margin-left:auto;">
+            <span class="filter-toggle-icon" aria-hidden="true"><span></span><span></span></span>
+          </button>
         </div>
-        <button class="filter-toggle-btn" onclick="toggleBrowseFilters()" id="filter-toggle-btn" aria-label="Filters">
-          <span class="filter-toggle-icon" aria-hidden="true">
-            <span></span>
-            <span></span>
-          </span>
-        </button>
       </div>
 
       <div class="browse-filters" id="browse-filters">
-        <div class="filter-group">
-          <div class="filter-group-label">Type</div>
-          <div class="filter-chips">
-            <button class="filter-chip active" data-filter="type" data-value="" onclick="selectChip(this,'type')">All</button>
-            <button class="filter-chip" data-filter="type" data-value="pg" onclick="selectChip(this,'type')">PG</button>
-            <button class="filter-chip" data-filter="type" data-value="hostel" onclick="selectChip(this,'type')">Hostel</button>
-            <button class="filter-chip" data-filter="type" data-value="apartment" onclick="selectChip(this,'type')">Apartment</button>
-            <button class="filter-chip" data-filter="type" data-value="room" onclick="selectChip(this,'type')">Room</button>
-          </div>
-        </div>
-        <div class="filter-group">
-          <div class="filter-group-label">Gender</div>
-          <div class="filter-chips">
-            <button class="filter-chip active" data-filter="gender" data-value="" onclick="selectChip(this,'gender')">Any</button>
-            <button class="filter-chip" data-filter="gender" data-value="male" onclick="selectChip(this,'gender')">Boys</button>
-            <button class="filter-chip" data-filter="gender" data-value="female" onclick="selectChip(this,'gender')">Girls</button>
-          </div>
-        </div>
-        <div class="filter-group">
-          <div class="filter-group-label">Budget</div>
-          <div class="filter-chips">
-            <button class="filter-chip active" data-filter="budget" data-value="" onclick="selectChip(this,'budget')">Any</button>
-            <button class="filter-chip" data-filter="budget" data-value="5000" onclick="selectChip(this,'budget')">Under ₹5k</button>
-            <button class="filter-chip" data-filter="budget" data-value="10000" onclick="selectChip(this,'budget')">₹5k–₹10k</button>
-            <button class="filter-chip" data-filter="budget" data-value="99999" onclick="selectChip(this,'budget')">₹10k+</button>
-          </div>
-        </div>
-        <div class="filter-group filter-group-sort">
-          <div class="filter-group-label">Sort</div>
-          <div class="filter-chips">
-            <button class="filter-chip active" data-filter="sort" data-value="" onclick="selectChip(this,'sort')">Default</button>
-            <button class="filter-chip" data-filter="sort" data-value="price_asc" onclick="selectChip(this,'sort')">Price ↑</button>
-            <button class="filter-chip" data-filter="sort" data-value="price_desc" onclick="selectChip(this,'sort')">Price ↓</button>
-            <button class="filter-chip" data-filter="sort" data-value="newest" onclick="selectChip(this,'sort')">Newest</button>
-          </div>
-        </div>
+        <div class="filter-floating-card">
 
-        <div style="display:none">
-          <select id="filter-type"><option value=""></option></select>
-          <select id="filter-gender"><option value=""></option></select>
-          <input type="number" id="filter-min">
-          <input type="number" id="filter-max">
-          <select id="filter-sort"><option value=""></option></select>
+          <div class="filter-section">
+            <p class="filter-label">Type</p>
+            <div class="filter-chips">
+              <button class="filter-chip active" data-filter="type" data-value="" onclick="selectChip(this,'type')">All</button>
+              <button class="filter-chip" data-filter="type" data-value="pg" onclick="selectChip(this,'type')">PG</button>
+              <button class="filter-chip" data-filter="type" data-value="hostel" onclick="selectChip(this,'type')">Hostel</button>
+              <button class="filter-chip" data-filter="type" data-value="apartment" onclick="selectChip(this,'type')">Apartment</button>
+              <button class="filter-chip" data-filter="type" data-value="room" onclick="selectChip(this,'type')">Room</button>
+            </div>
+          </div>
+
+          <div class="filter-row-2col">
+            <div class="filter-section">
+              <p class="filter-label">Gender</p>
+              <div class="filter-chips">
+                <button class="filter-chip active" data-filter="gender" data-value="" onclick="selectChip(this,'gender')">Any</button>
+                <button class="filter-chip" data-filter="gender" data-value="male" onclick="selectChip(this,'gender')">Boys</button>
+                <button class="filter-chip" data-filter="gender" data-value="female" onclick="selectChip(this,'gender')">Girls</button>
+              </div>
+            </div>
+            <div class="filter-section">
+              <p class="filter-label">Budget</p>
+              <div class="filter-chips">
+                <button class="filter-chip active" data-filter="budget" data-value="" onclick="selectChip(this,'budget')">Any</button>
+                <button class="filter-chip" data-filter="budget" data-value="5000" onclick="selectChip(this,'budget')">Under ₹5k</button>
+                <button class="filter-chip" data-filter="budget" data-value="10000" onclick="selectChip(this,'budget')">₹5k–₹10k</button>
+                <button class="filter-chip" data-filter="budget" data-value="99999" onclick="selectChip(this,'budget')">₹10k+</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="filter-row-2col">
+            <div class="filter-section">
+              <p class="filter-label">Max budget: <span id="budget-slider-val">₹20,000</span></p>
+              <input type="range" min="2000" max="50000" step="500" value="20000" class="filter-range"
+                oninput="
+                  document.getElementById('budget-slider-val').textContent='₹'+parseInt(this.value).toLocaleString('en-IN');
+                  document.getElementById('filter-max').value=this.value;
+                ">
+              <div style="display:flex;justify-content:space-between;margin-top:4px;">
+                <span class="filter-range-label">₹2,000</span>
+                <span class="filter-range-label">₹50,000</span>
+              </div>
+            </div>
+            <div class="filter-section">
+              <p class="filter-label">Sort by</p>
+              <select id="filter-sort-select" class="filter-select" onchange="document.getElementById('filter-sort').value=this.value;loadListings()">
+                <option value="">Default</option>
+                <option value="price_asc">Price: Low to High</option>
+                <option value="price_desc">Price: High to Low</option>
+                <option value="newest">Newest first</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="filter-actions">
+            <button class="filter-reset-btn" onclick="resetFilters()">Reset</button>
+            <button class="filter-apply-btn" onclick="applyFiltersAndClose()">Apply Filters</button>
+          </div>
+
         </div>
       </div>
+
+      <div style="display:none">
+        <select id="filter-type"><option value=""></option></select>
+        <select id="filter-gender"><option value=""></option></select>
+        <input type="number" id="filter-min">
+        <input type="number" id="filter-max">
+        <select id="filter-sort"><option value=""></option></select>
+      </div>
+
     </div>
     <div id="listings-grid" class="listings-grid"></div>
   </div>

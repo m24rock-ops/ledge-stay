@@ -2216,7 +2216,7 @@ async function loadFeaturedListings() {
   featuredGrid.innerHTML = '<div class="featured-empty">Loading featured listings...</div>';
 
   try {
-    const listings = await apiFetchJson('/api/listings?featured=true&limit=6');
+    const listings = await apiFetchJson('/api/listings?limit=6&sort=rating');
 
     if (!Array.isArray(listings) || listings.length === 0) {
       featuredGrid.innerHTML = '<div class="featured-empty">No featured listings yet. Add <code>is_featured: true</code> to a listing to highlight it here.</div>';
@@ -2365,6 +2365,27 @@ function toggleBrowseFilters() {
   const btn = document.getElementById('filter-toggle-btn');
   const open = panel.classList.toggle('open');
   btn.classList.toggle('active', open);
+}
+
+function resetFilters() {
+  document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+  document.querySelectorAll('.filter-chip[data-value=""]').forEach(c => c.classList.add('active'));
+  document.getElementById('filter-max').value = '';
+  document.getElementById('filter-min').value = '';
+  document.getElementById('filter-sort').value = '';
+  document.getElementById('filter-sort-select').value = '';
+  const slider = document.querySelector('.filter-range');
+  if (slider) {
+    slider.value = 20000;
+    document.getElementById('budget-slider-val').textContent = '₹20,000';
+  }
+  loadListings();
+}
+
+function applyFiltersAndClose() {
+  loadListings();
+  document.getElementById('browse-filters').classList.remove('open');
+  document.getElementById('filter-toggle-btn').classList.remove('active');
 }
 
 function selectChip(el, filterType) {
