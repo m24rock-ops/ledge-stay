@@ -5015,3 +5015,20 @@ textarea {
     display: inline-flex !important;
   }
 }
+
+@media (max-width: 768px) {
+  #listings-grid {
+    display: grid !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    grid-auto-flow: row !important;
+    overflow-x: visible !important;
+    scroll-snap-type: none !important;
+    padding: 12px !important;
+    gap: 10px !important;
+  }
+
+  #listings-grid .listing-card--premium {
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+}
