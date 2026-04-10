@@ -1,6 +1,4 @@
 User-agent: *
 Allow: /
-Disallow: /admin
-Disallow: /login
-Disallow: /reset-password
+
 Sitemap: https://ledgestay.in/sitemap.xml
