@@ -2252,7 +2252,7 @@ async function loadFeaturedListings() {
     }
 
     featuredGrid.innerHTML = listings.map((listing) => `
-      <article class="featured-card featured-card--hero" data-id="${listing._id}">
+      <article class="featured-card featured-card--hero" data-id="${listing._id}" onclick="showDetail('${listing._id}')" style="cursor:pointer;">
         <div class="featured-image-wrap">
           <div class="featured-card-badge-row">
             <span class="featured-card-badge">Verified</span>

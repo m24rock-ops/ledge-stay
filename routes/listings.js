@@ -180,6 +180,28 @@ router.get('/', async (req, res) => {
   }
 });
 
+router.get('/search', async (req, res) => {
+  try {
+    const query = req.query.query || '';
+    if (!query) return res.json([]);
+
+    const results = await Listing.find({
+      $or: [
+        { city: { $regex: query, $options: 'i' } },
+        { address: { $regex: query, $options: 'i' } }
+      ]
+    }).select('city address').limit(10);
+
+    const suggestions = [...new Set(
+      results.map(r => r.city).filter(Boolean)
+    )];
+
+    res.json(suggestions);
+  } catch (err) {
+    res.status(500).json([]);
+  }
+});
+
 router.get('/nearby', async (req, res) => {
   try {
     const {

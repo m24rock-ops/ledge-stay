@@ -5009,3 +5009,9 @@ textarea {
   max-width: 260px !important;
   flex: 0 0 260px !important;
 }
+
+@media (max-width: 768px) {
+  .featured-card--hero .featured-view-button {
+    display: inline-flex !important;
+  }
+}
