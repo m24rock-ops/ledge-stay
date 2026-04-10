@@ -2478,14 +2478,33 @@ function renderListingsMarkup(listings) {
   return listings.map((listing) => renderListingCard(listing)).join('');
 }
 
-async function loadListings() {
+async function loadListings(special = null) {
   const grid = document.getElementById('listings-grid');
   grid.innerHTML = 'Loading...';
 
   await loadWishlistIds();
-  console.log(savedListingIds);
+  
+  let url = '/api/listings';
+  const params = new URLSearchParams();
 
-  const listings = await apiFetchJson('/api/listings');
+  const city = document.getElementById('filter-city')?.value;
+  const type = document.getElementById('filter-type')?.value;
+  const gender = document.getElementById('filter-gender')?.value;
+  const minPrice = document.getElementById('filter-min')?.value;
+  const maxPrice = document.getElementById('filter-max')?.value;
+  const sort = document.getElementById('filter-sort')?.value;
+
+  if (city) params.append('city', city);
+  if (type) params.append('type', type);
+  if (gender) params.append('gender', gender);
+  if (minPrice) params.append('minPrice', minPrice);
+  if (maxPrice) params.append('maxPrice', maxPrice);
+  if (sort) params.append('sort', sort);
+  if (special === 'verified') params.append('verified', 'true');
+
+  if (params.toString()) url += '?' + params.toString();
+
+  const listings = await apiFetchJson(url);
 
   grid.innerHTML = listings.map(renderListingCard).join('');
 
@@ -3473,6 +3492,30 @@ async function submitPasswordReset() {
   } finally {
     if (btn) btn.disabled = false;
   }
+}
+
+function filterVerified() {
+  syncLocationInputs('');
+  showPage('listings');
+  setTimeout(() => {
+    document.getElementById('filter-type').value = '';
+    document.getElementById('filter-gender').value = '';
+    document.getElementById('filter-min').value = '';
+    document.getElementById('filter-max').value = '';
+    document.getElementById('filter-sort').value = '';
+    loadListings('verified');
+  }, 100);
+}
+
+function filterClearPrice() {
+  syncLocationInputs('');
+  showPage('listings');
+  setTimeout(() => {
+    document.getElementById('filter-sort').value = 'price_asc';
+    document.getElementById('filter-min').value = '';
+    document.getElementById('filter-max').value = '';
+    loadListings();
+  }, 100);
 }
 
 document.addEventListener('DOMContentLoaded', () => {
