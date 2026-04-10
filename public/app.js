@@ -362,20 +362,48 @@ function highlightLocationMatch(text, query) {
 function renderLocationSuggestions(dropdown, suggestions, query) {
   if (!dropdown) return;
 
+  const safeQuery = query.trim();
+
+  // ❌ No results state (premium)
   if (!suggestions.length) {
-    dropdown.innerHTML = '<div class="location-autocomplete-empty">No locations found.</div>';
+    dropdown.innerHTML = `
+      <div class="location-autocomplete-empty">
+        <div class="search-empty-title">🔍 No results for "${escapeHtml(safeQuery)}"</div>
+        <div class="search-empty-sub">Try city, area, or college</div>
+      </div>
+    `;
     dropdown.classList.add('is-open');
     return;
   }
 
-  dropdown.innerHTML = suggestions.map((suggestion) => {
-    const formattedSuggestion = formatLocationSuggestion(suggestion);
-    return `
-    <button type="button" class="location-suggestion" data-location-value="${escapeHtml(formattedSuggestion)}">
-      ${highlightLocationMatch(formattedSuggestion, query)}
-    </button>
+  // ✅ Suggestions UI
+  dropdown.innerHTML = `
+    <div class="location-autocomplete-header">Search results</div>
+    ${suggestions.map((suggestion) => {
+      const formattedSuggestion = formatLocationSuggestion(suggestion);
+
+      return `
+        <button 
+          type="button" 
+          class="location-suggestion premium-suggestion"
+          data-location-value="${escapeHtml(formattedSuggestion)}"
+        >
+          <div class="suggestion-left">
+            <span class="suggestion-icon">📍</span>
+          </div>
+          <div class="suggestion-content">
+            <div class="suggestion-title">
+              ${highlightLocationMatch(formattedSuggestion, safeQuery)}
+            </div>
+            <div class="suggestion-sub">
+              ${escapeHtml(suggestion.city || 'Location')}
+            </div>
+          </div>
+        </button>
+      `;
+    }).join('')}
   `;
-  }).join('');
+
   dropdown.classList.add('is-open');
 }
 
