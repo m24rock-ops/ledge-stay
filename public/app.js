@@ -251,16 +251,31 @@ function closeMenu() {
 }
 
 function heroSearch() {
-  const city = document.getElementById('hero-search').value.trim();
-  if (!city) {
-    return;
-  }
+  const input = document.getElementById('hero-search');
+  const city = input ? input.value.trim() : '';
+  if (!city) return;
+
+  collegeSearchState.active = true;
+  collegeSearchState.name = city;
 
   syncLocationInputs(city);
   document.getElementById('filter-max').value = '';
   nearbySearchState.active = false;
   updateNearbyResultsBanner();
+
+  // Get coordinates for the college using your existing distance API
+  fetch(`/api/listings/geocode?address=${encodeURIComponent(city)}`)
+    .then(r => r.json())
+    .then(data => {
+      if (data.lat && data.lng) {
+        collegeSearchState.lat = data.lat;
+        collegeSearchState.lng = data.lng;
+      }
+    })
+    .catch(() => {});
+
   showPage('listings');
+  updateCollegeBar();
 }
 
 function setNearMeStatus(message, isError = false) {
@@ -1727,8 +1742,9 @@ function buildListingCardData(listing = {}) {
     city !== 'Location unavailable' ? city : 'Location details unavailable'
   );
   const distanceKm = typeof listing.distanceKm === 'number' && Number.isFinite(listing.distanceKm)
-    ? `${listing.distanceKm.toFixed(1)} km away`
+    ? listing.distanceKm.toFixed(1)
     : '';
+  const walkTime = distanceKm ? getWalkTime(parseFloat(distanceKm)) : '';
   const price = formatListingPriceDisplay(listing.price);
   const ownerPhone = listing.contact || listing.owner?.whatsapp || listing.owner?.phone || listing.owner?.mobile || '';
   const averageRating = Number(listing.averageRating);
@@ -1778,6 +1794,8 @@ function buildListingCardData(listing = {}) {
 
 function renderListingCard(listing) {
   const card = buildListingCardData(listing);
+  const distanceKm = card.distanceKm;
+  const walkTime = distanceKm ? getWalkTime(parseFloat(distanceKm)) : '';
   const amenityTags = (card.tags.length ? card.tags : ['WiFi', 'AC', 'Meals']).slice(0, 3);
   const amenityMarkup = amenityTags
     .map((tag) => `<span class="listing-amenity-pill" title="${escapeHtml(tag)}">${escapeHtml(tag)}</span>`)
@@ -1790,6 +1808,12 @@ function renderListingCard(listing) {
           <div class="listing-verified-badge" aria-label="Verified listing">
             <span class="listing-verified-dot" aria-hidden="true"></span>
             <span>Verified</span>
+          </div>
+        ` : ''}
+        ${distanceKm ? `
+          <div style="position:absolute;bottom:8px;left:8px;background:rgba(12,68,124,0.88);border-radius:99px;padding:3px 9px;display:flex;align-items:center;gap:4px;z-index:2;pointer-events:none;">
+            <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round"><path d="M12 22s7-6.2 7-12a7 7 0 1 0-14 0c0 5.8 7 12 7 12z"/></svg>
+            <span style="font-size:10px;color:#fff;font-weight:600;">${distanceKm} km · ${walkTime}</span>
           </div>
         ` : ''}
         ${card.imageHtml}
@@ -2481,10 +2505,10 @@ function renderListingsMarkup(listings) {
 async function loadListings(special = null) {
   const grid = document.getElementById('listings-grid');
   grid.innerHTML = 'Loading...';
+  updateCollegeBar();
 
   await loadWishlistIds();
-  
-  let url = '/api/listings';
+
   const params = new URLSearchParams();
 
   const city = document.getElementById('filter-city')?.value;
@@ -2502,12 +2526,17 @@ async function loadListings(special = null) {
   if (sort) params.append('sort', sort);
   if (special === 'verified') params.append('verified', 'true');
 
-  if (params.toString()) url += '?' + params.toString();
+  // Pass college coordinates to get distances
+  if (collegeSearchState.active && collegeSearchState.lat && collegeSearchState.lng) {
+    params.append('lat', collegeSearchState.lat);
+    params.append('lng', collegeSearchState.lng);
+    params.append('radiusKm', 20);
+    params.append('sort', 'distance');
+  }
 
+  const url = '/api/listings' + (params.toString() ? '?' + params.toString() : '');
   const listings = await apiFetchJson(url);
-
   grid.innerHTML = listings.map(renderListingCard).join('');
-
   applyWishlistStateToButtons();
 }
 
@@ -3516,6 +3545,38 @@ function filterClearPrice() {
     document.getElementById('filter-max').value = '';
     loadListings();
   }, 100);
+}
+
+let collegeSearchState = {
+  active: false,
+  name: '',
+  lat: null,
+  lng: null
+};
+
+function updateCollegeBar() {
+  const bar = document.getElementById('college-bar');
+  const name = document.getElementById('college-bar-name');
+  if (!bar) return;
+
+  if (collegeSearchState.active && collegeSearchState.name) {
+    bar.style.display = 'flex';
+    if (name) name.textContent = collegeSearchState.name;
+  } else {
+    bar.style.display = 'none';
+  }
+}
+
+function clearCollegeSearch() {
+  collegeSearchState = { active: false, name: '', lat: null, lng: null };
+  updateCollegeBar();
+  loadListings();
+}
+
+function getWalkTime(km) {
+  const minutes = Math.round((km / 5) * 60);
+  if (minutes < 60) return `${minutes} min walk`;
+  return `${Math.round(km / 25 * 60)} min by bike`;
 }
 
 document.addEventListener('DOMContentLoaded', () => {

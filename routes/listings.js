@@ -279,6 +279,30 @@ router.get('/nearby', async (req, res) => {
   }
 });
 
+router.get('/geocode', async (req, res) => {
+  try {
+    const address = req.query.address;
+    if (!address) return res.json({});
+
+    const apiKey = process.env.GOOGLE_MAPS_API_KEY;
+    if (!apiKey) return res.json({});
+
+    const response = await fetch(
+      `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(address)}&key=${apiKey}`
+    );
+    const data = await response.json();
+
+    if (data.results && data.results[0]) {
+      const { lat, lng } = data.results[0].geometry.location;
+      res.json({ lat, lng });
+    } else {
+      res.json({});
+    }
+  } catch (err) {
+    res.json({});
+  }
+});
+
 // Get dashboard listings for the logged-in owner
 router.get('/mine', auth, async (req, res) => {
   try {
