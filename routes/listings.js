@@ -283,18 +283,14 @@ router.get('/geocode', async (req, res) => {
   try {
     const address = req.query.address;
     if (!address) return res.json({});
-
-    const apiKey = process.env.GOOGLE_MAPS_API_KEY;
-    if (!apiKey) return res.json({});
-
     const response = await fetch(
-      `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(address)}&key=${apiKey}`
+      `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(address)}&format=json&limit=1`,
+      { headers: { 'User-Agent': 'LedgeStay/1.0 (ledgestay.in)' } }
     );
     const data = await response.json();
 
-    if (data.results && data.results[0]) {
-      const { lat, lng } = data.results[0].geometry.location;
-      res.json({ lat, lng });
+    if (data && data[0]) {
+      res.json({ lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) });
     } else {
       res.json({});
     }
@@ -464,39 +460,54 @@ router.delete('/:id', auth, async (req, res) => {
 router.get('/:id/distance', async (req, res) => {
   try {
     const { from } = req.query;
-    if (!from) return res.status(400).json({ message: 'From address required' });
+    if (!from) return res.status(400).json({ message: 'from address required' });
 
     const listing = await Listing.findById(req.params.id);
     if (!listing) return res.status(404).json({ message: 'Listing not found' });
 
-    const geocode = async (address) => {
-      const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}&countrycodes=in&limit=1`;
-      const r = await fetch(url, { headers: { 'User-Agent': 'LedgeStay/1.0' } });
-      const data = await r.json();
-      if (!data[0]) return null;
-      return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
-    };
-
-    const toAddress = `${listing.address}, ${listing.city}, India`;
-    const [fromCoords, toCoords] = await Promise.all([geocode(from), geocode(toAddress)]);
-
-    if (!fromCoords || !toCoords) {
-      return res.status(400).json({ message: 'Could not find one of the addresses' });
+    const fromResponse = await fetch(
+      `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(from)}&format=json&limit=1`,
+      { headers: { 'User-Agent': 'LedgeStay/1.0 (ledgestay.in)' } }
+    );
+    const fromData = await fromResponse.json();
+    if (!fromData || !fromData[0]) {
+      return res.status(400).json({ message: 'Could not find that location. Try a more specific address.' });
     }
 
-    // Haversine straight-line distance
+    const fromLat = parseFloat(fromData[0].lat);
+    const fromLng = parseFloat(fromData[0].lon);
+
+    const toAddress = `${listing.address}, ${listing.city}, India`;
+    const toResponse = await fetch(
+      `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(toAddress)}&format=json&limit=1`,
+      { headers: { 'User-Agent': 'LedgeStay/1.0 (ledgestay.in)' } }
+    );
+    const toData = await toResponse.json();
+
+    let toLat, toLng;
+    if (toData && toData[0]) {
+      toLat = parseFloat(toData[0].lat);
+      toLng = parseFloat(toData[0].lon);
+    } else if (listing.lat && listing.lng) {
+      toLat = listing.lat;
+      toLng = listing.lng;
+    } else {
+      return res.status(400).json({ message: 'Could not find listing location.' });
+    }
+
+    // Haversine formula
     const R = 6371;
-    const dLat = (toCoords.lat - fromCoords.lat) * Math.PI / 180;
-    const dLng = (toCoords.lng - fromCoords.lng) * Math.PI / 180;
-    const a = Math.sin(dLat/2)**2 +
-              Math.cos(fromCoords.lat * Math.PI/180) *
-              Math.cos(toCoords.lat * Math.PI/180) *
-              Math.sin(dLng/2)**2;
-    const distanceKm = (R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a))).toFixed(1);
+    const dLat = (toLat - fromLat) * Math.PI / 180;
+    const dLng = (toLng - fromLng) * Math.PI / 180;
+    const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+              Math.cos(fromLat * Math.PI / 180) * Math.cos(toLat * Math.PI / 180) *
+              Math.sin(dLng/2) * Math.sin(dLng/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    const distanceKm = (R * c).toFixed(1);
 
     res.json({ distanceKm });
   } catch (err) {
-    res.status(500).json({ message: 'Error calculating distance', error: err.message });
+    res.status(500).json({ message: 'Distance calculation failed.' });
   }
 });
 

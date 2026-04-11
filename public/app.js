@@ -274,8 +274,8 @@ function heroSearch() {
     })
     .catch(() => {});
 
-  showPage('listings');
   updateCollegeBar();
+  showPage('listings');
 }
 
 function setNearMeStatus(message, isError = false) {
@@ -287,30 +287,24 @@ function setNearMeStatus(message, isError = false) {
 
 function useNearMe() {
   if (!navigator.geolocation) {
-    setNearMeStatus('Please allow location access to use Near Me.', true);
+    alert('Location not supported by your browser.');
     return;
   }
 
-  setNearMeStatus('Finding stays near your current location...');
+  alert('Finding stays near your location...');
 
   navigator.geolocation.getCurrentPosition(
     ({ coords }) => {
-      const searchInput = document.getElementById('hero-search');
-      if (searchInput && !searchInput.value.trim()) {
-        searchInput.value = 'Nearby';
-      }
-
       nearbySearchState = {
         active: true,
         lat: Number(coords.latitude),
         lng: Number(coords.longitude),
         radiusKm: 10
       };
-      setNearMeStatus('Location found. Opening nearby listings now.');
       showPage('listings');
     },
     () => {
-      setNearMeStatus('Location was not available. Please search by college, area, or city.', true);
+      alert('Location access denied. Please allow location and try again.');
     },
     { enableHighAccuracy: false, timeout: 7000, maximumAge: 300000 }
   );
