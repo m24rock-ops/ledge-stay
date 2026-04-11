@@ -4,12 +4,45 @@ const cors = require('cors');
 const dotenv = require('dotenv');
 const path = require('path');
 const { getEmailConfig } = require('./services/email');
+const { validateEnv } = require('./config/env');
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
+const compression = require('compression');
 
 if (process.env.NODE_ENV !== 'production') {
   dotenv.config();
 }
 
+validateEnv();
+
 const app = express();
+
+// Security headers
+app.use(helmet({
+  contentSecurityPolicy: false
+}));
+
+// Compress all responses
+app.use(compression());
+
+// Hide server info
+app.disable('x-powered-by');
+
+// Rate limiting — 100 requests per 15 min per IP
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 100,
+  message: { message: 'Too many requests, please try again later.' }
+});
+app.use('/api/', limiter);
+
+// Strict rate limit for auth routes
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  message: { message: 'Too many login attempts, please try again later.' }
+});
+app.use('/api/auth/', authLimiter);
 
 app.use(cors({
   origin: [
@@ -37,6 +70,21 @@ app.use('/api/notifications', require('./routes/notifications'));
 app.get('/api/config', (req, res) => {
   res.json({
     mapsEmbedApiKey: process.env.GOOGLE_MAPS_EMBED_API_KEY || ''
+  });
+});
+
+app.get('/api/health', (req, res) => {
+  const mongoState = mongoose.connection.readyState;
+  const mongoConnected = mongoState === 1;
+
+  return res.status(mongoConnected ? 200 : 503).json({
+    status: mongoConnected ? 'ok' : 'degraded',
+    uptimeSec: Math.round(process.uptime()),
+    mongo: {
+      connected: mongoConnected,
+      state: mongoState
+    },
+    timestamp: new Date().toISOString()
   });
 });
 
@@ -119,9 +167,6 @@ if (emailConfig.ready) {
 } else {
   console.warn('[email] Resend configuration issues:', emailConfig.issues.join(' '));
 }
-
-console.log('VERIFY SID:', process.env.TWILIO_VERIFY_SID);
-console.log('ACCOUNT SID:', process.env.TWILIO_ACCOUNT_SID);
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
