@@ -5031,7 +5031,7 @@ textarea {
   color: #64748b !important;
   background: #e2e8f0 !important;
 }
-@media (max-width: 420px) {
+@media (max-width: 420px) {}
   .listing-card-premium {
   max-width: 420px;
   width: 100%;
