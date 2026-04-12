@@ -743,28 +743,38 @@ async function sendOtpForPhoneLogin() {
 
   setLoginError('');
   const phone = sanitizePhone(ui.phoneInput?.value || '');
+
   if (!/^\d{10}$/.test(phone)) {
     setLoginError('Please enter a valid 10-digit phone number.');
     return;
   }
 
   ui.submitButton.disabled = true;
-  try {
-    const res = await fetch('/api/auth/send-otp', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ phone })
-    });
-    const data = await res.json();
 
-    if (!res.ok) {
-      throw new Error(data.message || 'Unable to send OTP.');
+  try {
+    // ✅ YOUR NUMBER → Twilio
+    if (phone === "YOUR_NUMBER") {
+      const res = await fetch('/api/auth/send-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone })
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) throw new Error(data.message);
+
+    } else {
+      // 🔥 DEMO MODE (others)
+      console.log("Demo OTP: 123456");
     }
 
     authState.otpSent = true;
     authState.otpPhone = phone;
+
     if (ui.otpSection) ui.otpSection.style.display = '';
     applyAuthModeState('phone');
+
   } catch (err) {
     setLoginError(err.message || 'Unable to send OTP.');
   } finally {
@@ -1024,17 +1034,25 @@ async function handleRegisterSubmit() {
     let data;
 
     if (isPhone) {
-      // Phone registration — send OTP first, then let OTP flow handle it
       errorEl.style.color = '#2563eb';
-      errorEl.textContent = 'Phone detected — switching to OTP flow...';
+      errorEl.textContent = 'Sending OTP...';
 
-      setTimeout(() => {
+      try {
+        // Switch to login UI
         showLoginForm();
+
         const phoneInput = document.getElementById('login-phone');
         if (phoneInput) phoneInput.value = emailOrPhone;
+
         applyAuthModeState('phone');
-        errorEl.textContent = '';
-      }, 1000);
+
+        // 🔥 SEND OTP HERE
+        await sendOtpForPhoneLogin();
+      } catch (err) {
+        errorEl.style.color = '#dc2626';
+        errorEl.textContent = 'Failed to send OTP';
+      }
+
       return;
     }
 
