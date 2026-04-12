@@ -4,7 +4,6 @@ const cors = require('cors');
 const dotenv = require('dotenv');
 const path = require('path');
 const { getEmailConfig } = require('./services/email');
-const { validateEnv } = require('./config/env');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const compression = require('compression');
@@ -12,8 +11,6 @@ const compression = require('compression');
 if (process.env.NODE_ENV !== 'production') {
   dotenv.config();
 }
-
-validateEnv();
 
 const app = express();
 

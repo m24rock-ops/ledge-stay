@@ -994,14 +994,25 @@ input:focus {
 /* Password */
 .password-field {
   position: relative;
+  margin-bottom: 12px;
+}
+
+.password-field input {
+  margin-bottom: 0;
 }
 
 .password-field span {
   position: absolute;
   right: 12px;
-  top: 50%;
+  top: 20px;
   transform: translateY(-50%);
   cursor: pointer;
+}
+
+.password-field .forgot-password-link {
+  margin-top: 8px;
+  margin-bottom: 0;
+  text-align: right;
 }
 
 /* Role */
@@ -5014,4 +5025,32 @@ textarea {
   .featured-card--hero .featured-view-button {
     display: inline-flex !important;
   }
+}
+
+.tabs button:not(.active) {
+  color: #64748b !important;
+  background: #e2e8f0 !important;
+}
+@media (max-width: 420px) {
+  .listing-card-premium {
+  max-width: 420px;
+  width: 100%;
+  margin: 0 auto;
+
+  height: auto;
+  min-height: 280px;
+}
+@media (max-width: 480px) {
+
+  /* Make whole card slightly smaller */
+  .listing-card {
+    transform: scale(0.95);
+  }
+
+  /* Reduce image height */
+  .listing-card .card-img-wrap {
+    height: 150px !important;
+    min-height: 150px !important;
+  }
+
 }
