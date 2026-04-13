@@ -2,7 +2,6 @@ const crypto = require('crypto');
 const express = require('express');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const twilio = require('twilio');
 const User = require('../models/User');
 const { sendPasswordResetEmail } = require('../services/email');
 
@@ -11,7 +10,10 @@ const router = express.Router();
 const OTP_EXPIRY_MS = 5 * 60 * 1000;
 const OTP_REQUEST_WINDOW_MS = 5 * 60 * 1000;
 const OTP_MAX_REQUESTS_PER_WINDOW = 3;
-const client = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
+const client = require('twilio')(
+  process.env.TWILIO_ACCOUNT_SID,
+  process.env.TWILIO_AUTH_TOKEN
+);
 const otpRequestStore = new Map();
 
 function escapeRegExp(str) {
@@ -272,25 +274,26 @@ async function registerEmailHandler(req, res) {
 router.post('/continue', continueHandler);
 router.post('/send-otp', async (req, res) => {
   try {
-    const phone = normalizePhone(req.body.phone);
-    if (!isValidPhone(phone)) {
+    const { phone } = req.body;
+    const normalizedPhone = String(normalizePhone(phone) || '').replace(/^\+91/, '');
+
+    if (!/^\d{10}$/.test(normalizedPhone)) {
       return res.status(400).json({ message: 'Please enter a valid phone number.' });
     }
 
-    await issuePhoneOtp(phone);
+    const formattedPhone = '+91' + normalizedPhone;
 
-    return res.json({
-      type: 'otp_sent',
-      expiresInSeconds: Math.floor(OTP_EXPIRY_MS / 1000)
-    });
-  } catch (err) {
-    if (err.status === 429) {
-      return res.status(429).json({
-        message: err.message,
-        retryAfterSeconds: err.retryAfterSeconds || 0
+    await client.verify.v2
+      .services(process.env.TWILIO_VERIFY_SID)
+      .verifications.create({
+        to: formattedPhone,
+        channel: 'sms'
       });
-    }
-    return res.status(500).json({ message: 'Server error', error: err.message });
+
+    return res.json({ success: true });
+  } catch (err) {
+    console.error('Twilio Error:', err);
+    return res.status(500).json({ message: err.message });
   }
 });
 router.post('/verify-otp', verifyOtpHandler);

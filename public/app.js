@@ -752,21 +752,18 @@ async function sendOtpForPhoneLogin() {
   ui.submitButton.disabled = true;
 
   try {
-    // ✅ YOUR NUMBER → Twilio
-    if (phone === "YOUR_NUMBER") {
-      const res = await fetch('/api/auth/send-otp', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone })
-      });
+    console.log("Sending OTP to:", phone);
 
-      const data = await res.json();
+    const res = await fetch('/api/auth/send-otp', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone })
+    });
 
-      if (!res.ok) throw new Error(data.message);
+    const data = await res.json();
 
-    } else {
-      // 🔥 DEMO MODE (others)
-      console.log("Demo OTP: 123456");
+    if (!res.ok) {
+      throw new Error(data.message || 'Failed to send OTP');
     }
 
     authState.otpSent = true;
@@ -776,6 +773,7 @@ async function sendOtpForPhoneLogin() {
     applyAuthModeState('phone');
 
   } catch (err) {
+    console.error(err);
     setLoginError(err.message || 'Unable to send OTP.');
   } finally {
     ui.submitButton.disabled = false;
@@ -1037,21 +1035,18 @@ async function handleRegisterSubmit() {
       errorEl.style.color = '#2563eb';
       errorEl.textContent = 'Sending OTP...';
 
-      try {
-        // Switch to login UI
-        showLoginForm();
+      // Switch to login
+      showLoginForm();
 
-        const phoneInput = document.getElementById('login-phone');
-        if (phoneInput) phoneInput.value = emailOrPhone;
+      const phoneInput = document.getElementById('login-phone');
+      if (phoneInput) phoneInput.value = emailOrPhone;
 
-        applyAuthModeState('phone');
+      applyAuthModeState('phone');
 
-        // 🔥 SEND OTP HERE
-        await sendOtpForPhoneLogin();
-      } catch (err) {
-        errorEl.style.color = '#dc2626';
-        errorEl.textContent = 'Failed to send OTP';
-      }
+      // 🔥 FORCE OTP SEND
+      setTimeout(() => {
+        sendOtpForPhoneLogin();
+      }, 300);
 
       return;
     }
