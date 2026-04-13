@@ -15,6 +15,7 @@ const client = require('twilio')(
   process.env.TWILIO_AUTH_TOKEN
 );
 const otpRequestStore = new Map();
+const otpStore = new Map();
 
 function escapeRegExp(str) {
   return String(str).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -281,18 +282,45 @@ router.post('/send-otp', async (req, res) => {
       return res.status(400).json({ message: 'Please enter a valid phone number.' });
     }
 
-    const formattedPhone = '+91' + normalizedPhone;
-
-    await client.verify.v2
-      .services(process.env.TWILIO_VERIFY_SID)
-      .verifications.create({
-        to: formattedPhone,
-        channel: 'sms'
+    // Rate limiting
+    const rateLimitResult = consumeOtpRequestQuota(normalizedPhone);
+    if (!rateLimitResult.allowed) {
+      return res.status(429).json({
+        message: 'Too many OTP requests. Please try again later.',
+        retryAfterSeconds: rateLimitResult.retryAfterSeconds
       });
+    }
+
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+
+    otpStore.set(normalizedPhone, {
+      otp,
+      expiresAt: Date.now() + OTP_EXPIRY_MS
+    });
+
+    const response = await fetch('https://www.fast2sms.com/dev/bulkV2', {
+      method: 'POST',
+      headers: {
+        'authorization': process.env.FAST2SMS_API_KEY,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        route: 'otp',
+        variables_values: otp,
+        numbers: normalizedPhone
+      })
+    });
+
+    const data = await response.json();
+    console.log('Fast2SMS response:', data);
+
+    if (!data.return) {
+      return res.status(500).json({ message: 'Failed to send OTP. Please try again.' });
+    }
 
     return res.json({ success: true });
   } catch (err) {
-    console.error('Twilio Error:', err);
+    console.error('Fast2SMS Error:', err);
     return res.status(500).json({ message: err.message });
   }
 });
