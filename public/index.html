@@ -239,6 +239,11 @@
           <button>Owner</button>
         </div>
 
+        <p style="font-size:12px;color:#666;text-align:center;margin-top:4px;">
+          Are you looking for a PG? &rarr; Tenant<br>
+          Do you own a PG? &rarr; Owner
+        </p>
+
         <button class="login-btn" id="login-submit-btn">Send OTP</button>
 
         <p class="signup">
@@ -249,7 +254,15 @@
         <div id="register-fields" style="display:none">
           <input type="text" id="register-name" placeholder="Full name">
           <input type="text" id="register-email" placeholder="Email or phone number">
-          <input type="password" id="register-password" placeholder="Password (8+ chars, letters & numbers)">
+          <div style="position:relative;">
+            <input type="password" id="register-password" placeholder="Password (8+ chars, letters & numbers)" style="width:100%;padding-right:44px;">
+            <button type="button" onclick="toggleRegisterPassword()" id="register-eye-btn" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;padding:0;color:#888;">
+              <svg id="register-eye-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                <circle cx="12" cy="12" r="3"/>
+              </svg>
+            </button>
+          </div>
           <div class="role-toggle" id="register-role-toggle">
             <button type="button" class="active" id="register-tenant-btn">Tenant</button>
             <button type="button" id="register-owner-btn">Owner</button>

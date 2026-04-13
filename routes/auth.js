@@ -231,8 +231,8 @@ async function verifyOtpHandler(req, res) {
     let user = await User.findOne({ phone });
 
     if (!user) {
-      if (!isValidName(name)) {
-        return res.status(400).json({ message: 'Please enter your full name to finish account setup.' });
+      if (!name || name.trim().length < 2) {
+        return res.status(400).json({ message: 'Please enter your name to finish account setup.' });
       }
 
       if (!isValidRole(role)) {
@@ -240,9 +240,9 @@ async function verifyOtpHandler(req, res) {
       }
 
       user = await User.create({
-        name,
+        name: name.trim(),
         phone,
-        role
+        role: isValidRole(role) ? role : 'tenant'
       });
     }
 
@@ -261,10 +261,6 @@ async function registerEmailHandler(req, res) {
 
     if (!name || !email || !password || !role) {
       return res.status(400).json({ message: 'Name, email, password, and role are required.' });
-    }
-
-    if (!isValidName(name)) {
-      return res.status(400).json({ message: 'Please enter a valid name.' });
     }
 
     if (!isValidEmail(email)) {
