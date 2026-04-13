@@ -85,8 +85,10 @@ async function sendOtpViaSms(phone, otp) {
       'Content-Type': 'application/json'
     },
     body: JSON.stringify({
-      route: 'otp',
-      variables_values: otp,
+      route: 'q',
+      message: `Your LedgeStay OTP is ${otp}. Valid for 5 minutes.`,
+      language: 'english',
+      flash: 0,
       numbers: phone
     })
   });
