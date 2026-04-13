@@ -42,7 +42,7 @@ function isValidPassword(password) {
 
 function isValidName(name) {
   const value = String(name || '').trim();
-  return /^[A-Za-z ]+$/.test(value) && value.replace(/\s/g, '').length >= 2;
+  return value.length >= 2 && value.length <= 60;
 }
 
 function isValidRole(role) {
