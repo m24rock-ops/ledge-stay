@@ -10,12 +10,10 @@ const router = express.Router();
 const OTP_EXPIRY_MS = 5 * 60 * 1000;
 const OTP_REQUEST_WINDOW_MS = 5 * 60 * 1000;
 const OTP_MAX_REQUESTS_PER_WINDOW = 3;
-const client = require('twilio')(
-  process.env.TWILIO_ACCOUNT_SID,
-  process.env.TWILIO_AUTH_TOKEN
-);
-const otpRequestStore = new Map();
-const otpStore = new Map();
+
+// Replaces Twilio
+const otpStore = new Map();        // phone -> { otp, expiresAt }
+const otpRequestStore = new Map(); // phone -> { count, windowStart }
 
 function escapeRegExp(str) {
   return String(str).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -79,6 +77,28 @@ function consumeOtpRequestQuota(phone) {
   };
 }
 
+async function sendOtpViaSms(phone, otp) {
+  const response = await fetch('https://www.fast2sms.com/dev/bulkV2', {
+    method: 'POST',
+    headers: {
+      'authorization': process.env.FAST2SMS_API_KEY,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      route: 'otp',
+      variables_values: otp,
+      numbers: phone
+    })
+  });
+
+  const data = await response.json();
+  console.log('Fast2SMS response:', data);
+
+  if (!data.return) {
+    throw new Error(data.message || 'Failed to send OTP. Please try again.');
+  }
+}
+
 async function issuePhoneOtp(phone) {
   console.log('Sending OTP to:', phone);
 
@@ -90,16 +110,15 @@ async function issuePhoneOtp(phone) {
     throw err;
   }
 
-  const sanitizedPhone = String(phone || '').replace(/^\+/, '');
+  const otp = Math.floor(100000 + Math.random() * 900000).toString();
 
-  await client.verify.v2
-    .services(process.env.TWILIO_VERIFY_SID)
-    .verifications.create({
-      to: `+91${sanitizedPhone}`,
-      channel: 'sms'
-    });
+  otpStore.set(phone, {
+    otp,
+    expiresAt: Date.now() + OTP_EXPIRY_MS
+  });
 
-  console.log('OTP sent via Twilio');
+  await sendOtpViaSms(phone, otp);
+  console.log('OTP sent via Fast2SMS');
 }
 
 function signAuthToken(user) {
@@ -190,17 +209,22 @@ async function verifyOtpHandler(req, res) {
       return res.status(400).json({ message: 'Valid phone and OTP are required.' });
     }
 
-    const sanitizedPhone = String(phone || '').replace(/^\+/, '');
-    const verificationCheck = await client.verify.v2
-      .services(process.env.TWILIO_VERIFY_SID)
-      .verificationChecks.create({
-        to: `+91${sanitizedPhone}`,
-        code: otp
-      });
+    const stored = otpStore.get(phone);
 
-    if (verificationCheck.status !== 'approved') {
+    if (!stored) {
+      return res.status(400).json({ message: 'OTP not requested or already used. Please request a new OTP.' });
+    }
+
+    if (Date.now() > stored.expiresAt) {
+      otpStore.delete(phone);
+      return res.status(400).json({ message: 'OTP has expired. Please request a new one.' });
+    }
+
+    if (stored.otp !== otp) {
       return res.status(400).json({ message: 'Incorrect or expired OTP. Please request a new OTP.' });
     }
+
+    otpStore.delete(phone);
 
     let user = await User.findOne({ phone });
 
@@ -272,17 +296,18 @@ async function registerEmailHandler(req, res) {
   }
 }
 
+// Routes
 router.post('/continue', continueHandler);
+
 router.post('/send-otp', async (req, res) => {
   try {
     const { phone } = req.body;
     const normalizedPhone = String(normalizePhone(phone) || '').replace(/^\+91/, '');
 
     if (!/^\d{10}$/.test(normalizedPhone)) {
-      return res.status(400).json({ message: 'Please enter a valid phone number.' });
+      return res.status(400).json({ message: 'Please enter a valid 10-digit phone number.' });
     }
 
-    // Rate limiting
     const rateLimitResult = consumeOtpRequestQuota(normalizedPhone);
     if (!rateLimitResult.allowed) {
       return res.status(429).json({
@@ -298,25 +323,7 @@ router.post('/send-otp', async (req, res) => {
       expiresAt: Date.now() + OTP_EXPIRY_MS
     });
 
-    const response = await fetch('https://www.fast2sms.com/dev/bulkV2', {
-      method: 'POST',
-      headers: {
-        'authorization': process.env.FAST2SMS_API_KEY,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        route: 'otp',
-        variables_values: otp,
-        numbers: normalizedPhone
-      })
-    });
-
-    const data = await response.json();
-    console.log('Fast2SMS response:', data);
-
-    if (!data.return) {
-      return res.status(500).json({ message: 'Failed to send OTP. Please try again.' });
-    }
+    await sendOtpViaSms(normalizedPhone, otp);
 
     return res.json({ success: true });
   } catch (err) {
@@ -327,7 +334,7 @@ router.post('/send-otp', async (req, res) => {
 router.post('/verify-otp', verifyOtpHandler);
 router.post('/register-email', registerEmailHandler);
 
-// Backward-compatible aliases for any older clients still hitting split endpoints.
+// Backward-compatible aliases
 router.post('/login', (req, res) => {
   req.body.identifier = req.body.email;
   return continueHandler(req, res);
